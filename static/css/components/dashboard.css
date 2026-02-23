@@ -1,0 +1,468 @@
+/* Dashboard layout — entry box is full-width above the two columns */
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    margin-top: 16px;
+}
+@media (max-width: 768px) {
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dashboard-main {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-width: 0;
+}
+
+.dashboard-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Quick capture — full width, override .card border */
+.dashboard-quick-capture {
+    margin-bottom: 8px;
+    border: none;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Meetings list */
+.dashboard-meetings {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.dashboard-meeting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-gray-10);
+}
+.dashboard-meeting-item:last-child {
+    border-bottom: none;
+}
+.meeting-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.meeting-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Entry list */
+.dashboard-entry-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    border-bottom: 1px solid var(--color-gray-10);
+}
+.dashboard-entry-item:last-child {
+    border-bottom: none;
+}
+.dashboard-entry-item:hover {
+    background: var(--color-gray-10);
+}
+.dashboard-entry-item .entry-title {
+    flex: 1;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Check-in widget */
+.checkin-status {
+    padding: 4px 0;
+}
+/* Check-in highlights (energy + productivity scores) */
+.checkin-highlights {
+    display: flex;
+    gap: 16px;
+    padding: 8px 0;
+}
+.checkin-highlight {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.checkin-highlight-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+.checkin-highlight-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* OKR snapshot */
+.dashboard-goal {
+    margin-bottom: 16px;
+}
+.dashboard-goal:last-child {
+    margin-bottom: 0;
+}
+.dashboard-goal .goal-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+}
+.goal-title-link {
+    text-decoration: none;
+    color: var(--color-text);
+}
+.goal-title-link:hover {
+    color: var(--color-primary);
+}
+.dashboard-kr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+}
+.kr-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 0;
+}
+.kr-color {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+}
+.kr-score-bar {
+    width: 60px;
+    height: 3px;
+    background: var(--color-gray-20);
+    flex-shrink: 0;
+}
+.kr-score-fill {
+    height: 100%;
+    transition: width 300ms var(--ease-out-expo);
+}
+
+/* Past meetings dimmed */
+.meeting-past {
+    opacity: 0.5;
+}
+
+/* Weekly focus cards */
+.focus-card {
+    border: 1px solid var(--color-gray-15);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    background: var(--color-bg-secondary);
+}
+.focus-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    cursor: pointer;
+    gap: 8px;
+}
+.focus-card-header:hover {
+    background: var(--color-gray-10);
+}
+.focus-card-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.focus-card-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.focus-chevron {
+    transition: transform 200ms ease;
+    color: var(--color-text-secondary);
+}
+.focus-card.expanded .focus-chevron {
+    transform: rotate(180deg);
+}
+.focus-card-body {
+    padding: 0 12px 12px;
+}
+.focus-linked-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.focus-entry-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+.focus-entry-chip:hover {
+    background: var(--color-gray-10);
+}
+.focus-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.focus-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+}
+.focus-link:hover {
+    text-decoration: underline;
+}
+.focus-edit-form .form-input,
+.focus-edit-form .form-select,
+.focus-add-form .form-input,
+.focus-add-form .form-select {
+    font-size: 0.85rem;
+    padding: 6px 8px;
+}
+
+/* Entry autocomplete for focus items */
+.entry-autocomplete {
+    position: relative;
+}
+.entry-ac-selected {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
+.entry-ac-selected:empty {
+    display: none;
+}
+.entry-ac-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--color-gray-10);
+    border: 1px solid var(--color-gray-20);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px 2px 6px;
+    font-size: 0.75rem;
+}
+.entry-ac-chip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+.entry-ac-chip button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    padding: 0 2px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.entry-ac-chip button:hover {
+    color: var(--color-primary);
+}
+.entry-ac-results {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--color-surface);
+    border: 1px solid var(--color-gray-20);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    max-height: 220px;
+    overflow-y: auto;
+}
+.entry-ac-results.hidden {
+    display: none;
+}
+.entry-ac-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+.entry-ac-option:hover {
+    background: var(--color-gray-10);
+}
+.entry-ac-option.selected {
+    background: var(--color-primary-light, #fde8e7);
+    font-weight: 600;
+}
+
+/* Integration prompt empty state */
+.dashboard-integration-prompt {
+    padding: 12px 0;
+    text-align: center;
+}
+.dashboard-integration-prompt .btn {
+    margin-top: 8px;
+}
+
+/* Active work — collapsed shows only first 5 */
+.active-work--collapsed .dashboard-meeting-item:nth-child(n+6) {
+    display: none;
+}
+
+/* Week calendar widget */
+.week-calendar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.week-day {
+    text-align: center;
+    padding: 12px 8px;
+    border: 1px solid var(--color-gray-15);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-secondary);
+}
+.week-day--best {
+    border-color: var(--color-primary);
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-bg-secondary));
+}
+.week-day-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-bottom: 2px;
+}
+.week-day-abbr {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-text-secondary);
+}
+.week-day-date {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+.week-day-meetings {
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 2px;
+}
+.week-day-focus {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+.week-day--best .week-day-focus {
+    color: var(--color-primary);
+}
+
+/* Meeting day headlines */
+.meeting-day-headline {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-secondary);
+    margin: 12px 0 4px;
+    padding: 0;
+}
+.meeting-day-headline:first-of-type {
+    margin-top: 0;
+}
+.meeting-day-headline--past {
+    opacity: 0.5;
+}
+.meeting-day-today-badge {
+    text-transform: none;
+    font-weight: 700;
+    color: var(--color-primary);
+    letter-spacing: 0;
+}
+
+/* Focus block times in week widget */
+.week-day-blocks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 2px;
+}
+.week-day-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+}
+.week-day-block-hours {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+.week-day-block-range {
+    font-size: 0.6rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    border-top: 1px solid var(--color-border);
+    padding-top: 1px;
+    margin-top: 1px;
+}
+.week-day--best .week-day-block-hours {
+    color: var(--color-primary);
+}
+
+/* Entry autocomplete date */
+.entry-ac-date {
+    margin-left: auto;
+    font-size: 0.65rem;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+
+/* Focus add button disabled state */
+#focus-add-btn:disabled,
+#focus-add-btn.btn--greyed {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+/* Just-added list below capture form */
+#just-added-list {
+    margin-top: 4px;
+}
+#just-added-list:empty {
+    margin-top: 0;
+}
+
+/* Quick-add flash — legacy class kept for any remaining references */

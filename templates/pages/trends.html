@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}Trends — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Trends</h1>
+    <p class="page-subtitle">{{ phase.name }} · {{ total_entries }} entries</p>
+</div>
+
+<!-- Goals & Key Results -->
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">Goals &amp; Key Results</h2>
+    {% if goal_cards | length > 0 %}
+    <div class="trends-goal-cards">
+        {% for goal in goal_cards %}
+        <div class="trends-goal-card">
+            <h3 class="trends-goal-title">{{ goal.title }}</h3>
+            {% for kr in goal.krs %}
+            <div class="trends-kr-group">
+                <div class="trends-kr-row">
+                    <span class="trends-kr-dot" style="background:{{ kr.color }}"></span>
+                    <span class="trends-kr-name">{{ kr.name }}</span>
+                    <div class="trends-kr-bar-track">
+                        {% if kr.categories | length > 0 %}
+                        <div class="trends-kr-bar-fill trends-kr-stack" style="width:{{ kr.progress | default(value=100) }}%">
+                            {% for cat in kr.categories %}
+                            <div class="trends-kr-segment" style="flex-grow:{{ cat.count }};background:{{ cat.color }}" title="{{ cat.name }}: {{ cat.count }}"></div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="trends-kr-bar-fill" style="width:{{ kr.progress }}%;background:{{ kr.color }}"></div>
+                        {% endif %}
+                    </div>
+                    <span class="trends-kr-pct">{{ kr.progress }}%</span>
+                    {% if kr.entry_count > 0 %}
+                    <span class="trends-kr-entries">{{ kr.entry_count }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm text-muted">No goal or key result activity yet.</p>
+    {% endif %}
+</section>
+
+<!-- Category distribution -->
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">Category Distribution</h2>
+    <div class="trends-h-bars">
+        {% for item in category_bars %}
+        <div class="trends-h-bar-item">
+            <span class="trends-h-bar-label">{{ item.name }}</span>
+            <div class="trends-h-bar-track">
+                <div class="trends-h-bar-fill" style="width:{{ item.pct }}%;"></div>
+            </div>
+            <span class="trends-h-bar-value">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Code Activity -->
+{% if prs_opened > 0 or prs_reviewed > 0 or prs_merged > 0 %}
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">
+        Code Activity
+        {% if gh_prs_opened > 0 or phab_revisions_authored > 0 %}
+        <span class="trends-info-icon" tabindex="0">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-2px;opacity:0.5;"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0-1A6 6 0 1 0 8 2a6 6 0 0 0 0 12zm-.5-3h1V7h-1v4zm0-5h1V5h-1v1z"/></svg>
+            <span class="trends-info-tooltip">
+                {% if gh_prs_opened > 0 %}GitHub: {{ gh_prs_opened }} PRs{% endif %}
+                {% if gh_prs_opened > 0 and phab_revisions_authored > 0 %}<br>{% endif %}
+                {% if phab_revisions_authored > 0 %}Phabricator: {{ phab_revisions_authored }} revisions{% endif %}
+            </span>
+        </span>
+        {% endif %}
+    </h2>
+    <div class="trends-stat-grid">
+        {% if prs_opened > 0 %}
+        <div class="trends-stat">
+            <span class="trends-stat-value">{{ prs_opened }}</span>
+            <span class="trends-stat-label">PRs Opened</span>
+        </div>
+        {% endif %}
+        {% if prs_reviewed > 0 %}
+        <div class="trends-stat">
+            <span class="trends-stat-value">{{ prs_reviewed }}</span>
+            <span class="trends-stat-label">PRs Reviewed</span>
+        </div>
+        {% endif %}
+        {% if prs_merged > 0 %}
+        <div class="trends-stat">
+            <span class="trends-stat-value">{{ prs_merged }}</span>
+            <span class="trends-stat-label">PRs Merged</span>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Ticket Activity -->
+{% if jira_completed > 0 or jira_created > 0 or bugs_filed > 0 or bugs_fixed > 0 %}
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">Ticket Activity</h2>
+    <div class="trends-stat-grid">
+        {% if jira_completed > 0 %}
+        <div class="trends-stat">
+            <span class="trends-stat-value">{{ jira_completed }}</span>
+            <span class="trends-stat-label">Jira Completed</span>
+        </div>
+        {% endif %}
+        {% if jira_created > 0 %}
+        <div class="trends-stat">
+            <span class="trends-stat-value">{{ jira_created }}</span>
+            <span class="trends-stat-label">Jira Created</span>
+        </div>
+        {% endif %}
+        {% if bugs_filed > 0 %}
+        <div class="trends-stat">
+            <span class="trends-stat-value">{{ bugs_filed }}</span>
+            <span class="trends-stat-label">Bugs Filed</span>
+        </div>
+        {% endif %}
+        {% if bugs_fixed > 0 %}
+        <div class="trends-stat">
+            <span class="trends-stat-value">{{ bugs_fixed }}</span>
+            <span class="trends-stat-label">Bugs Fixed</span>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<style>
+/* Goal cards */
+.trends-goal-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.trends-goal-card {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+}
+.trends-goal-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+}
+.trends-kr-group {
+    margin-bottom: 6px;
+}
+.trends-kr-group:last-child {
+    margin-bottom: 0;
+}
+.trends-kr-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.trends-kr-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.trends-kr-name {
+    font-size: 0.8rem;
+    flex-shrink: 0;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.trends-kr-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--color-gray-10);
+    min-width: 60px;
+}
+.trends-kr-bar-fill {
+    height: 100%;
+    transition: width 300ms var(--ease-out-expo);
+}
+.trends-kr-pct {
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 36px;
+    text-align: right;
+}
+.trends-kr-entries {
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: var(--color-gray-10);
+    color: var(--color-text-secondary);
+    padding: 1px 6px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+/* Per-KR category stacked bar (inside progress fill) */
+.trends-kr-bar-fill.trends-kr-stack {
+    display: flex;
+    overflow: hidden;
+}
+.trends-kr-segment {
+    min-width: 3px;
+    cursor: default;
+}
+
+/* Horizontal bar chart */
+.trends-h-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.trends-h-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.trends-h-bar-label {
+    font-size: 0.8rem;
+    min-width: 120px;
+    max-width: 200px;
+    flex-shrink: 0;
+}
+.trends-h-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--color-gray-10);
+}
+.trends-h-bar-fill {
+    height: 100%;
+    background: var(--color-primary);
+    transition: width 300ms var(--ease-out-expo);
+}
+.trends-h-bar-value {
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-width: 30px;
+    text-align: right;
+}
+
+/* Info icon with hover tooltip */
+.trends-info-icon {
+    position: relative;
+    display: inline-block;
+    cursor: help;
+    margin-left: 4px;
+}
+.trends-info-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-size: 0.75rem;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+.trends-info-icon:hover .trends-info-tooltip,
+.trends-info-icon:focus .trends-info-tooltip {
+    display: block;
+}
+
+/* Stat grid for code / ticket activity */
+.trends-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 16px;
+}
+.trends-stat {
+    text-align: center;
+}
+.trends-stat-value {
+    display: block;
+    font-family: var(--font-stack-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-primary);
+}
+.trends-stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-top: 4px;
+}
+</style>
+{% endblock %}

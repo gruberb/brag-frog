@@ -1,0 +1,19 @@
+<div class="card initiative-card" id="initiative-{{ initiative.id }}" style="margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            {% if initiative.scope %}
+            <span class="badge" style="background:var(--color-tint-purple);color:var(--color-purple-30);font-size:0.7rem;">{{ initiative.scope }}</span>
+            {% endif %}
+            <span style="font-weight:500;font-size:0.9rem;cursor:pointer;" onclick="openPanelFromUrl('{{ initiative.title | escape }}', '/initiatives/{{ initiative.id }}/panel')">{{ initiative.title }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge badge-type" style="font-size:0.7rem;">{{ initiative.status }}</span>
+            <button class="btn btn-text btn-sm" style="color:var(--color-error);padding:2px;"
+                hx-delete="/initiatives/{{ initiative.id }}" hx-target="#initiative-{{ initiative.id }}" hx-swap="outerHTML"
+                hx-confirm="Delete this initiative?">×</button>
+        </div>
+    </div>
+    {% if initiative.description %}
+    <p class="text-sm text-muted" style="margin-top:4px;">{{ initiative.description }}</p>
+    {% endif %}
+</div>

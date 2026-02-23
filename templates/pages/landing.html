@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            Brag Frog{% if instance_name %} — {{ instance_name }}{% endif %}
+        </title>
+        <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg" />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="32x32"
+            href="/static/img/favicon.png"
+        />
+        <link rel="apple-touch-icon" href="/static/img/favicon.png" />
+        <link rel="stylesheet" href="/static/css/tokens.css" />
+        <link rel="stylesheet" href="/custom/tokens.css" />
+        <link rel="stylesheet" href="/static/css/landing.css" />
+    </head>
+    <body>
+        <!-- Navigation -->
+        <nav class="landing-nav">
+            <div class="nav-inner">
+                <a href="/" class="nav-brand">
+                    <img src="/static/img/symbol.svg" alt="" class="nav-logo" />
+                    <span class="nav-wordmark"
+                        >Brag Frog{% if instance_name %}
+                        <span class="nav-instance-sep">|</span>
+                        <span class="nav-instance-name"
+                            >{{ instance_name }}</span
+                        >{% endif %}</span
+                    >
+                </a>
+                <a href="{{ google_auth_url }}" class="nav-cta">
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 18 18"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"
+                            fill="#4285F4"
+                        />
+                        <path
+                            d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"
+                            fill="#34A853"
+                        />
+                        <path
+                            d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"
+                            fill="#FBBC05"
+                        />
+                        <path
+                            d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"
+                            fill="#EA4335"
+                        />
+                    </svg>
+                    Sign in
+                </a>
+            </div>
+        </nav>
+
+        <!-- Hero -->
+        <section class="instance-hero">
+            <img
+                src="/static/img/symbol.svg"
+                alt="Brag Frog"
+                class="instance-hero-logo"
+            />
+            <h1 class="instance-hero-title">Welcome to <em>Brag Frog</em></h1>
+            <p class="instance-hero-description">
+                Sync your work, prep meetings with AI, track goals, and generate
+                self-review drafts — all in one place.
+            </p>
+            <a href="{{ google_auth_url }}" class="btn-primary">
+                <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 18 18"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <path
+                        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"
+                        fill="#4285F4"
+                    />
+                    <path
+                        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"
+                        fill="#34A853"
+                    />
+                    <path
+                        d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"
+                        fill="#FBBC05"
+                    />
+                    <path
+                        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"
+                        fill="#EA4335"
+                    />
+                </svg>
+                Sign in with Google
+            </a>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="features-grid reveal">
+            <div class="features-grid-inner">
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/dashboard.png"
+                        alt="Dashboard"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Dashboard</h4>
+                        <p>
+                            Meetings, focus goals, check-in prompt, OKR snapshot
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/logbook.png"
+                        alt="Logbook"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Logbook</h4>
+                        <p>
+                            Contributions by week with filters and inline
+                            analysis
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/goals.png"
+                        alt="Goals & OKRs"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Goals & OKRs</h4>
+                        <p>
+                            Numeric, boolean, milestone targets with
+                            auto-scoring
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/feature_meetingprep.png"
+                        alt="Meeting Prep"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Meeting Prep</h4>
+                        <p>AI-generated talking points for every 1:1</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/trends.png"
+                        alt="Trends"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Trends</h4>
+                        <p>
+                            Category distribution, KR progress curves, activity
+                            overview
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/levelguide.png"
+                        alt="Level Guide"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Career Level Guide</h4>
+                        <p>
+                            Built-in IC ladder expectations alongside your work
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/feature_focustime.png"
+                        alt="Focus Time"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Focus Time</h4>
+                        <p>Track your weekly focus alongside meetings</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="/static/img/product/feature_quickcommands.png"
+                        alt="Quick Commands"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Quick Commands</h4>
+                        <p>Cmd+K command palette for instant access</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="landing-footer instance-footer">
+            <p class="footer-wordmark">Brag Frog</p>
+            <nav class="footer-links">
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+            </nav>
+        </footer>
+
+        <!-- Scroll reveal -->
+        <script>
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((e) => {
+                        if (e.isIntersecting) {
+                            e.target.classList.add("visible");
+                            observer.unobserve(e.target);
+                        }
+                    });
+                },
+                { threshold: 0.1 },
+            );
+            document
+                .querySelectorAll(".reveal")
+                .forEach((el) => observer.observe(el));
+        </script>
+    </body>
+</html>

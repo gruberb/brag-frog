@@ -1,0 +1,274 @@
+<div id="entry-{{ entry.id }}" class="entry-row {% if entry.description or entry.source_url or entry.teams or entry.collaborators %}entry-row--expandable{% endif %}">
+    <div class="entry-row-main" onclick="toggleEntryDetail('entry-{{ entry.id }}')">
+        <span class="entry-source-icon" title="{{ entry.source }}">
+            {% if entry.source == "github" %}
+            <svg width="16" height="16" viewBox="0 0 16 16"><path fill="#24292f" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+            {% elif entry.source == "phabricator" %}
+            <img src="/static/img/favicon-phabricator.png" alt="Phabricator" width="16" height="16">
+            {% elif entry.source == "bugzilla" %}
+            <img src="/static/img/favicon-bugzilla.svg" alt="Bugzilla" width="16" height="16">
+            {% elif entry.source == "jira" %}
+            <img src="/static/img/favicon-jira.ico" alt="Jira" width="16" height="16">
+            {% elif entry.source == "confluence" %}
+            <img src="/static/img/favicon-jira.ico" alt="Confluence" width="16" height="16">
+            {% elif entry.source == "google_calendar" %}
+            <img src="/static/img/favicon-gcalendar.png" alt="Google Calendar" width="16" height="16">
+            {% elif entry.source == "google_drive" %}
+                {% if entry.description == "Google Sheet" %}
+                <img src="/static/img/favicon-gsheets.png" alt="Google Sheets" width="16" height="16">
+                {% elif entry.description == "Google Slides" %}
+                <img src="/static/img/favicon-gslides.png" alt="Google Slides" width="16" height="16">
+                {% else %}
+                <img src="/static/img/favicon-gdocs.png" alt="Google Docs" width="16" height="16">
+                {% endif %}
+            {% else %}
+                {% if entry.entry_type == "meeting" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5zM1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4H1z"/></svg>
+                {% elif entry.entry_type == "workshop" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 0L0 1l2.2 3.081a1 1 0 0 0 .815.419h.07a1 1 0 0 1 .708.293l2.675 2.675-2.617 2.654A3.003 3.003 0 0 0 0 13a3 3 0 1 0 5.878-.851l2.654-2.617.968.968-.305.914a1 1 0 0 0 .242 1.023l3.27 3.27a.997.997 0 0 0 1.414 0l1.586-1.586a.997.997 0 0 0 0-1.414l-3.27-3.27a1 1 0 0 0-1.023-.242L10.5 9.5l-.96-.96 2.68-2.643A3.005 3.005 0 0 0 16 3c0-.269-.035-.53-.102-.777l-2.14 2.141L12 4l-.364-1.757L13.777.102a3 3 0 0 0-3.675 3.68L7.462 6.46 4.793 3.793a1 1 0 0 1-.293-.707v-.071a1 1 0 0 0-.419-.814L1 0zm9.646 10.646a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708z"/></svg>
+                {% elif entry.entry_type == "mentoring" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917l-7.5-3.5z"/><path d="M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466 4.176 9.032z"/></svg>
+                {% elif entry.entry_type == "presentation" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H2zM1 5v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5H1zm5.5 2a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-.854.354L4.854 10.56a.5.5 0 1 1 .708-.706l.938.94V7.5a.5.5 0 0 1 .5-.5zm4.354.354a.5.5 0 0 0-.708 0l-.94.938V7.5a.5.5 0 0 0-1 0v4a.5.5 0 0 0 .854.354l1.292-1.293a.5.5 0 0 0-.708-.706l-.938.94V7.854a.5.5 0 0 0 .148-.354z"/></svg>
+                {% elif entry.entry_type == "pairing" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1H7zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path fill-rule="evenodd" d="M5.216 14A2.238 2.238 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.325 6.325 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1h4.216z"/><path d="M4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"/></svg>
+                {% elif entry.entry_type == "cross_team" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 3a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm7 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm3.5 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm-10 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path d="M5.5 3.5h5M3 5.5v5M8 5.5v5M13 5.5v5M5.5 13h5" stroke="currentColor" stroke-width="1" fill="none" opacity="0.4"/></svg>
+                {% elif entry.entry_type == "design_doc" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5z"/></svg>
+                {% elif entry.entry_type == "code_review" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5.854 4.854a.5.5 0 1 0-.708-.708l-3.5 3.5a.5.5 0 0 0 0 .708l3.5 3.5a.5.5 0 0 0 .708-.708L2.707 8l3.147-3.146zm4.292 0a.5.5 0 0 1 .708-.708l3.5 3.5a.5.5 0 0 1 0 .708l-3.5 3.5a.5.5 0 0 1-.708-.708L13.293 8l-3.147-3.146z"/></svg>
+                {% elif entry.entry_type == "development" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M6 9a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3A.5.5 0 0 1 6 9zM3.854 4.146a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2z"/><path d="M2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2H2zm12 1a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1h12z"/></svg>
+                {% elif entry.entry_type == "onboarding" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10.175.78a.5.5 0 0 0-.35.855l1.64 1.64L8.175 6.564 5.03 3.42a.5.5 0 0 0-.707 0L.146 7.596a.5.5 0 1 0 .707.707l3.824-3.824 3.146 3.147a.5.5 0 0 0 .707 0l3.643-3.643 1.64 1.64a.5.5 0 0 0 .855-.354V.5a.5.5 0 0 0-.5-.5h-4.193z"/><path d="M3.5 10a.5.5 0 0 1 .5.5v3.5a.5.5 0 0 1-1 0v-3.5a.5.5 0 0 1 .5-.5zm4-2a.5.5 0 0 1 .5.5v5.5a.5.5 0 0 1-1 0V8.5a.5.5 0 0 1 .5-.5zm4 2a.5.5 0 0 1 .5.5v3.5a.5.5 0 0 1-1 0v-3.5a.5.5 0 0 1 .5-.5z"/></svg>
+                {% elif entry.entry_type == "learning" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/></svg>
+                {% elif entry.entry_type == "interview" %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.414l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/><path d="M3 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 6a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 6zm0 2.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/></svg>
+                {% else %}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4zm3.5 1a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 2a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3z"/></svg>
+                {% endif %}
+            {% endif %}
+        </span>
+
+        <div class="entry-row-title-block">
+            <span class="entry-row-title">{{ entry.title }}</span>
+            <span class="entry-row-subtitle">
+                {{ entry.entry_type | entry_type_label | lower }}
+                {% if entry.key_result_id %}
+                    {% for kr in key_results %}
+                        {% if kr.id == entry.key_result_id %}
+                            &middot; <span style="color:{{ kr.color | default(value='#999') }}">{{ kr.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            </span>
+        </div>
+
+        {% if entry.source_url %}
+        <a href="{{ entry.source_url }}" target="_blank" rel="noopener" class="entry-row-link" title="Open source" onclick="event.stopPropagation();">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/><path d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/></svg>
+        </a>
+        {% endif %}
+
+        <span class="entry-row-date">{{ entry.occurred_at }}</span>
+
+        <span class="entry-row-actions"></span>
+    </div>
+
+    <div class="entry-row-detail hidden" id="entry-detail-{{ entry.id }}">
+        <div id="entry-content-view-{{ entry.id }}">
+        {% if entry.description %}
+        <div class="entry-row-full-description entry-row-full-description--md">
+            {{ entry.description | markdown | safe }}
+        </div>
+        {% endif %}
+
+        {% if entry.source_url and entry.source != "manual" %}
+        <div class="entry-row-source-info">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="flex-shrink:0;opacity:0.5;"><path d="M4.715 6.542L3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1.002 1.002 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4.018 4.018 0 0 1-.128-1.287z"/><path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243L6.586 4.672z"/></svg>
+            <a href="{{ entry.source_url }}" target="_blank" rel="noopener" class="entry-row-source-link" onclick="event.stopPropagation();">{{ entry.source_url | truncate(length=80) }}</a>
+        </div>
+        {% endif %}
+        </div>
+
+        <div class="entry-row-meta" id="entry-meta-view-{{ entry.id }}">
+            {% if entry.teams %}
+            <div class="entry-row-meta-item">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="flex-shrink:0;opacity:0.6;"><path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-.779.357-1.85 1.084-2.803.243-.32.52-.62.827-.892zM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+                {% for team in entry.teams | split(pat=",") %}
+                <span class="entry-meta-chip">{{ team | trim }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if entry.collaborators %}
+            <div class="entry-row-meta-item">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="flex-shrink:0;opacity:0.6;"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+                {% for collab in entry.collaborators | split(pat=",") %}
+                <span class="entry-meta-chip">{{ collab | trim }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="entry-row-meta-item" style="margin-left:auto;">
+                <button class="btn btn-sm btn-secondary"
+                        onclick="event.stopPropagation(); toggleEntryEdit('{{ entry.id }}')">
+                    Edit
+                </button>
+                {% if entry.source == "google_drive" %}
+                <button class="btn btn-sm btn-secondary"
+                        hx-post="/entries/{{ entry.id }}/exclude-file"
+                        hx-target="#entry-{{ entry.id }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="Exclude this file from future syncs? All entries for this file will be hidden."
+                        onclick="event.stopPropagation();">
+                    Exclude
+                </button>
+                {% endif %}
+                {% if entry.source == "google_calendar" %}
+                <button class="btn btn-sm btn-secondary"
+                        hx-post="/entries/{{ entry.id }}/exclude-event"
+                        hx-target="#entry-{{ entry.id }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="Exclude this event series from future syncs? All instances will be hidden."
+                        onclick="event.stopPropagation();">
+                    Exclude
+                </button>
+                {% endif %}
+                <button class="btn-icon btn-icon--danger"
+                        hx-delete="/entries/{{ entry.id }}"
+                        hx-target="#entry-{{ entry.id }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="Delete this entry?"
+                        title="Delete"
+                        onclick="event.stopPropagation();">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <form class="entry-row-meta entry-edit-form hidden" id="entry-meta-edit-{{ entry.id }}"
+              hx-put="/entries/{{ entry.id }}"
+              hx-target="#entry-{{ entry.id }}"
+              hx-swap="outerHTML">
+
+            <div class="entry-edit-fields">
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline" for="type-select-{{ entry.id }}">Type</label>
+                    <select id="type-select-{{ entry.id }}"
+                            class="form-select form-select--sm"
+                            name="entry_type"
+                            required>
+                        {% if entry.source == "manual" %}
+                            {% for group in manual_grouped_entry_types %}
+                            <optgroup label="{{ group.group }}">
+                                {% for et in group.options %}
+                                <option value="{{ et.value }}" {% if entry.entry_type == et.value %}selected{% endif %}>{{ et.label }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        {% else %}
+                            {% for group in grouped_entry_types %}
+                            <optgroup label="{{ group.group }}">
+                                {% for et in group.options %}
+                                <option value="{{ et.value }}" {% if entry.entry_type == et.value %}selected{% endif %}>{{ et.label }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="entry-row-meta-item" style="flex-basis:100%;">
+                    <label class="form-label form-label--inline" for="title-input-{{ entry.id }}">Title</label>
+                    <input type="text" id="title-input-{{ entry.id }}"
+                           class="form-input form-input--sm"
+                           name="title"
+                           value="{{ entry.title }}"
+                           required>
+                </div>
+
+                <div class="entry-row-meta-item" style="flex-basis:100%;">
+                    <label class="form-label form-label--inline" for="description-input-{{ entry.id }}">Description</label>
+                    <textarea id="description-input-{{ entry.id }}"
+                              class="form-input form-input--sm"
+                              name="description"
+                              rows="3"
+                              style="resize:vertical;">{{ entry.description | default(value="") }}</textarea>
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline" for="kr-select-{{ entry.id }}">Key Result</label>
+                    <select id="kr-select-{{ entry.id }}"
+                            class="form-select form-select--sm"
+                            name="key_result_id">
+                        <option value="">No key result</option>
+                        {% if goals is defined %}
+                        {% for goal in goals %}
+                        <optgroup label="{{ goal.title }}">
+                            {% for kr in key_results %}{% if kr.goal_id and kr.goal_id == goal.id %}
+                            <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                            {% endif %}{% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                        {% for kr in key_results %}{% if not kr.goal_id %}
+                        <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                        {% endif %}{% endfor %}
+                        {% else %}
+                        {% for kr in key_results %}
+                        <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                        {% endfor %}
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline" for="date-input-{{ entry.id }}">Date</label>
+                    <input type="date" id="date-input-{{ entry.id }}"
+                           class="form-input form-input--sm"
+                           name="occurred_at"
+                           value="{{ entry.occurred_at }}"
+                           required>
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline" for="teams-input-{{ entry.id }}">Teams</label>
+                    <input type="text" id="teams-input-{{ entry.id }}"
+                           class="form-input form-input--sm"
+                           name="teams"
+                           value="{{ entry.teams | default(value='') }}"
+                           placeholder="e.g. WebCompat, DevTools">
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline" for="collaborators-input-{{ entry.id }}">Collaborators</label>
+                    <input type="text" id="collaborators-input-{{ entry.id }}"
+                           class="form-input form-input--sm"
+                           name="collaborators"
+                           value="{{ entry.collaborators | default(value='') }}"
+                           placeholder="e.g. Alice, Bob">
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline" for="link-input-{{ entry.id }}">Link</label>
+                    <input type="url" id="link-input-{{ entry.id }}"
+                           class="form-input form-input--sm"
+                           name="source_url"
+                           value="{{ entry.source_url | default(value='') }}"
+                           placeholder="https://...">
+                </div>
+            </div>
+
+            <div class="entry-row-meta-item" style="margin-left:auto;">
+                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                <button type="button" class="btn btn-sm btn-text"
+                        hx-get="/entries/{{ entry.id }}/view"
+                        hx-target="#entry-{{ entry.id }}"
+                        hx-swap="outerHTML">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>

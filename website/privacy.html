@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Privacy Policy — Brag Frog</title>
+        <link rel="icon" type="image/png" sizes="32x32" href="img/favicon.png" />
+        <link rel="stylesheet" href="css/tokens.css" />
+        <style>
+            body { font-family: var(--font-stack); color: var(--color-text); background: var(--color-bg); line-height: 1.7; }
+            .container { max-width: 720px; margin: 0 auto; padding: 4rem 1.5rem; }
+            h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+            h2 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.5rem; }
+            p, ul { margin-bottom: 1rem; }
+            ul { padding-left: 1.5rem; }
+            .meta { color: var(--color-text-secondary); font-size: 0.875rem; margin-bottom: 2rem; }
+            a { color: var(--color-primary); }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Privacy Policy</h1>
+            <p class="meta">Last updated: February 20, 2026</p>
+
+            <h2>What Brag Frog is</h2>
+            <p>Brag Frog is an open-source, self-hosted brag document tool. Each organization runs its own instance. This policy covers the Brag Frog software and any instance operated by the project maintainers.</p>
+
+            <h2>Data we collect</h2>
+            <p>When you sign in with Google, we receive and store:</p>
+            <ul>
+                <li><strong>Name and email address</strong> — from your Google account, used for authentication</li>
+                <li><strong>Profile photo URL</strong> — displayed in the app header</li>
+            </ul>
+            <p>When you use the app, we store:</p>
+            <ul>
+                <li><strong>Entries you create</strong> — manual entries and synced work items (titles only from external services)</li>
+                <li><strong>Goals and key results</strong> — that you define</li>
+                <li><strong>API tokens</strong> — encrypted with AES-256-GCM before storage</li>
+                <li><strong>AI-generated summaries</strong> — self-review drafts you generate</li>
+            </ul>
+
+            <h2>Data we do NOT collect</h2>
+            <ul>
+                <li>No analytics or tracking</li>
+                <li>No cookies beyond the session cookie for authentication</li>
+                <li>No PR/issue body content — only titles are synced from external services</li>
+                <li>No data is shared with third parties</li>
+            </ul>
+
+            <h2>Where data is stored</h2>
+            <p>All data is stored in a SQLite database on the server running the Brag Frog instance. API tokens are encrypted at rest with AES-256-GCM using per-user derived keys. The database is controlled by the organization operating the instance.</p>
+
+            <h2>Third-party services</h2>
+            <ul>
+                <li><strong>Google OAuth</strong> — used for sign-in. Google receives standard OAuth flow data (redirect URI, scopes). See <a href="https://policies.google.com/privacy">Google's Privacy Policy</a>.</li>
+                <li><strong>Anthropic API</strong> — if you configure an API key for AI summaries, your entry titles are sent to Anthropic's API to generate self-review drafts. See <a href="https://www.anthropic.com/privacy">Anthropic's Privacy Policy</a>.</li>
+                <li><strong>External sync services</strong> (GitHub, Jira, etc.) — the app connects to these using tokens you provide, fetching only titles and metadata.</li>
+            </ul>
+
+            <h2>Data deletion</h2>
+            <p>You can delete your data at any time:</p>
+            <ul>
+                <li>Delete individual entries, goals, or key results from the UI</li>
+                <li>Delete an entire performance cycle (cascades to all its data)</li>
+                <li>Reset integration tokens from Settings</li>
+            </ul>
+            <p>For complete account deletion, contact the administrator of your Brag Frog instance.</p>
+
+            <h2>Self-hosted instances</h2>
+            <p>If your organization self-hosts Brag Frog, the instance operator controls all data. This policy applies to the software's default behavior. Your organization may have additional policies.</p>
+
+            <h2>Contact</h2>
+            <p>For privacy questions, open an issue on <a href="https://github.com/gruberb/brag-frog">GitHub</a>.</p>
+        </div>
+    </body>
+</html>

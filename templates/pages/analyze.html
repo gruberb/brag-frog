@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Logbook — Brag Frog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Logbook</h1>
+    <p class="page-subtitle">{{ phase.name }} &mdash; <span id="filtered-count">{{ filtered_count }}</span> of {{ total_entries }} entries <button type="button" class="report-subtitle-btn" onclick="toggleReportSidebar()">Report <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z"/></svg></button></p>
+</div>
+
+<div class="analyze-layout">
+    <!-- Compact filter toolbar -->
+    <div class="analyze-toolbar">
+        <div class="analyze-toolbar-row">
+            <input type="text"
+                   id="filter-search"
+                   class="form-input analyze-search-input"
+                   placeholder="Search entries..."
+                   value="{{ init_search }}"
+                   oninput="debounceApply()">
+
+            <select id="filter-goal" class="form-select analyze-toolbar-select" onchange="onGoalChange()">
+                <option value="">All Goals</option>
+                {% for goal in goals %}
+                <option value="{{ goal.id }}" {% if init_goal_id == goal.id ~ "" %}selected{% endif %}>{{ goal.title }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="filter-key-result" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                <option value="">All Key Results</option>
+                {% for kr in key_results %}
+                <option value="{{ kr.id }}" data-goal-id="{{ kr.goal_id | default(value='') }}" {% if init_key_result_id == kr.id ~ "" %}selected{% endif %}>{{ kr.name }}</option>
+                {% endfor %}
+            </select>
+
+            <select id="filter-category" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                <option value="">All Types</option>
+                <option value="reviews" {% if init_category == "reviews" %}selected{% endif %}>Reviews</option>
+                <option value="code" {% if init_category == "code" %}selected{% endif %}>Code</option>
+                <option value="docs" {% if init_category == "docs" %}selected{% endif %}>Docs</option>
+                <option value="meetings" {% if init_category == "meetings" %}selected{% endif %}>Meetings</option>
+                <option value="collaboration" {% if init_category == "collaboration" %}selected{% endif %}>Collaboration</option>
+                <option value="learning" {% if init_category == "learning" %}selected{% endif %}>Learning</option>
+            </select>
+
+        </div>
+
+        <div class="analyze-more-panel open" id="more-panel">
+            <div class="analyze-more-grid">
+                <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Source</label>
+                    <select id="filter-source" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All Sources</option>
+                        <option value="github" {% if init_source == "github" %}selected{% endif %}>GitHub</option>
+                        <option value="phabricator" {% if init_source == "phabricator" %}selected{% endif %}>Phabricator</option>
+                        <option value="bugzilla" {% if init_source == "bugzilla" %}selected{% endif %}>Bugzilla</option>
+                        <option value="jira" {% if init_source == "jira" %}selected{% endif %}>Jira</option>
+                        <option value="confluence" {% if init_source == "confluence" %}selected{% endif %}>Confluence</option>
+                        <option value="google_drive" {% if init_source == "google_drive" %}selected{% endif %}>Google Drive</option>
+                        <option value="google_calendar" {% if init_source == "google_calendar" %}selected{% endif %}>Google Calendar</option>
+                        <option value="manual" {% if init_source == "manual" %}selected{% endif %}>Manual</option>
+                    </select>
+                </div>
+                <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Team</label>
+                    <select id="filter-team" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All Teams</option>
+                        {% for team in all_teams %}
+                        <option value="{{ team }}" {% if init_team == team %}selected{% endif %}>{{ team }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Person</label>
+                    <select id="filter-collaborator" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All People</option>
+                        {% for collab in all_collaborators %}
+                        <option value="{{ collab }}" {% if init_collaborator == collab %}selected{% endif %}>{{ collab }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="analyze-checkboxes">
+                    <label class="form-label form-label--inline">Show only:</label>
+                    <label class="analyze-checkbox-label">
+                        <input type="checkbox" id="filter-no-kr" onchange="applyFilters()" {% if init_no_key_result == "1" %}checked{% endif %}>
+                        Unlinked
+                    </label>
+                    <label class="analyze-checkbox-label">
+                        <input type="checkbox" id="filter-no-team" onchange="applyFilters()" {% if init_no_team == "1" %}checked{% endif %}>
+                        Missing team
+                    </label>
+                    <label class="analyze-checkbox-label">
+                        <input type="checkbox" id="filter-no-collab" onchange="applyFilters()" {% if init_no_collaborator == "1" %}checked{% endif %}>
+                        Missing collaborator
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active filter pills + clear button -->
+    <div class="filter-pills-row" id="filter-pills-row" style="display:none">
+        <button type="button" class="btn btn-sm btn-secondary" id="clear-all-btn" onclick="clearFilters()">Clear all</button>
+        <div class="filter-pills" id="filter-pills"></div>
+    </div>
+
+    <!-- Results (insights + date-grouped entries) -->
+    <div id="analyze-results">
+        {% include "components/analyze_results.html" %}
+    </div>
+</div>
+
+<script>
+function toggleReportSidebar() {
+    document.getElementById('report-sidebar').classList.toggle('open');
+    document.getElementById('report-overlay').classList.toggle('open');
+}
+
+// Goal → key result IDs (for cascading dropdown)
+var GOAL_KEY_RESULTS = {{ goal_key_results_json | safe }};
+
+var _debounceTimer = null;
+function debounceApply() {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(applyFilters, 300);
+}
+
+function onGoalChange() {
+    document.getElementById('filter-key-result').value = '';
+    filterKeyResultsByGoal(document.getElementById('filter-goal').value);
+    applyFilters();
+}
+
+function filterKeyResultsByGoal(goalId) {
+    var select = document.getElementById('filter-key-result');
+    var options = select.querySelectorAll('option[data-goal-id]');
+    options.forEach(function(opt) {
+        if (!goalId || opt.dataset.goalId === goalId) {
+            opt.style.display = '';
+            opt.disabled = false;
+        } else {
+            opt.style.display = 'none';
+            opt.disabled = true;
+            if (opt.selected) select.value = '';
+        }
+    });
+}
+
+function applyFilters() {
+    var params = new URLSearchParams();
+    var goal = document.getElementById('filter-goal').value;
+    var kr = document.getElementById('filter-key-result').value;
+    var category = document.getElementById('filter-category').value;
+    var source = document.getElementById('filter-source').value;
+    var team = document.getElementById('filter-team').value;
+    var collab = document.getElementById('filter-collaborator').value;
+    var search = document.getElementById('filter-search').value.trim();
+    var noKr = document.getElementById('filter-no-kr').checked;
+    var noTeam = document.getElementById('filter-no-team').checked;
+    var noCollab = document.getElementById('filter-no-collab').checked;
+
+    if (goal) params.set('goal_id', goal);
+    if (kr) params.set('key_result_id', kr);
+    if (category) params.set('category', category);
+    if (source) params.set('source', source);
+    if (team) params.set('team', team);
+    if (collab) params.set('collaborator', collab);
+    if (search) params.set('search', search);
+    if (noKr) params.set('no_key_result', '1');
+    if (noTeam) params.set('no_team', '1');
+    if (noCollab) params.set('no_collaborator', '1');
+
+    htmx.ajax('GET', '/logbook/entries?' + params.toString(), {target: '#analyze-results', swap: 'innerHTML'});
+
+    // Sync URL for bookmarkability
+    var url = '/logbook';
+    var qs = params.toString();
+    if (qs) url += '?' + qs;
+    history.replaceState(null, '', url);
+
+    updateFilterPills(params);
+    updateClearButton(params);
+}
+
+function clearFilters() {
+    document.getElementById('filter-goal').value = '';
+    document.getElementById('filter-key-result').value = '';
+    document.getElementById('filter-category').value = '';
+    document.getElementById('filter-source').value = '';
+    document.getElementById('filter-team').value = '';
+    document.getElementById('filter-collaborator').value = '';
+    document.getElementById('filter-search').value = '';
+    document.getElementById('filter-no-kr').checked = false;
+    document.getElementById('filter-no-team').checked = false;
+    document.getElementById('filter-no-collab').checked = false;
+    filterKeyResultsByGoal('');
+    applyFilters();
+}
+
+function removeFilter(field) {
+    if (field === 'goal_id') { document.getElementById('filter-goal').value = ''; document.getElementById('filter-key-result').value = ''; filterKeyResultsByGoal(''); }
+    else if (field === 'key_result_id') document.getElementById('filter-key-result').value = '';
+    else if (field === 'category') document.getElementById('filter-category').value = '';
+    else if (field === 'source') document.getElementById('filter-source').value = '';
+    else if (field === 'team') document.getElementById('filter-team').value = '';
+    else if (field === 'collaborator') document.getElementById('filter-collaborator').value = '';
+    else if (field === 'search') document.getElementById('filter-search').value = '';
+    else if (field === 'no_key_result') document.getElementById('filter-no-kr').checked = false;
+    else if (field === 'no_team') document.getElementById('filter-no-team').checked = false;
+    else if (field === 'no_collaborator') document.getElementById('filter-no-collab').checked = false;
+    applyFilters();
+}
+
+var PILL_LABELS = {
+    goal_id: 'Goal',
+    key_result_id: 'Key Result',
+    category: 'Type',
+    source: 'Source',
+    team: 'Team',
+    collaborator: 'Person',
+    search: 'Search',
+    no_key_result: 'Unlinked',
+    no_team: 'Missing team',
+    no_collaborator: 'Missing collaborator'
+};
+
+function updateFilterPills(params) {
+    var container = document.getElementById('filter-pills');
+    var html = '';
+    params.forEach(function(value, key) {
+        var label = PILL_LABELS[key] || key;
+        var displayValue = value;
+        // Resolve display names for IDs
+        if (key === 'goal_id') {
+            var opt = document.querySelector('#filter-goal option[value="' + value + '"]');
+            if (opt) displayValue = opt.textContent;
+        } else if (key === 'key_result_id') {
+            var opt = document.querySelector('#filter-key-result option[value="' + value + '"]');
+            if (opt) displayValue = opt.textContent;
+        } else if (key === 'no_key_result' || key === 'no_team' || key === 'no_collaborator') {
+            displayValue = '';
+        }
+        html += '<span class="filter-pill">' + label + (displayValue ? ': ' + displayValue : '') +
+                ' <button class="filter-pill-remove" onclick="removeFilter(\'' + key + '\')">&times;</button></span>';
+    });
+    container.innerHTML = html;
+}
+
+function updateClearButton(params) {
+    var row = document.getElementById('filter-pills-row');
+    row.style.display = params.toString() ? '' : 'none';
+}
+
+// On page load: apply initial goal filter to cascade KR dropdown
+(function() {
+    var initGoal = '{{ init_goal_id }}';
+    if (initGoal) filterKeyResultsByGoal(initGoal);
+
+    // Show clear button if any filters are active
+    var params = new URLSearchParams(window.location.search);
+    updateFilterPills(params);
+    updateClearButton(params);
+})();
+</script>
+{% endblock %}
+
+{% block overlay %}
+<div class="sidebar-overlay" id="report-overlay" onclick="toggleReportSidebar()"></div>
+<div class="sidebar-panel sidebar-panel--report" id="report-sidebar">
+    <div class="sidebar-panel-header">
+        <h3>Report</h3>
+        <button type="button" class="btn-icon" onclick="toggleReportSidebar()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+    </div>
+    <div id="report-content">
+        {% include "components/analyze_report.html" %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+<!-- Date-grouped entry list -->
+{% if date_groups | length == 0 %}
+<div class="empty-state">
+    <p>No entries match your filters.</p>
+</div>
+{% else %}
+{% for group in date_groups %}
+<div class="date-divider">
+    <span class="date-divider-label">{{ group.label }}</span>
+    <span class="date-divider-count">{{ group.count }}</span>
+</div>
+{% for entry in group.entries %}
+{% include "components/entry_card.html" %}
+{% endfor %}
+{% endfor %}
+{% endif %}

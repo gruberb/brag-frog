@@ -1,0 +1,53 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea for Brag Frog? We'd love to hear it.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem does this solve? Why do you need it?
+      placeholder: I find it difficult to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How do you think this should work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you tried any workarounds or considered other approaches?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Dashboard
+        - Logbook
+        - Goals & OKRs
+        - Integrations / Sync
+        - Meeting Prep
+        - Weekly Check-ins
+        - Self Review
+        - Impact Stories
+        - Trends
+        - Settings
+        - Export
+        - New area
+    validations:
+      required: true

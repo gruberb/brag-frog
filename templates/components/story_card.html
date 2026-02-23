@@ -1,0 +1,32 @@
+<div class="card" id="story-{{ story.id }}" style="margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:4px;">{{ story.title }}</h3>
+            <span class="badge badge-type" style="font-size:0.7rem;">{{ story.status }}</span>
+        </div>
+        <button class="btn btn-text btn-sm" style="color:var(--color-error);"
+            hx-delete="/impact-stories/{{ story.id }}" hx-target="#story-{{ story.id }}" hx-swap="outerHTML"
+            hx-confirm="Delete this story?">×</button>
+    </div>
+
+    {% if story.situation %}
+    <div style="margin-top:8px;">
+        <span class="form-label" style="display:block;">Situation</span>
+        <p class="text-sm">{{ story.situation }}</p>
+    </div>
+    {% endif %}
+
+    {% if story.actions %}
+    <div style="margin-top:6px;">
+        <span class="form-label" style="display:block;">Actions</span>
+        <p class="text-sm">{{ story.actions }}</p>
+    </div>
+    {% endif %}
+
+    {% if story.result %}
+    <div style="margin-top:6px;">
+        <span class="form-label" style="display:block;">Result</span>
+        <p class="text-sm">{{ story.result }}</p>
+    </div>
+    {% endif %}
+</div>

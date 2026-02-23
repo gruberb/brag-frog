@@ -1,0 +1,78 @@
+/* Pixel art effects and micro-interactions */
+
+/* Dithered divider — horizontal */
+.dither-divider {
+    height: var(--px-unit);
+    background-image: repeating-linear-gradient(
+        90deg,
+        var(--color-border) 0,
+        var(--color-border) var(--px-unit),
+        transparent var(--px-unit),
+        transparent calc(var(--px-unit) * 2)
+    );
+    background-size: calc(var(--px-unit) * 2) var(--px-unit);
+    margin: var(--space-4) 0;
+}
+
+/* Pixel confetti keyframes */
+@keyframes pixel-confetti {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-40px) scale(0.5); }
+}
+
+.pixel-confetti-particle {
+    position: absolute;
+    width: var(--px-unit);
+    height: var(--px-unit);
+    animation: pixel-confetti 600ms var(--ease-out-expo) forwards;
+}
+
+/* Frog assembly loading animation */
+@keyframes frog-blink {
+    0%, 90%, 100% { opacity: 1; }
+    95% { opacity: 0; }
+}
+
+.frog-loading {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    background: var(--color-success);
+    animation: frog-blink 2s infinite;
+}
+
+/* KR score celebration */
+@keyframes score-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+.score-celebrate {
+    animation: score-pop 300ms var(--ease-out-expo);
+}
+
+/* Entry logged pop */
+@keyframes entry-pop {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.entry-pop-in {
+    animation: entry-pop 200ms var(--ease-out-expo);
+}
+
+/* Pixel frog watermark for empty states */
+.pixel-frog-watermark {
+    opacity: 0.08;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--space-4);
+    background: var(--color-primary);
+    /* Simple pixel block shape */
+    clip-path: polygon(
+        25% 0%, 75% 0%, 75% 25%, 100% 25%,
+        100% 75%, 75% 75%, 75% 100%, 25% 100%,
+        25% 75%, 0% 75%, 0% 25%, 25% 25%
+    );
+}

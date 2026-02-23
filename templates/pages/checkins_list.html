@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Check-in History — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Check-in History</h1>
+    <p class="page-subtitle">Your weekly reflections</p>
+    <a href="/dashboard" class="btn btn-text btn-sm" style="margin-top:8px;">&larr; Back to Dashboard</a>
+</div>
+
+{% if checkins | length == 0 %}
+<div class="card empty-state">
+    <div class="pixel-frog-watermark"></div>
+    <h2>No check-ins yet</h2>
+    <p>Complete your first weekly check-in from the dashboard to see it here.</p>
+    <a href="/dashboard" class="btn btn-primary btn-sm" style="margin-top:12px;">Go to Dashboard</a>
+</div>
+{% else %}
+<div class="checkins-list">
+    {% for checkin in checkins %}
+    <details class="card checkin-card">
+        <summary class="checkin-card-summary">
+            <div class="checkin-card-info">
+                <span class="checkin-card-week">Week {{ checkin.iso_week }}, {{ checkin.year }}</span>
+                <span class="text-sm text-muted">{{ checkin.week_start }} to {{ checkin.week_end }}</span>
+                <span class="badge badge-type" style="font-size:0.65rem;">{{ checkin.phase_name }}</span>
+            </div>
+            <div class="checkin-card-meta">
+                {% if checkin.energy_level %}
+                <span class="text-sm">Energy: {{ checkin.energy_level }}/5</span>
+                {% endif %}
+                {% if checkin.productivity_rating %}
+                <span class="text-sm">Productivity: {{ checkin.productivity_rating }}/5</span>
+                {% endif %}
+                <span class="intg-card-chevron">&#9656;</span>
+            </div>
+        </summary>
+        <div class="checkin-card-body">
+            {% if checkin.proud_of %}
+            <div class="checkin-field">
+                <label class="form-label">What I'm proud of</label>
+                <p class="text-sm">{{ checkin.proud_of }}</p>
+            </div>
+            {% endif %}
+            {% if checkin.learned %}
+            <div class="checkin-field">
+                <label class="form-label">What I learned</label>
+                <p class="text-sm">{{ checkin.learned }}</p>
+            </div>
+            {% endif %}
+            {% if checkin.wants_to_change %}
+            <div class="checkin-field">
+                <label class="form-label">What I want to change</label>
+                <p class="text-sm">{{ checkin.wants_to_change }}</p>
+            </div>
+            {% endif %}
+            {% if checkin.frustrations %}
+            <div class="checkin-field">
+                <label class="form-label">Frustrations</label>
+                <p class="text-sm">{{ checkin.frustrations }}</p>
+            </div>
+            {% endif %}
+            {% if checkin.notes %}
+            <div class="checkin-field">
+                <label class="form-label">Notes</label>
+                <p class="text-sm">{{ checkin.notes }}</p>
+            </div>
+            {% endif %}
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                <a href="/checkin/{{ checkin.week_id }}" class="btn btn-text btn-sm">Edit check-in</a>
+                <button class="btn btn-text btn-sm" style="color:var(--color-danger);"
+                        hx-delete="/checkin/{{ checkin.week_id }}"
+                        hx-confirm="Delete this check-in? This cannot be undone.">Delete</button>
+            </div>
+        </div>
+    </details>
+    {% endfor %}
+</div>
+{% endif %}
+
+<style>
+.checkins-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.checkin-card {
+    cursor: default;
+}
+.checkin-card-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    list-style: none;
+}
+.checkin-card-summary::-webkit-details-marker {
+    display: none;
+}
+.checkin-card-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.checkin-card-week {
+    font-weight: 600;
+}
+.checkin-card-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.checkin-card-body {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+}
+.checkin-field {
+    margin-bottom: var(--space-3);
+}
+.checkin-field .form-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+}
+.checkin-field p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+</style>
+{% endblock %}

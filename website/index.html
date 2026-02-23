@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>
+            Brag Frog — Track your contributions. Reflect on your impact.
+        </title>
+        <meta
+            name="description"
+            content="A daily workflow and check-in tool for engineering teams. Log your work, auto-prep 1:1s, reflect on your impact, and generate AI-powered self-reviews."
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="256x256"
+            href="img/favicon.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="32x32"
+            href="img/favicon.png"
+        />
+        <link rel="apple-touch-icon" href="img/favicon.png" />
+        <link rel="stylesheet" href="css/tokens.css" />
+        <link rel="stylesheet" href="css/landing.css" />
+    </head>
+    <body>
+        <!-- Navigation -->
+        <nav class="landing-nav">
+            <div class="nav-inner">
+                <a href="/" class="nav-brand">
+                    <img
+                        src="img/symbol.svg"
+                        alt="Brag Frog"
+                        class="nav-logo"
+                    />
+                    <span class="nav-wordmark">Brag Frog</span>
+                </a>
+                <a
+                    href="https://github.com/gruberb/brag-frog"
+                    class="nav-cta"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                        />
+                    </svg>
+                    View on GitHub
+                </a>
+            </div>
+        </nav>
+
+        <!-- Hero -->
+        <section class="hero">
+            <div class="hero-brand">
+                <img
+                    src="img/symbol.svg"
+                    alt="Brag Frog"
+                    class="hero-brand-logo"
+                />
+                <span class="hero-brand-name">Brag Frog</span>
+            </div>
+            <h1 class="hero-title">
+                Own your week,<br />
+                <em>own your review.</em>
+            </h1>
+            <p class="hero-description">
+                The daily workflow tool for engineering teams. Sync your work,
+                prep meetings with AI, track goals, and generate self-review
+                drafts — all in one place.
+            </p>
+            <div class="hero-actions">
+                <a
+                    href="https://github.com/gruberb/brag-frog"
+                    class="btn-primary"
+                    target="_blank"
+                    rel="noopener"
+                >
+                    <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 16 16"
+                        fill="currentColor"
+                    >
+                        <path
+                            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                        />
+                    </svg>
+                    View on GitHub
+                </a>
+                <a href="#features" class="btn-secondary">See how it works</a>
+            </div>
+            <div class="hero-screenshot">
+                <div class="browser-frame">
+                    <div class="browser-bar">
+                        <span
+                            class="browser-dot"
+                            style="background: #ff5f57"
+                        ></span>
+                        <span
+                            class="browser-dot"
+                            style="background: #febc2e"
+                        ></span>
+                        <span
+                            class="browser-dot"
+                            style="background: #28c840"
+                        ></span>
+                    </div>
+                    <img
+                        src="img/product/dashboard.png"
+                        alt="Brag Frog dashboard"
+                    />
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Pills -->
+        <section class="feature-pills reveal" id="features">
+            <span class="feature-pill">Dashboard</span>
+            <span class="feature-pill">Logbook</span>
+            <span class="feature-pill">Goals</span>
+            <span class="feature-pill">Meeting Prep</span>
+            <span class="feature-pill">Review</span>
+            <span class="feature-pill">Trends</span>
+        </section>
+
+        <!-- Deep-dive Sections -->
+        <section class="journey">
+            <!-- A: Start every day prepared -->
+            <div class="journey-step reveal">
+                <div class="step-text">
+                    <h3>Start every day prepared</h3>
+                    <p>
+                        Dashboard with upcoming meetings and join links, weekly
+                        focus with goals and docs, check-in prompt, OKR
+                        snapshot, and focus time overview. Cmd+K to navigate
+                        anywhere.
+                    </p>
+                </div>
+                <div class="step-image">
+                    <div class="browser-frame">
+                        <div class="browser-bar">
+                            <span
+                                class="browser-dot"
+                                style="background: #ff5f57"
+                            ></span>
+                            <span
+                                class="browser-dot"
+                                style="background: #febc2e"
+                            ></span>
+                            <span
+                                class="browser-dot"
+                                style="background: #28c840"
+                            ></span>
+                        </div>
+                        <img
+                            src="img/product/dashboard.png"
+                            alt="Dashboard with meetings, focus, and OKR snapshot"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- B: Capture everything, automatically -->
+            <div class="journey-step journey-step--reverse reveal">
+                <div class="step-text">
+                    <h3>Capture everything, automatically</h3>
+                    <p>
+                        Sync contributions from the tools you already use. Your
+                        logbook organizes everything by week with filters and
+                        inline analysis.
+                    </p>
+                    <div class="step-services">
+                        <span>GitHub</span>
+                        <span>Jira</span>
+                        <span>Confluence</span>
+                        <span>Bugzilla</span>
+                        <span>Phabricator</span>
+                        <span>Google</span>
+                    </div>
+                </div>
+                <div class="step-image">
+                    <div class="browser-frame">
+                        <div class="browser-bar">
+                            <span
+                                class="browser-dot"
+                                style="background: #ff5f57"
+                            ></span>
+                            <span
+                                class="browser-dot"
+                                style="background: #febc2e"
+                            ></span>
+                            <span
+                                class="browser-dot"
+                                style="background: #28c840"
+                            ></span>
+                        </div>
+                        <img
+                            src="img/product/logbook.png"
+                            alt="Logbook with filters and weekly view"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- C: Shine at review time -->
+            <div class="journey-step journey-step--hero reveal">
+                <div class="step-text">
+                    <h3>Shine at review time</h3>
+                    <p>
+                        Generate polished self-assessments that match your
+                        organization's performance review format.
+                    </p>
+                    <ul class="step-highlights">
+                        <li>Auto-synced contributions from all your tools</li>
+                        <li>Weekly check-in reflections woven in</li>
+                        <li>Impact stories and initiative context</li>
+                        <li>Formatted to your org's review sections</li>
+                    </ul>
+                </div>
+                <div class="step-image">
+                    <div class="browser-frame">
+                        <div class="browser-bar">
+                            <span
+                                class="browser-dot"
+                                style="background: #ff5f57"
+                            ></span>
+                            <span
+                                class="browser-dot"
+                                style="background: #febc2e"
+                            ></span>
+                            <span
+                                class="browser-dot"
+                                style="background: #28c840"
+                            ></span>
+                        </div>
+                        <img
+                            src="img/product/selfreview.png"
+                            alt="AI-generated self review draft"
+                            loading="lazy"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section class="features-grid reveal">
+            <h2>Everything you need</h2>
+            <div class="features-grid-inner">
+                <div class="feature-card">
+                    <img
+                        src="img/product/feature_meetingprep.png"
+                        alt="Meeting Prep"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Meeting Prep</h4>
+                        <p>AI-generated talking points for every 1:1</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="img/product/feature_checkin.png"
+                        alt="Weekly Check-ins"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Weekly Check-ins</h4>
+                        <p>Reflect on your week with structured prompts</p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="img/product/goals.png"
+                        alt="Goals & OKRs"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Goals & OKRs</h4>
+                        <p>
+                            Numeric, boolean, milestone targets with
+                            auto-scoring
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="img/product/trends.png"
+                        alt="Trends"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Trends</h4>
+                        <p>
+                            Category distribution, KR progress curves, activity
+                            overview
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="img/product/feature_focustime.png"
+                        alt="Focus Time"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Focus Time</h4>
+                        <p>
+                            Finds the best focus times based on your schedule.
+                        </p>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <img
+                        src="img/product/feature_quickcommands.png"
+                        alt="Quick Navigation"
+                        class="feature-card-img"
+                        loading="lazy"
+                    />
+                    <div class="feature-card-body">
+                        <h4>Quick Navigation</h4>
+                        <p>Cmd+K command palette for instant access</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Security & Privacy -->
+        <section class="security reveal">
+            <h2>Secure by design</h2>
+            <div class="security-grid">
+                <div class="security-item">
+                    <div class="security-icon">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <rect
+                                x="3"
+                                y="11"
+                                width="18"
+                                height="11"
+                                rx="2"
+                                ry="2"
+                            />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                    </div>
+                    <h4>Encrypted & Private</h4>
+                    <p>
+                        AES-256-GCM encrypted at rest with per-user keys. Your
+                        API tokens and data are protected.
+                    </p>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                            />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                    </div>
+                    <h4>Titles only by default</h4>
+                    <p>
+                        Only titles are fetched from integrations, no text body,
+                        for security and privacy.
+                    </p>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+                            />
+                        </svg>
+                    </div>
+                    <h4>Public-only mode</h4>
+                    <p>
+                        Opt-in filter so no security-critical issues make it
+                        into your log.
+                    </p>
+                </div>
+                <div class="security-item">
+                    <div class="security-icon">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                            />
+                        </svg>
+                    </div>
+                    <h4>Fully Customizable</h4>
+                    <p>
+                        Career levels, review sections, sync filters, and
+                        branding — all configurable via TOML files.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA -->
+        <section class="final-cta reveal">
+            <div class="final-cta-inner">
+                <h2>Never forget a single contribution</h2>
+                <p>
+                    Every meeting led, bug triaged, colleague mentored, and
+                    feature shipped — captured, measured, and ready to present
+                    when review time comes.
+                </p>
+                <div class="hero-actions" style="justify-content: center">
+                    <a
+                        href="https://github.com/gruberb/brag-frog"
+                        class="btn-primary"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                        >
+                            <path
+                                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                            />
+                        </svg>
+                        View on GitHub
+                    </a>
+                    <a
+                        href="https://github.com/gruberb/brag-frog/blob/main/docs/self-hosting.md"
+                        class="btn-secondary"
+                        target="_blank"
+                        rel="noopener"
+                        >Self-host guide</a
+                    >
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="landing-footer">
+            <img src="img/symbol.svg" alt="Brag Frog" class="footer-logo" />
+            <p>Brag Frog &mdash; Open source, built for engineering teams</p>
+            <a
+                href="https://github.com/gruberb/brag-frog"
+                class="footer-github"
+                target="_blank"
+                rel="noopener"
+            >
+                <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="currentColor"
+                >
+                    <path
+                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                    />
+                </svg>
+                GitHub
+            </a>
+        </footer>
+
+        <!-- Scroll reveal -->
+        <script>
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((e) => {
+                        if (e.isIntersecting) {
+                            e.target.classList.add("visible");
+                            observer.unobserve(e.target);
+                        }
+                    });
+                },
+                { threshold: 0.1 },
+            );
+            document
+                .querySelectorAll(".reveal")
+                .forEach((el) => observer.observe(el));
+        </script>
+    </body>
+</html>

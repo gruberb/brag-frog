@@ -1,0 +1,299 @@
+/* Logbook layout */
+.logbook-layout {
+    display: flex;
+    flex-direction: column;
+}
+
+.logbook-main {
+    min-width: 0;
+}
+
+/* Inline week selector */
+.week-inline-select {
+    font-family: var(--font-stack);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    cursor: pointer;
+    min-width: 280px;
+}
+
+.week-inline-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+/* Entries header actions */
+.entries-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.btn-add-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Logbook stats */
+.logbook-stats {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    min-width: 120px;
+}
+
+.stat-count {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+.stat-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+/* Week divider — XL size, no border */
+.week-divider {
+    padding: var(--space-5, 32px) 0 var(--space-2);
+}
+.week-divider:first-child {
+    padding-top: var(--space-3);
+}
+
+.week-divider-label {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text);
+}
+
+/* Quick entry form — logbook */
+.quick-entry-form {
+    background: var(--color-surface);
+    border: 2.5px solid var(--color-primary);
+    border-radius: 0;
+    padding: var(--space-5, 32px) var(--space-6, 40px);
+    margin-bottom: var(--space-6);
+    box-shadow: var(--shadow-md);
+}
+
+.quick-entry-top {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.quick-entry-form .quick-entry-title {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    font-size: 1.35rem;
+    border: none;
+    background: transparent;
+    padding: 14px 12px;
+}
+
+.quick-entry-form .quick-entry-title:focus {
+    outline: none;
+    background: var(--color-gray-10);
+    border-radius: var(--radius-sm);
+}
+
+.quick-entry-form .quick-entry-type {
+    width: auto;
+    min-width: 130px;
+    max-width: 160px;
+    flex-shrink: 0;
+    font-size: var(--text-sm);
+    padding: 8px 10px;
+}
+
+.quick-entry-form .quick-entry-date {
+    width: auto;
+    max-width: 155px;
+    flex-shrink: 0;
+    font-size: var(--text-sm);
+    padding: 8px 10px;
+}
+
+.quick-entry-submit {
+    flex-shrink: 0;
+    padding: 10px 28px;
+    font-size: 1rem;
+    font-weight: var(--font-weight-semibold);
+}
+
+.quick-entry-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-gray-20);
+}
+
+.quick-entry-form .quick-entry-meta-field {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+}
+
+.quick-entry-meta-field::placeholder {
+    color: var(--color-gray-40);
+}
+
+/* Chip multi-select inside quick entry */
+.quick-entry-multiselect {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    min-height: 32px;
+}
+
+.chip-select {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.chip-option {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.chip-option input[type="checkbox"] {
+    display: none;
+}
+
+.chip-label {
+    display: inline-block;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    border-radius: 0;
+    border: 1px solid var(--color-gray-30);
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    transition: all 120ms ease;
+    white-space: nowrap;
+}
+
+.chip-option input[type="checkbox"]:checked + .chip-label {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+}
+
+.chip-add-input {
+    border: none;
+    background: transparent;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    min-width: 60px;
+    width: 70px;
+    color: var(--color-text);
+    font-family: var(--font-stack);
+}
+
+.chip-add-input:focus {
+    outline: none;
+}
+
+.chip-add-input--full {
+    width: 100%;
+    min-width: 100%;
+    font-size: 0.8rem;
+    padding: 2px 0;
+}
+
+/* Chip dropdown popover (teams / collaborators in quick entry) */
+.quick-entry-dropdown {
+    position: relative;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+.chip-dropdown {
+    position: relative;
+}
+
+.chip-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 10px;
+    white-space: nowrap;
+    font-family: var(--font-stack);
+}
+
+.chip-dropdown-trigger:hover {
+    color: var(--color-primary);
+}
+
+.chip-dropdown-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 10;
+    background: var(--color-surface);
+    border: 1px solid var(--color-gray-20);
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    min-width: 200px;
+    max-width: 300px;
+}
+
+.chip-dropdown-panel .chip-select {
+    margin-bottom: 4px;
+}
+
+.chip-dropdown-panel .chip-add-input {
+    width: 100%;
+    min-width: 100%;
+    padding: 4px 2px;
+}
+
+.chip-dropdown-panel.hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .quick-entry-top {
+        flex-wrap: wrap;
+    }
+    .quick-entry-title {
+        flex-basis: 100%;
+    }
+    .quick-entry-meta {
+        flex-wrap: wrap;
+    }
+}

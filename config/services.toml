@@ -1,0 +1,36 @@
+# Organization-specific service defaults.
+# These populate the settings UI and provide fallback URLs for sync services.
+# Other organizations can edit this file — no Rust recompilation needed.
+
+[github]
+default_orgs = ""
+org_placeholder = "my-org, my-org-infra"
+token_url = "https://github.com/settings/tokens/new"
+note = "Create a Classic token with no scopes (public repos) or the 'repo' scope (private repos). If your org uses SSO, click 'Configure SSO' to authorize it."
+allowed_orgs = []     # Restrict sync to these GitHub orgs. Empty = all orgs the user has access to.
+
+[phabricator]
+default_base_url = "https://phabricator.example.com"
+base_url_placeholder = "https://phabricator.example.com"
+token_url = ""
+allowed_projects = [] # Restrict sync to these project codes (e.g. ["FFOX", "WEBR"]). Empty = all.
+
+[bugzilla]
+default_base_url = "https://bugzilla.example.com"
+base_url_placeholder = "https://bugzilla.example.com"
+email_placeholder = "you@example.com"
+token_url = ""
+note = "API key is optional. Without it, only public bugs are synced."
+allowed_products = [] # Restrict sync to these Bugzilla products (e.g. ["Firefox", "Core"]). Empty = all.
+
+[atlassian]
+default_base_url = "https://your-org.atlassian.net"
+base_url_placeholder = "https://your-org.atlassian.net"
+email_placeholder = "you@example.com"
+token_url = "https://id.atlassian.com/manage-profile/security/api-tokens"
+note = "Syncs both Jira issues and Confluence pages"
+allowed_jira_projects = []   # Restrict Jira sync to these project keys (e.g. ["ENG", "INFRA"]). Empty = all.
+allowed_confluence_spaces = [] # Restrict Confluence sync to these space keys (e.g. ["ENG", "TEAM"]). Empty = all.
+
+[claude]
+token_url = "https://console.anthropic.com/settings/keys"

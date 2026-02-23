@@ -1,0 +1,43 @@
+<!-- Command palette modal -->
+<div class="cmd-palette-overlay" id="cmd-palette-overlay" style="display:none;">
+    <div class="cmd-palette">
+        <div class="cmd-palette-search">
+            <input type="text" id="cmd-palette-input" placeholder="Type a command…" autocomplete="off" autofocus>
+        </div>
+        <div class="cmd-palette-actions" id="cmd-palette-actions">
+            <div class="cmd-palette-group">
+                <div class="cmd-palette-group-title">Navigation</div>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/dashboard" onclick="executeCommandAction(this)">
+                    <span class="cmd-palette-key">g d</span> Dashboard
+                </button>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/logbook" onclick="executeCommandAction(this)">
+                    <span class="cmd-palette-key">g l</span> Logbook
+                </button>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/goals" onclick="executeCommandAction(this)">
+                    <span class="cmd-palette-key">g o</span> Goals & OKRs
+                </button>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/trends" onclick="executeCommandAction(this)">
+                    <span class="cmd-palette-key">g t</span> Trends
+                </button>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/settings" onclick="executeCommandAction(this)">
+                    <span class="cmd-palette-key">g s</span> Settings
+                </button>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/integrations" onclick="executeCommandAction(this)">
+                    <span class="cmd-palette-key">g i</span> Integrations
+                </button>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/checkins" onclick="executeCommandAction(this)">
+                    <span class="cmd-palette-key">g c</span> Check-in History
+                </button>
+            </div>
+            <div class="cmd-palette-group">
+                <div class="cmd-palette-group-title">Actions</div>
+                <button class="cmd-palette-action" data-action="sync" data-href="/sync/all" onclick="executeCommandAction(this)">
+                    Sync All
+                </button>
+                <button class="cmd-palette-action" data-action="navigate" data-href="/export" onclick="executeCommandAction(this)">
+                    Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

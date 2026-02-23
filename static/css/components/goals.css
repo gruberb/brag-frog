@@ -1,0 +1,166 @@
+/* Key result tag */
+.kr-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 2px var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-sm);
+    background: var(--color-gray-20);
+}
+
+.kr-tag-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+}
+
+.kr-tag-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.kr-tag-card.archived {
+    opacity: 0.6;
+}
+
+/* Goal card */
+.goal-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+}
+
+.goal-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+
+.goal-title {
+    font-weight: var(--font-weight-semibold);
+}
+
+.goal-description {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2);
+}
+
+/* Goal checkbox list */
+.goal-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.goal-checkbox-list label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    cursor: pointer;
+}
+
+/* Color picker */
+.color-input {
+    width: 40px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    padding: 2px;
+}
+
+/* Goals list */
+.goals-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+/* Goal card row — card with category color bar */
+.goal-card-row {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: box-shadow var(--transition-fast);
+}
+
+.goal-card-row:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.goal-card-row-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    min-height: 52px;
+}
+
+.goal-card-row-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 1;
+    min-width: 0;
+}
+
+.goal-card-row-title {
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-semibold);
+}
+
+.goal-card-row-actions {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.goal-card-row:hover .goal-card-row-actions {
+    opacity: 1;
+}
+
+.goal-card-row-description-visible {
+    padding: 0 var(--space-4) var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: var(--line-height-relaxed);
+    white-space: pre-wrap;
+}
+
+/* KR inline dot */
+.kr-inline-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+/* Form color input */
+.form-color-input {
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    cursor: pointer;
+}
+
+/* Small icon button */
+.btn-icon--sm {
+    width: 22px;
+    height: 22px;
+}

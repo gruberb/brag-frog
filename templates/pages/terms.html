@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Terms of Service — Brag Frog</title>
+        <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon.png" />
+        <link rel="stylesheet" href="/static/css/tokens.css" />
+        <link rel="stylesheet" href="/custom/tokens.css" />
+        <style>
+            body { font-family: var(--font-stack); color: var(--color-text); background: var(--color-bg); line-height: 1.7; }
+            .container { max-width: 720px; margin: 0 auto; padding: 4rem 1.5rem; }
+            h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+            h2 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.5rem; }
+            p, ul { margin-bottom: 1rem; }
+            ul { padding-left: 1.5rem; }
+            .meta { color: var(--color-text-secondary); font-size: 0.875rem; margin-bottom: 2rem; }
+            a { color: var(--color-primary); }
+            .back { display: inline-block; margin-bottom: 2rem; color: var(--color-text-secondary); text-decoration: none; font-size: 0.875rem; }
+            .back:hover { color: var(--color-text); }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <a href="/" class="back">&larr; Back</a>
+            <h1>Terms of Service</h1>
+            <p class="meta">Last updated: February 20, 2026</p>
+
+            <h2>Agreement</h2>
+            <p>By using Brag Frog, you agree to these terms. If your organization operates a self-hosted instance, your organization's policies may also apply.</p>
+
+            <h2>What Brag Frog provides</h2>
+            <p>Brag Frog is an open-source self-assessment and brag document tool. It helps you track work contributions, set goals, and generate AI-assisted self-review drafts. The software is provided under the <a href="https://github.com/gruberb/brag-frog/blob/main/LICENSE">Mozilla Public License 2.0</a>.</p>
+
+            <h2>Your data</h2>
+            <ul>
+                <li>You own the content you create in Brag Frog (entries, goals, summaries)</li>
+                <li>You can export your data at any time (Markdown or JSON)</li>
+                <li>You can delete your data at any time through the app</li>
+                <li>We do not sell, share, or monetize your data</li>
+            </ul>
+
+            <h2>Account and access</h2>
+            <ul>
+                <li>Authentication is via Google OAuth — you need a Google account to sign in</li>
+                <li>Instance operators may restrict access to specific email domains</li>
+                <li>You are responsible for safeguarding your API tokens configured in the app</li>
+            </ul>
+
+            <h2>AI features</h2>
+            <p>AI-powered self-review generation is optional and requires you to provide your own Anthropic API key. When you use this feature:</p>
+            <ul>
+                <li>Your entry titles are sent to Anthropic's API to generate drafts</li>
+                <li>Anthropic's <a href="https://www.anthropic.com/terms">terms of service</a> apply to that API usage</li>
+                <li>You are responsible for your Anthropic API costs</li>
+            </ul>
+
+            <h2>External service integrations</h2>
+            <p>Brag Frog connects to external services (GitHub, Jira, etc.) using API tokens you provide. You are responsible for:</p>
+            <ul>
+                <li>Having appropriate authorization to access those services</li>
+                <li>Complying with those services' terms of use</li>
+                <li>The scope of access granted by your tokens</li>
+            </ul>
+
+            <h2>Acceptable use</h2>
+            <p>Don't use Brag Frog to:</p>
+            <ul>
+                <li>Store credentials or secrets beyond the intended API token fields</li>
+                <li>Circumvent access controls on external services</li>
+                <li>Violate your organization's data policies</li>
+            </ul>
+
+            <h2>Disclaimer</h2>
+            <p>Brag Frog is provided "as is" without warranty of any kind. The maintainers are not liable for data loss, service interruptions, or any damages arising from use of the software. See the <a href="https://github.com/gruberb/brag-frog/blob/main/LICENSE">MPL 2.0 license</a> for full terms.</p>
+
+            <h2>Self-hosted instances</h2>
+            <p>Organizations that self-host Brag Frog are responsible for their own data handling, backups, security, and compliance. These terms cover the software itself, not the operation of any specific instance.</p>
+
+            <h2>Changes</h2>
+            <p>We may update these terms. Changes will be posted in the repository and noted in the changelog.</p>
+
+            <h2>Contact</h2>
+            <p>For questions, open an issue on <a href="https://github.com/gruberb/brag-frog">GitHub</a>.</p>
+        </div>
+    </body>
+</html>

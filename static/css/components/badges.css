@@ -1,0 +1,201 @@
+/* Badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px var(--space-2);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-medium);
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+
+.badge-key-result {
+    background: transparent;
+    border: 1px solid;
+    font-size: 0.65rem;
+    padding: 1px 7px;
+}
+
+.badge-goal {
+    background: rgba(255, 69, 63, 0.06);
+    color: var(--color-primary);
+    border: 1px solid rgba(255, 69, 63, 0.2);
+    font-size: 0.65rem;
+    padding: 1px 7px;
+}
+
+.badge-type {
+    background: var(--color-blue-50);
+    color: var(--color-blue-10);
+    background: rgba(0, 96, 223, 0.1);
+    color: var(--color-primary);
+}
+
+.badge-category {
+    font-size: var(--text-xs);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-full);
+}
+
+.badge-technical {
+    background: rgba(0, 96, 223, 0.1);
+    color: var(--color-blue-30);
+}
+
+.badge-leadership {
+    background: rgba(117, 66, 229, 0.1);
+    color: var(--color-purple-30);
+}
+
+.badge-growth {
+    background: rgba(5, 139, 0, 0.1);
+    color: var(--color-green-30);
+}
+
+.badge-developmental {
+    background: rgba(226, 127, 46, 0.1);
+    color: var(--color-orange-30);
+}
+
+/* Badge status variants */
+.badge-success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--color-success);
+}
+
+.badge-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+}
+
+.badge-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--color-blue-30);
+}
+
+.badge-muted {
+    background: var(--color-gray-20);
+    color: var(--color-gray-50);
+}
+
+/* Badge category variants */
+.badge-category--technical {
+    background: rgba(0, 96, 223, 0.1);
+    color: var(--color-blue-30);
+}
+
+.badge-category--leadership {
+    background: rgba(117, 66, 229, 0.1);
+    color: var(--color-purple-30);
+}
+
+.badge-category--growth {
+    background: rgba(5, 139, 0, 0.1);
+    color: var(--color-green-30);
+}
+
+.badge-category--developmental {
+    background: rgba(226, 127, 46, 0.1);
+    color: var(--color-orange-30);
+}
+
+.badge-category--individual {
+    background: rgba(0, 96, 223, 0.1);
+    color: var(--color-blue-30);
+}
+
+.badge-category--development {
+    background: rgba(117, 66, 229, 0.1);
+    color: var(--color-purple-30);
+}
+
+/* Status badges */
+.badge-status {
+    font-size: var(--text-xs);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-full);
+    text-transform: capitalize;
+}
+
+.badge-status--in_progress {
+    background: rgba(226, 127, 46, 0.1);
+    color: var(--color-orange-30);
+}
+
+.badge-status--active {
+    background: rgba(0, 96, 223, 0.1);
+    color: var(--color-blue-30);
+}
+
+.badge-status--not_started {
+    background: var(--color-gray-10);
+    color: var(--color-gray-60);
+}
+
+.badge-status--completed {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--color-success);
+}
+
+.badge-status--on_hold {
+    background: rgba(226, 127, 46, 0.1);
+    color: var(--color-orange-30);
+}
+
+/* Icon buttons */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--color-border);
+    background: none;
+    color: var(--color-gray-50);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+    background: var(--color-gray-20);
+    color: var(--color-text);
+}
+
+.btn-icon--danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+}
+
+/* Highlight star */
+.highlight-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: var(--text-lg);
+    padding: 0;
+    line-height: 1;
+    color: var(--color-gray-30);
+    transition: color var(--transition-fast);
+}
+
+.highlight-btn:hover {
+    color: var(--color-orange-40);
+}
+
+.highlight-btn.active {
+    color: var(--color-orange-40);
+}
+
+/* Page header with mascot */
+.page-header-with-mascot {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.page-mascot {
+    height: 120px;
+    width: auto;
+    flex-shrink: 0;
+}

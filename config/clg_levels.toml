@@ -1,0 +1,63 @@
+# Career Level Guide — Example Configuration
+# Replace this with your organization's leveling framework.
+# Each [[levels]] entry defines a career level with competency expectations.
+
+[[levels]]
+id = "junior"
+title = "Junior Engineer"
+one_liner = "Complete well-defined tasks with guidance."
+
+[levels.problems]
+task_size = "Days"
+complexity = "Standalone tasks with clear requirements."
+risk_management = "Escalate blockers to team lead."
+domain_expertise = "Building foundational knowledge."
+strategy = "Understands team priorities."
+
+[levels.people]
+influence = "Self"
+responsibility = "Works under close guidance."
+communication = "Keeps team informed of progress."
+change_management = ""
+team_contributions = "Follows team processes."
+dei = "Treats all colleagues with respect."
+
+[[levels]]
+id = "mid"
+title = "Software Engineer"
+one_liner = "Independently deliver features across multiple components."
+
+[levels.problems]
+task_size = "Weeks"
+complexity = "Multi-component tasks requiring collaboration."
+risk_management = "Identifies and mitigates risks proactively."
+domain_expertise = "Solid understanding of team's domain."
+strategy = "Contributes to technical discussions."
+
+[levels.people]
+influence = "Peers (2-5)"
+responsibility = "Self-directed after alignment on goals."
+communication = "Clear written and verbal communication."
+change_management = "Adapts to and supports team changes."
+team_contributions = "Mentors new team members. Reviews code thoroughly."
+dei = "Actively fosters an inclusive team environment."
+
+[[levels]]
+id = "senior"
+title = "Senior Engineer"
+one_liner = "Lead projects and mentor others while driving technical direction."
+
+[levels.problems]
+task_size = "Months"
+complexity = "Ambiguous, cross-team technical challenges."
+risk_management = "Manages project-level risk. Sequences work to reduce uncertainty."
+domain_expertise = "Expert in domain. Guides architectural decisions."
+strategy = "Shapes team technical strategy."
+
+[levels.people]
+influence = "Team (5-15)"
+responsibility = "Tech lead for team-scoped projects."
+communication = "Writes proposals, drives alignment across teams."
+change_management = "Leads engineering process improvements."
+team_contributions = "Elevates team standards. Grows junior engineers."
+dei = "Champions diversity in hiring and team culture."

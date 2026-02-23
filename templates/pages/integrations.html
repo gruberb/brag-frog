@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}Integrations — Brag Frog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Integrations</h1>
+    <p class="page-subtitle">Connect services to sync your contributions</p>
+</div>
+
+<div class="settings-layout">
+    <!-- Synced Entries -->
+    <div id="synced-entries">
+    {% include "components/settings_synced_entries.html" %}
+    </div>
+
+    <!-- Sync behavior info -->
+    <div class="card" style="background:var(--color-bg-secondary);border-left:3px solid var(--color-primary);">
+        <h3 style="margin:0 0 var(--space-2) 0;font-size:0.85rem;">How sync and deletion work</h3>
+        <ul class="text-sm text-muted" style="margin:0;padding-left:var(--space-4);display:flex;flex-direction:column;gap:var(--space-1);">
+            <li>Deleting a synced entry hides it permanently from normal syncs &mdash; it won't come back.</li>
+            <li><strong>Hard Resync</strong> restores all previously deleted entries for that service and re-fetches everything. Entries that no longer match your sync settings are removed, but entries you've edited (key result assignments, teams, collaborators) are always preserved.</li>
+            <li>Manual entries are permanently deleted immediately.</li>
+        </ul>
+    </div>
+
+    {% if public_only %}
+    <div class="card" style="background:var(--color-bg-secondary);border-left:3px solid var(--color-warning, #e6a817);">
+        <h3 style="margin:0 0 var(--space-2) 0;font-size:0.85rem;">Public-only sync mode</h3>
+        <p class="text-sm text-muted" style="margin:0;">
+            This instance is configured to sync only public and non-confidential data.
+            Private repositories, security-restricted bugs, and confidential issues are excluded.
+            Some of your contributions may not appear in synced results.
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Integrations -->
+    <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
+            <div>
+                <h2 style="margin:0;">Services</h2>
+                <p class="text-muted text-sm" style="margin-top:2px;">Configure and manage your connected services.</p>
+            </div>
+            {% if source_counts | length == 0 %}
+            <button class="btn btn-primary btn-sm btn-loading-indicator"
+                    hx-post="/sync/all"
+                    hx-target="#sync-activity"
+                    hx-swap="innerHTML"
+                    hx-disabled-elt="this">
+                <span class="btn-label">Sync All</span>
+                <span class="btn-spinner"></span>
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="intg-list">
+        {% for service in services %}
+        <details class="intg-card {% if service.has_token %}intg-card--connected{% endif %}" {% if service.is_enabled and not service.has_token %}open{% endif %}>
+            <summary class="intg-card-summary">
+                <span class="intg-status-dot {% if service.has_token %}intg-status-dot--active{% endif %}"></span>
+                <span class="intg-card-name">{{ service.display_name }}</span>
+                <div class="intg-card-meta">
+                    {% if service.has_token %}
+                    <span class="intg-card-status">Connected</span>
+                    {% else %}
+                    <span class="intg-card-status intg-card-status--inactive">Not configured</span>
+                    {% endif %}
+                    {% if service.last_sync_at %}
+                    <span class="intg-card-sync-info">
+                        {{ service.last_sync_at }}
+                        {% if service.last_sync_status == "success" %}
+                        <span class="intg-sync-ok">OK</span>
+                        {% elif service.last_sync_status %}
+                        <span class="intg-sync-fail">Failed</span>
+                        {% endif %}
+                    </span>
+                    {% endif %}
+                    {% if service.has_token and not service.token_only %}
+                    <div class="intg-card-actions" onclick="event.stopPropagation();">
+                        <button type="button" class="btn btn-secondary btn-sm btn-loading-indicator"
+                                hx-post="/sync/{{ service.name }}"
+                                hx-target="#sync-activity"
+                                hx-swap="innerHTML"
+                                hx-disabled-elt="this">
+                            <span class="btn-label">Sync</span>
+                            <span class="btn-spinner"></span>
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm btn-loading-indicator"
+                                hx-post="/sync/{{ service.name }}/hard"
+                                hx-target="#sync-activity"
+                                hx-swap="innerHTML"
+                                hx-disabled-elt="this"
+                                hx-confirm="Hard Resync will restore all previously deleted {{ service.display_name }} entries. Continue?">
+                            <span class="btn-label">Hard Resync</span>
+                            <span class="btn-spinner"></span>
+                        </button>
+                    </div>
+                    {% endif %}
+                    <span class="intg-card-chevron">&#9656;</span>
+                </div>
+            </summary>
+            <div class="intg-card-body">
+                {% if service.oauth_connect %}
+                {% if service.has_token %}
+                <div style="display:flex;align-items:center;gap:var(--space-2);flex-wrap:wrap;">
+                    <span class="badge badge-success">Connected</span>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            hx-delete="/integrations/{{ service.name }}/reset"
+                            hx-swap="none"
+                            hx-confirm="Disconnect {{ service.display_name }}? Synced entries will be kept.">Disconnect</button>
+                    <button type="button" class="btn btn-danger btn-sm"
+                            hx-delete="/integrations/{{ service.name }}/reset?delete_entries=true"
+                            hx-swap="none"
+                            hx-confirm="Disconnect {{ service.display_name }} and permanently delete ALL its synced entries?">Disconnect &amp; Delete Entries</button>
+                </div>
+                {% if service.excluded_files | length > 0 %}
+                <div style="margin-top:var(--space-3);">
+                    <label class="form-label" style="margin-bottom:var(--space-1);">Excluded files</label>
+                    <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-1);">
+                        {% for ef in service.excluded_files %}
+                        <li style="display:flex;align-items:center;gap:var(--space-2);font-size:0.85rem;">
+                            <span class="text-muted" style="flex:1;">{{ ef.title | default(value="Untitled") }}</span>
+                            <button type="button" class="btn btn-secondary btn-sm"
+                                    hx-delete="/integrations/google_drive/excluded/{{ ef.file_id }}"
+                                    hx-swap="none"
+                                    hx-confirm="Restore '{{ ef.title | default(value='this file') }}'? It will reappear on next sync.">Restore</button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% if service.excluded_events | length > 0 %}
+                <div style="margin-top:var(--space-3);">
+                    <label class="form-label" style="margin-bottom:var(--space-1);">Excluded events</label>
+                    <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-1);">
+                        {% for ee in service.excluded_events %}
+                        <li style="display:flex;align-items:center;gap:var(--space-2);font-size:0.85rem;">
+                            <span class="text-muted" style="flex:1;">{{ ee.title | default(value="Untitled") }}</span>
+                            <button type="button" class="btn btn-secondary btn-sm"
+                                    hx-delete="/integrations/google_calendar/excluded/{{ ee.event_id }}"
+                                    hx-swap="none"
+                                    hx-confirm="Restore '{{ ee.title | default(value='this event') }}'? It will reappear on next sync.">Restore</button>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                {% else %}
+                {% if service.note %}
+                <p class="text-muted text-sm" style="margin-bottom:var(--space-3);">{{ service.note }}</p>
+                {% endif %}
+                <a href="/integrations/{{ service.name }}/connect" class="btn btn-primary btn-sm" hx-boost="false">Connect {{ service.display_name }}</a>
+                {% endif %}
+                {% else %}
+                {% if not service.has_token and service.note %}
+                <div class="intg-setup-guide">
+                    <p class="intg-setup-title">Setup guide</p>
+                    <ol class="intg-setup-steps">
+                        {% if service.token_url %}
+                        <li>Go to <a href="{{ service.token_url }}" target="_blank" rel="noopener">{{ service.display_name }} token settings</a></li>
+                        {% endif %}
+                        <li>{{ service.note }}</li>
+                        <li>Paste your {% if service.token_only %}API key{% else %}token{% endif %} below and save</li>
+                    </ol>
+                </div>
+                {% endif %}
+
+                <form hx-post="/integrations/{{ service.name }}"
+                      hx-swap="none"
+                      hx-on::after-request="handleSaveResult(this, '{{ service.name }}', event)">
+                    <div class="form-group">
+                        <label class="form-label">
+                            {% if service.token_only %}API Key{% else %}API Token{% endif %}
+                            {% if service.has_token %}<span class="text-muted">(saved, enter new to replace)</span>{% endif %}
+                        </label>
+                        <input type="password" name="token" class="form-input"
+                               placeholder="{% if service.has_token %}Enter new token to replace{% else %}Paste your token here{% endif %}">
+                        {% if service.has_token and service.token_url %}
+                        <a href="{{ service.token_url }}" target="_blank" rel="noopener" class="text-sm" style="margin-top:var(--space-1);display:inline-block;">Get new token</a>
+                        {% endif %}
+                    </div>
+
+                    {% set_global has_checkboxes = false %}
+                    {% set_global has_text_fields = false %}
+                    {% for field in service.config_fields %}
+                        {% if field.field_type == "checkbox" %}
+                            {% set_global has_checkboxes = true %}
+                        {% else %}
+                            {% set_global has_text_fields = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if has_text_fields %}
+                    {% for field in service.config_fields %}
+                    {% if field.field_type != "checkbox" %}
+                    <div class="form-group">
+                        <label class="form-label" for="config-{{ service.name }}-{{ field.name }}">{{ field.label }}</label>
+                        <input type="text" id="config-{{ service.name }}-{{ field.name }}"
+                               name="{{ field.name }}" class="form-input"
+                               placeholder="{{ field.placeholder }}"
+                               value="{{ field.value | default(value='') }}">
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
+                    {% if has_checkboxes %}
+                    <div class="intg-sync-settings">
+                        <label class="form-label">What to sync</label>
+                        {% for field in service.config_fields %}
+                        {% if field.field_type == "checkbox" %}
+                        <label class="intg-toggle">
+                            <input type="checkbox" name="{{ field.name }}" value="on"
+                                   {% if field.value is defined and field.value %}checked{% endif %}>
+                            <span class="intg-toggle-track">
+                                <span class="intg-toggle-thumb"></span>
+                            </span>
+                            <span class="intg-toggle-label">{{ field.label }}</span>
+                        </label>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-sm btn-loading-indicator"
+                                hx-disabled-elt="this">
+                            <span class="btn-label">{% if service.has_token %}Update{% elif service.token_only %}Save{% else %}Test &amp; Save{% endif %}</span>
+                            <span class="btn-spinner"></span>
+                        </button>
+                        {% if service.has_token %}
+                        <button type="button" class="btn btn-danger btn-sm"
+                                hx-delete="/integrations/{{ service.name }}/reset"
+                                hx-swap="none"
+                                hx-confirm="Reset {{ service.display_name }}? Synced entries will be kept.">Reset</button>
+                        {% if not service.token_only %}
+                        <button type="button" class="btn btn-danger btn-sm"
+                                hx-delete="/integrations/{{ service.name }}/reset?delete_entries=true"
+                                hx-swap="none"
+                                hx-confirm="Reset {{ service.display_name }} and permanently delete ALL its synced entries?">Reset &amp; Delete</button>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    <div id="save-status-{{ service.name }}" class="intg-save-status"></div>
+                </form>
+                {% endif %}
+            </div>
+        </details>
+        {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sync Activity -->
+    <div class="card">
+        <div id="sync-activity">
+            {% include "components/settings_sync_log.html" %}
+        </div>
+    </div>
+</div>
+
+<script>
+function handleSaveResult(form, serviceName, event) {
+    var statusEl = document.getElementById('save-status-' + serviceName);
+    if (!statusEl) return;
+    if (statusEl.innerHTML.trim()) {
+        setTimeout(function() { statusEl.innerHTML = ''; }, 8000);
+    }
+}
+
+document.body.addEventListener('integrationSaved', function(evt) {
+    var service = evt.detail.value || evt.detail;
+    htmx.ajax('POST', '/sync/' + service, {
+        target: '#sync-activity',
+        swap: 'innerHTML'
+    }).then(function() {
+        var el = document.getElementById('sync-activity');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        setTimeout(function() { window.location.reload(); }, 500);
+    });
+});
+</script>
+{% endblock %}

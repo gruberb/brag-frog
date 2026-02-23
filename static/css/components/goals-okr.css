@@ -1,0 +1,345 @@
+/* Phase card */
+.phase-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.phase-card.active {
+    border-color: var(--color-primary);
+    border-width: 2px;
+}
+
+.phase-info h3 {
+    font-weight: var(--font-weight-semibold);
+}
+
+.phase-dates {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-1);
+}
+
+/* Cycle list — Performance Cycle page */
+.cycle-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.cycle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: box-shadow var(--transition-fast);
+}
+
+.cycle-row:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.cycle-row--active {
+    border-color: var(--color-green-30);
+    background: rgba(5, 139, 0, 0.04);
+}
+
+.cycle-row-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.cycle-row-name {
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--text-xl);
+}
+
+.cycle-row-dates {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.cycle-row-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.new-cycle-details {
+    text-align: right;
+}
+.new-cycle-details summary {
+    list-style: none;
+    cursor: pointer;
+    display: inline-block;
+}
+.new-cycle-details summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Soft add button */
+.btn-add {
+    border: 1px solid transparent;
+    background: rgba(255, 69, 63, 0.08);
+    color: var(--color-primary);
+    font-weight: var(--font-weight-medium);
+}
+
+.btn-add:hover {
+    background: rgba(255, 69, 63, 0.15);
+    color: var(--color-primary);
+}
+
+/* Goal group spacing — prevents KRs from crowding the next goal header */
+.cycle-goal-group {
+    margin-bottom: var(--space-4);
+}
+
+/* Goals / Key Results sections under active cycle */
+.cycle-section {
+    margin-top: var(--space-5, 32px);
+}
+
+.cycle-section h2 {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-3);
+}
+
+.cycle-item-row {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    transition: box-shadow var(--transition-fast);
+}
+
+.cycle-item-row:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.cycle-item-view {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.cycle-item-edit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.cycle-item-title {
+    font-weight: var(--font-weight-medium);
+    font-size: var(--text-base);
+    flex: 1;
+    min-width: 0;
+}
+
+.cycle-item-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.cycle-item-actions {
+    display: flex;
+    gap: 2px;
+}
+
+/* KR progress bar */
+.kr-progress-track {
+    width: 80px;
+    height: 6px;
+    background: var(--color-gray-20);
+    border-radius: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.kr-progress-fill {
+    height: 100%;
+    border-radius: 0;
+    transition: width 0.2s ease;
+}
+
+.kr-progress-value {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+    min-width: 3ch;
+    text-align: right;
+}
+
+/* Goal description as block below the header row */
+.cycle-item-desc-block {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    padding: 0 var(--space-4) var(--space-1);
+    padding-left: calc(var(--space-4) + 14px + var(--space-1));
+}
+
+.cycle-add-form {
+    margin-top: var(--space-2);
+}
+
+.cycle-add-row {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.cycle-add-row .form-input,
+.cycle-add-row .form-select {
+    border: none;
+    border-right: 1px solid var(--color-border);
+    border-radius: 0;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--text-base);
+}
+
+.cycle-add-row .form-select {
+    border-right: 10px solid transparent;
+}
+
+.cycle-add-row .form-color-input {
+    border: none;
+    border-right: 1px solid var(--color-border);
+    border-radius: 0;
+    height: auto;
+    width: 40px;
+}
+
+.cycle-add-row .btn {
+    border-radius: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Goal progress display (percentage + horizontal bar) */
+.goal-progress-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.goal-progress-value {
+    font-size: 0.8rem;
+    font-weight: var(--font-weight-semibold);
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-secondary);
+    min-width: 3ch;
+    text-align: right;
+}
+
+.goal-progress-track {
+    width: 80px;
+    height: 6px;
+    background: var(--color-gray-20);
+    border-radius: 0;
+    overflow: hidden;
+}
+
+.goal-progress-fill {
+    height: 100%;
+    border-radius: 0;
+    transition: width 0.2s ease;
+}
+
+/* Overall cycle progress bar */
+.cycle-progress-bar {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+}
+
+.cycle-progress-total {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-right: var(--space-4);
+    border-right: 1px solid var(--color-border);
+    min-width: 100px;
+}
+
+.cycle-progress-total-value {
+    font-size: 1.75rem;
+    font-weight: var(--font-weight-semibold);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.cycle-progress-total-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+
+.cycle-progress-status {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.cycle-progress-status-label {
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.cycle-progress-status-bar {
+    height: 20px;
+    border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    background: var(--color-gray-10);
+}
+
+.cycle-progress-status-bar > div {
+    height: 100%;
+    transition: width 0.3s ease;
+}
+
+.cycle-progress-legend {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-1);
+}
+
+.cycle-progress-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+.cycle-progress-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 0;
+    flex-shrink: 0;
+}

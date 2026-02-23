@@ -1,0 +1,9 @@
+/target
+.env
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+distributed-sparking-floyd.md
+plan.md
+custom/
