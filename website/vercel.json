@@ -1,3 +1,4 @@
 {
-  "cleanUrls": true
+  "cleanUrls": true,
+  "buildCommand": "if [ -n \"$ANALYTICS_SCRIPT\" ]; then echo \"$ANALYTICS_SCRIPT\" > js/analytics.local.js; fi"
 }
