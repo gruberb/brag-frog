@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in Brag Frog, please report it responsibly.
 
-**Email:** [bastian@gruber.dev](mailto:bastian@gruber.dev)
+**Email:** [foreach@me.com](mailto:foreach@me.com)
 
 Please include:
 - Description of the vulnerability
