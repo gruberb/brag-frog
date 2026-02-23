@@ -1,0 +1,72 @@
+name: Bug Report
+description: Report something that isn't working correctly
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: Describe what you expected vs. what actually happened.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the app is affected?
+      options:
+        - Dashboard
+        - Logbook
+        - Goals & OKRs
+        - Integrations / Sync
+        - Meeting Prep
+        - Weekly Check-ins
+        - Self Review
+        - Impact Stories
+        - Trends
+        - Settings
+        - Authentication
+        - Export
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: How are you running Brag Frog?
+      placeholder: |
+        - Deployment: Docker / bare metal / Fly.io
+        - Browser: Chrome 120 / Firefox 121 / Safari 17
+        - OS: macOS 15 / Ubuntu 24.04 / Windows 11
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste any relevant error output or attach screenshots.
+      render: shell
+    validations:
+      required: false

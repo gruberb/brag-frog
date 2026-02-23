@@ -1,0 +1,120 @@
+<!-- Report sidebar content -->
+
+<!-- Overview -->
+<div class="report-section">
+    <div class="report-section-title">Overview</div>
+    <div class="report-stats-grid">
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.total }}</span><span class="report-stat-card-label">Total</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.reviews }}</span><span class="report-stat-card-label">Reviews</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.code }}</span><span class="report-stat-card-label">Code</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.docs }}</span><span class="report-stat-card-label">Docs</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.meetings }}</span><span class="report-stat-card-label">Meetings</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.collaboration }}</span><span class="report-stat-card-label">Collab</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.learning }}</span><span class="report-stat-card-label">Learning</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ insights.unlinked_count }}</span><span class="report-stat-card-label">Unlinked</span></div>
+    </div>
+</div>
+
+<!-- By Goal -->
+<div class="report-section">
+    <div class="report-section-title">By Goal</div>
+    {% if insights.goal_breakdown | length > 0 or insights.unlinked_count > 0 %}
+    <div class="sidebar-list">
+        {% for item in insights.goal_breakdown %}
+        <div class="sidebar-list-item sidebar-list-item--accented">
+            <span class="sidebar-list-item-title">
+                {% for goal in goals %}{% if goal.id == item.id %}{{ goal.title }}{% endif %}{% endfor %}
+            </span>
+            <span class="report-count">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+        {% if insights.unlinked_count > 0 %}
+        <div class="sidebar-list-item">
+            <span class="sidebar-list-item-title" style="color: var(--color-text-secondary)">Unlinked</span>
+            <span class="report-count">{{ insights.unlinked_count }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="report-empty">No goal data</p>
+    {% endif %}
+</div>
+
+<!-- By Key Result -->
+<div class="report-section">
+    <div class="report-section-title">By Key Result</div>
+    {% if insights.kr_breakdown | length > 0 %}
+    <div class="sidebar-list">
+        {% for item in insights.kr_breakdown %}
+        <div class="sidebar-list-item">
+            {% for kr in key_results %}{% if kr.id == item.id %}<span class="sidebar-list-item-dot" style="background:{{ kr.color | default(value='#999') }}"></span>{% endif %}{% endfor %}
+            <span class="sidebar-list-item-title">
+                {% for kr in key_results %}{% if kr.id == item.id %}{{ kr.name }}{% endif %}{% endfor %}
+            </span>
+            <span class="report-count">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="report-empty">No key result data</p>
+    {% endif %}
+</div>
+
+<!-- Top People -->
+<div class="report-section">
+    <div class="report-section-title">Top People</div>
+    {% if insights.top_people | length > 0 %}
+    <div class="report-day-grid">
+        {% for item in insights.top_people %}
+        <div class="report-day-card"><span class="report-day-card-count">{{ item.count }}</span><span class="report-day-card-label">{{ item.name }}</span></div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="report-empty">No collaborator data</p>
+    {% endif %}
+</div>
+
+<!-- Top Repos -->
+<div class="report-section">
+    <div class="report-section-title">Top Repos</div>
+    {% if insights.top_repos | length > 0 %}
+    <div class="sidebar-list">
+        {% for item in insights.top_repos %}
+        <div class="sidebar-list-item">
+            <span class="sidebar-list-item-title">{{ item.name }}</span>
+            <span class="report-count">{{ item.count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="report-empty">No repository data</p>
+    {% endif %}
+</div>
+
+<!-- Top Teams -->
+<div class="report-section">
+    <div class="report-section-title">Top Teams</div>
+    {% if insights.top_teams | length > 0 %}
+    <div class="report-chip-grid">
+        {% for item in insights.top_teams %}
+        <span class="report-chip"><span class="report-chip-label">{{ item.name }}</span><span class="report-chip-count">{{ item.count }}</span></span>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="report-empty">No team data</p>
+    {% endif %}
+</div>
+
+<!-- Most Productive Days -->
+<div class="report-section">
+    <div class="report-section-title">Most Productive Days</div>
+    {% if insights.productive_days | length > 0 %}
+    <div class="report-day-grid">
+        {% for item in insights.productive_days %}
+        <div class="report-day-card"><span class="report-day-card-count">{{ item.count }}</span><span class="report-day-card-label">{{ item.name }}</span></div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="report-empty">No date data</p>
+    {% endif %}
+</div>

@@ -1,0 +1,155 @@
+/* Fonts */
+@font-face {
+    font-family: 'Mozilla Headline';
+    src: url('../fonts/MozillaHeadline-Variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Mozilla Headline';
+    src: url('../fonts/MozillaHeadlineItalic-Variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Mozilla Text';
+    src: url('../fonts/MozillaText-Variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Mozilla Text';
+    src: url('../fonts/MozillaTextItalic-Variable.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+}
+
+/* Design Tokens — Mozilla New Products Orange-1 Lightmode */
+:root {
+    /* Colors */
+    --color-ink-10: #fafafa;
+    --color-ink-20: #e5e5e5;
+    --color-ink-80: #171717;
+    --color-ink-90: #0a0a0a;
+
+    --color-blue-10: #003eaa;
+    --color-blue-20: #004ec2;
+    --color-blue-30: #3b82f6;
+    --color-blue-40: #60a5fa;
+    --color-blue-50: #93c5fd;
+    --color-blue-60: #80ebff;
+
+    --color-green-30: #16a34a;
+    --color-green-40: #22c55e;
+    --color-green-50: #4ade80;
+
+    --color-yellow-30: #ca8a04;
+    --color-yellow-40: #eab308;
+    --color-yellow-50: #fde047;
+
+    --color-red-30: #dc2626;
+    --color-red-40: #ef4444;
+    --color-red-50: #f87171;
+
+    --color-orange-30: #c45a27;
+    --color-orange-40: #e27f2e;
+    --color-orange-50: #ffa436;
+
+    --color-purple-30: #7542e5;
+    --color-purple-40: #9059ff;
+
+    --color-spot-30: #E03E38;
+    --color-spot-40: #FF453F;
+    --color-spot-50: #FF6E69;
+
+    /* Neutrals — light theme (gray-10=lightest, gray-90=darkest) */
+    --color-gray-10: #f5f5f5;
+    --color-gray-20: #e5e5e5;
+    --color-gray-30: #d4d4d4;
+    --color-gray-40: #a3a3a3;
+    --color-gray-50: #737373;
+    --color-gray-60: #525252;
+    --color-gray-70: #404040;
+    --color-gray-80: #262626;
+    --color-gray-90: #171717;
+
+    /* Semantic colors */
+    --color-primary: #FF453F;
+    --color-primary-hover: #E03E38;
+    --color-primary-active: #C03530;
+    --color-accent: var(--color-orange-40);
+    --color-accent-hover: var(--color-orange-30);
+
+    --color-success: #16a34a;
+    --color-warning: #eab308;
+    --color-error: #ef4444;
+    --color-info: var(--color-blue-30);
+
+    --color-bg: #F0EBE3;
+    --color-bg-secondary: #FAF0E6;
+    --color-surface: #ffffff;
+    --color-text: #000000;
+    --color-text-secondary: #5c5c5c;
+    --color-border: #d4cec6;
+
+    /* Typography */
+    --font-stack: 'Mozilla Text', Inter, system-ui, -apple-system, sans-serif;
+    --font-stack-heading: 'Mozilla Headline', 'Mozilla Text', system-ui, sans-serif;
+    --font-stack-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 1.875rem;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
+
+    /* Spacing */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.25rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-10: 2.5rem;
+    --space-12: 3rem;
+    --space-16: 4rem;
+
+    /* Border radius — square/sharp per Mozilla New Products style */
+    --radius-sm: 0px;
+    --radius-md: 0px;
+    --radius-lg: 0px;
+    --radius-full: 0px;
+
+    /* Shadows — light theme */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+
+    /* Halftone texture */
+    --halftone-dot-color: rgba(0, 0, 0, 0.055);
+    --halftone-dot-size: 1.2px;
+    --halftone-dot-spacing: 14px;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+}

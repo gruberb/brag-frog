@@ -1,0 +1,153 @@
+<!-- Entry detail panel content (loaded into #panel-body via HTMX) -->
+<div class="panel-entry-detail">
+    <div class="panel-entry-meta">
+        <span class="badge badge-type">{{ entry.entry_type | entry_type_label }}</span>
+        <span class="badge" style="background:var(--color-gray-10);color:var(--color-text-secondary);">{{ entry.source | source_label }}</span>
+        <span class="text-sm text-muted">{{ entry.occurred_at }}</span>
+    </div>
+
+    <h3 class="panel-entry-title">{{ entry.title }}</h3>
+
+    {% if entry.description %}
+    <div class="panel-entry-description markdown-content">
+        {{ entry.description }}
+    </div>
+    {% endif %}
+
+    <div class="dither-divider"></div>
+
+    <!-- Key Result assignment -->
+    <div class="panel-entry-field">
+        <label class="form-label">Key Result</label>
+        {% if entry.key_result_id %}
+            {% for kr in key_results %}
+                {% if kr.id == entry.key_result_id %}
+                <span class="kr-label">
+                    <span class="kr-color" style="background:{{ kr.color | default(value='#888') }}"></span>
+                    {{ kr.name }}
+                </span>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+        <span class="text-sm text-muted">Not assigned</span>
+        {% endif %}
+    </div>
+
+    <!-- Meeting role (for meetings) -->
+    {% if entry.entry_type == "meeting" %}
+    <div class="panel-entry-field">
+        <label class="form-label">Meeting Role</label>
+        {% if entry.meeting_role %}
+        <span class="badge badge-type">{{ entry.meeting_role | replace(from="_", to=" ") }}</span>
+        {% else %}
+        <form hx-post="/entries/{{ entry.id }}/classify" hx-swap="none"
+              hx-on::after-request="closePanel(); window.location.reload();">
+            <div class="classify-roles">
+                {% for role in ["manager", "tech_lead", "skip_level", "peer", "stakeholder", "facilitator", "team"] %}
+                <label class="classify-role-chip">
+                    <input type="radio" name="meeting_role" value="{{ role }}" required>
+                    <span>{{ role | replace(from="_", to=" ") }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <div style="margin-top:8px;">
+                <label class="form-label">Team</label>
+                <input type="text" name="teams" list="known-teams-list" class="form-input" placeholder="e.g. Platform, Frontend" autocomplete="off">
+                <datalist id="known-teams-list">
+                    {% for t in known_teams %}
+                    <option value="{{ t }}">
+                    {% endfor %}
+                </datalist>
+            </div>
+            <label class="checkbox-label" style="margin-top:8px;">
+                <input type="checkbox" name="save_rule" value="true">
+                <span class="text-sm">Apply to all meetings in this series</span>
+            </label>
+            <button type="submit" class="btn btn-primary btn-sm" style="margin-top:8px;">Classify</button>
+        </form>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Impact fields -->
+    {% if entry.outcome_statement %}
+    <div class="panel-entry-field">
+        <label class="form-label">Impact</label>
+        <p>{{ entry.outcome_statement }}</p>
+    </div>
+    {% endif %}
+
+    {% if entry.role %}
+    <div class="panel-entry-field">
+        <label class="form-label">Role</label>
+        <span class="badge badge-type">{{ entry.role }}</span>
+    </div>
+    {% endif %}
+
+    <!-- Action buttons -->
+    {% if entry.source_url or entry.repository %}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% if entry.entry_type == "meeting" %}
+            {% if entry.repository and (entry.repository is containing("zoom.us") or entry.repository is containing("meet.google")) %}
+            <a href="{{ entry.repository }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary" hx-boost="false">
+                Join Meeting &rarr;
+            </a>
+            {% endif %}
+            {% if entry.source_url %}
+            <a href="{{ entry.source_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" hx-boost="false">
+                Calendar Event
+            </a>
+            {% endif %}
+        {% else %}
+            {% if entry.source_url %}
+            <a href="{{ entry.source_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary" hx-boost="false">
+                Open in {{ entry.source | source_label }} &rarr;
+            </a>
+            {% endif %}
+            {% if entry.repository %}
+                {% if entry.repository is starting_with("http") %}
+                <a href="{{ entry.repository }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" hx-boost="false">
+                    Repository
+                </a>
+                {% elif entry.source == "github" %}
+                <a href="https://github.com/{{ entry.repository }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" hx-boost="false">
+                    {{ entry.repository }}
+                </a>
+                {% else %}
+                <span class="btn btn-sm btn-secondary" style="cursor:default;">{{ entry.repository }}</span>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Metadata -->
+    {% if entry.teams %}
+    <div class="panel-entry-field">
+        <label class="form-label">Teams</label>
+        <span class="text-sm">{{ entry.teams }}</span>
+    </div>
+    {% endif %}
+
+    {% if entry.collaborators %}
+    <div class="panel-entry-field">
+        <label class="form-label">Collaborators</label>
+        <span class="text-sm">{{ entry.collaborators }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.panel-entry-detail { padding: 0; }
+.panel-entry-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+.panel-entry-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; }
+.panel-entry-description { font-size: 0.9rem; color: var(--color-text-secondary); margin-bottom: 12px; }
+.panel-entry-field { margin-bottom: 12px; }
+.panel-entry-field .form-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-gray-50); margin-bottom: 4px; }
+.classify-roles { display: flex; gap: 6px; flex-wrap: wrap; }
+.classify-role-chip { cursor: pointer; }
+.classify-role-chip input[type="radio"] { display: none; }
+.classify-role-chip span { display: inline-block; padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; border: 1px solid var(--color-gray-20); background: var(--color-bg-secondary); color: var(--color-text-secondary); text-transform: capitalize; transition: all 0.15s; }
+.classify-role-chip input[type="radio"]:checked + span { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.classify-role-chip:hover span { border-color: var(--color-primary); }
+</style>

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Self Review - {{ phase.name }} - Brag Frog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-inner">
+        <h1>Self Review</h1>
+        <p class="page-subtitle">{{ phase.name }} &mdash; {{ phase.start_date }} to {{ phase.end_date }}</p>
+        {% if has_ai %}
+        <div class="page-header-actions">
+            <button class="btn btn-primary"
+                    hx-post="/review/{{ phase.id }}/generate"
+                    hx-target="#summary-sections"
+                    hx-swap="innerHTML"
+                    hx-indicator="#generate-all-spinner"
+                    hx-confirm="Generate all sections? This will overwrite any existing content.">
+                Generate All Sections
+            </button>
+            <span id="generate-all-spinner" class="htmx-indicator spinner">Generating...</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div id="summary-sections" class="summary-layout">
+    {% for section in sections %}
+    {% include "components/summary_section.html" %}
+    {% endfor %}
+</div>
+{% endblock %}

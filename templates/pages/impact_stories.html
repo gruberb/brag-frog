@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Impact Stories — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+            <h1>Impact Stories</h1>
+            <p class="page-subtitle">{{ phase.name }} — Narrative arcs for your review</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-story-form').classList.toggle('hidden')">+ New Story</button>
+    </div>
+</div>
+
+<!-- New story form -->
+<div id="new-story-form" class="card hidden" style="margin-bottom:16px;">
+    <form hx-post="/impact-stories" hx-target="#stories-container" hx-swap="beforeend" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');}">
+        <div class="form-group">
+            <label class="form-label">Story Title</label>
+            <input type="text" name="title" class="form-input" required placeholder="e.g., Led the migration to new auth system">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Situation</label>
+            <textarea name="situation" class="form-textarea" rows="2" placeholder="What was the context? What challenge did you face?"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Actions</label>
+            <textarea name="actions" class="form-textarea" rows="2" placeholder="What did you do? How did you approach it?"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Result</label>
+            <textarea name="result" class="form-textarea" rows="2" placeholder="What was the outcome? What was the impact?"></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">Create Story</button>
+            <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden')">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<div id="stories-container">
+    {% for story in stories %}
+    {% include "components/story_card.html" %}
+    {% endfor %}
+
+    {% if stories | length == 0 %}
+    <div class="card empty-state">
+        <div class="pixel-frog-watermark"></div>
+        <h2>No impact stories yet</h2>
+        <p>Impact stories help you articulate your accomplishments in a narrative format (Situation → Actions → Result).</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

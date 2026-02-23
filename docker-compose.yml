@@ -1,0 +1,13 @@
+services:
+  brag-frog:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file: .env
+    volumes:
+      - bragfrog-data:/data
+      - ./custom:/app/custom
+    restart: unless-stopped
+
+volumes:
+  bragfrog-data:

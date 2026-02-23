@@ -1,0 +1,37 @@
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2);">
+    <h2 style="margin:0;">Sync Activity</h2>
+    {% if sync_logs | length > 0 %}
+    <button class="btn btn-secondary btn-sm"
+            hx-delete="/sync/logs"
+            hx-target="#sync-activity"
+            hx-swap="innerHTML"
+            hx-confirm="Clear all sync logs?">Clear Logs</button>
+    {% endif %}
+</div>
+{% if sync_logs | length > 0 %}
+<div class="sync-log">
+    {% for log in sync_logs %}
+    <div class="sync-log-item">
+        <span class="sync-log-service">{{ log.service | source_label }}</span>
+        {% if log.status == "success" %}
+        <span class="badge badge-success">OK</span>
+        {% elif log.status == "error" %}
+        <span class="badge badge-danger">Failed</span>
+        {% else %}
+        <span class="badge badge-muted">{{ log.status }}</span>
+        {% endif %}
+        {% if log.status == "success" %}
+        <span class="text-muted" style="font-size:var(--text-xs);">
+            {% if log.entries_fetched > 0 or log.entries_created > 0 or log.entries_updated > 0 or log.entries_deleted > 0 %}{{ log.entries_fetched }} fetched, {{ log.entries_created }} new, {{ log.entries_updated }} updated{% if log.entries_deleted > 0 %}, {{ log.entries_deleted }} removed{% endif %}{% if log.entries_skipped > 0 %}, {{ log.entries_skipped }} skipped{% endif %}{% else %}up to date{% endif %}
+        </span>
+        {% endif %}
+        <span class="sync-log-time">{{ log.started_at }}</span>
+    </div>
+    {% if log.error_message %}
+    <div class="sync-log-error">{{ log.error_message }}</div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted text-sm">No sync activity yet. Configure an integration and click Sync to get started.</p>
+{% endif %}

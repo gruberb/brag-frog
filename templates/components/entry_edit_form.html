@@ -1,0 +1,94 @@
+<div id="entry-{{ entry.id }}" class="entry-edit-form card">
+    <form hx-put="/entries/{{ entry.id }}"
+          hx-target="#entry-{{ entry.id }}"
+          hx-swap="outerHTML">
+
+        <div class="form-row">
+            <div class="form-group form-group--grow">
+                <label class="form-label" for="edit-title-{{ entry.id }}">Title</label>
+                <input type="text"
+                       id="edit-title-{{ entry.id }}"
+                       name="title"
+                       class="form-input"
+                       value="{{ entry.title }}"
+                       required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="edit-type-{{ entry.id }}">Type</label>
+                <select id="edit-type-{{ entry.id }}" name="entry_type" class="form-select" required>
+                    {% if entry.source == "manual" %}
+                        {% for group in manual_grouped_entry_types %}
+                        <optgroup label="{{ group.group }}">
+                            {% for et in group.options %}
+                            <option value="{{ et.value }}" {% if entry.entry_type == et.value %}selected{% endif %}>{{ et.label }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    {% else %}
+                        {% for group in grouped_entry_types %}
+                        <optgroup label="{{ group.group }}">
+                            {% for et in group.options %}
+                            <option value="{{ et.value }}" {% if entry.entry_type == et.value %}selected{% endif %}>{{ et.label }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="edit-description-{{ entry.id }}">Description</label>
+            <textarea id="edit-description-{{ entry.id }}"
+                      name="description"
+                      class="form-textarea"
+                      rows="3">{{ entry.description | default(value="") }}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="edit-kr-{{ entry.id }}">Key Result</label>
+                <select id="edit-kr-{{ entry.id }}" name="key_result_id" class="form-select">
+                    <option value="">No key result</option>
+                    {% if goals is defined %}
+                    {% for goal in goals %}
+                    <optgroup label="{{ goal.title }}">
+                        {% for kr in key_results %}{% if kr.goal_id and kr.goal_id == goal.id %}
+                        <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                        {% endif %}{% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                    {% for kr in key_results %}{% if not kr.goal_id %}
+                    <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                    {% endif %}{% endfor %}
+                    {% else %}
+                    {% for kr in key_results %}
+                    <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                    {% endfor %}
+                    {% endif %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="edit-date-{{ entry.id }}">Date</label>
+                <input type="date"
+                       id="edit-date-{{ entry.id }}"
+                       name="occurred_at"
+                       class="form-input"
+                       value="{{ entry.occurred_at }}"
+                       required>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+            <button type="button" class="btn btn-sm btn-secondary"
+                    hx-get="/entries/{{ entry.id }}/view"
+                    hx-target="#entry-{{ entry.id }}"
+                    hx-swap="outerHTML">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>

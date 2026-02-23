@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Get Started — Brag Frog{% endblock %}
+
+{% block content %}
+<div class="empty-state">
+    <h2>Welcome to Brag Frog!</h2>
+    <p>Create a performance cycle to start tracking your contributions.</p>
+    <div class="card" style="max-width:420px;margin:24px auto 0;text-align:left;">
+        <div class="form-actions" style="margin-bottom: var(--space-3);justify-content:center;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setPreset('H1')">H1 (Jan-Jun)</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="setPreset('H2')">H2 (Jul-Dec)</button>
+        </div>
+        <form hx-post="/phases" hx-swap="none">
+            <div class="form-group">
+                <label class="form-label" for="phase-name">Name</label>
+                <input type="text" id="phase-name" name="name" class="form-input" required placeholder="e.g. H1 2026">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="phase-start">Start Date</label>
+                <input type="date" id="phase-start" name="start_date" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="phase-end">End Date</label>
+                <input type="date" id="phase-end" name="end_date" class="form-input" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Create Cycle</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function setPreset(half) {
+    var year = new Date().getFullYear();
+    var name = document.getElementById('phase-name');
+    var start = document.getElementById('phase-start');
+    var end = document.getElementById('phase-end');
+
+    if (half === 'H1') {
+        name.value = 'H1 ' + year;
+        start.value = year + '-01-01';
+        end.value = year + '-06-30';
+    } else {
+        name.value = 'H2 ' + year;
+        start.value = year + '-07-01';
+        end.value = year + '-12-31';
+    }
+}
+</script>
+{% endblock %}

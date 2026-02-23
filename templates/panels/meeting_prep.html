@@ -1,0 +1,173 @@
+<!-- Meeting prep panel content (loaded into #panel-body via HTMX) -->
+<div class="panel-entry-detail" id="meeting-prep-panel">
+    <!-- Metadata header (always shown) -->
+    <div class="panel-entry-meta" style="margin-top:8px;">
+        <span class="badge badge-type">meeting</span>
+        {% if entry.meeting_role %}
+        <span class="badge badge-type">{{ entry.meeting_role }}</span>
+        {% endif %}
+        <span class="text-sm text-muted">{{ entry.occurred_at }}</span>
+        {% if entry.start_time %}
+        <span class="text-sm text-muted">{{ entry.start_time }}{% if entry.end_time %}&ndash;{{ entry.end_time }}{% endif %}</span>
+        {% endif %}
+        {% if entry.key_result_id %}
+        {% for kr in key_results %}
+        {% if kr.id == entry.key_result_id %}
+        <span class="badge" style="background:{{ kr.color | default(value='#888') }};color:#fff;">{{ kr.name }}</span>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <h3 class="panel-entry-title">{{ entry.title }}</h3>
+
+    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        {% if entry.repository and (entry.repository is containing("zoom.us") or entry.repository is containing("meet.google")) %}
+        <a href="{{ entry.repository }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary">
+            Join Meeting &rarr;
+        </a>
+        {% endif %}
+        {% if entry.source_url %}
+        <a href="{{ entry.source_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
+            Calendar Event
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="dither-divider"></div>
+
+    {% if edit_mode %}
+    <!-- Edit mode -->
+    <form hx-post="/meeting-prep/panel/{{ entry.id }}" hx-target="#meeting-prep-panel" hx-swap="outerHTML">
+        <input type="hidden" name="week_id" value="{{ current_week.id }}">
+
+        <div class="form-group">
+            <label class="form-label">Key Result</label>
+            <select name="key_result_id" class="form-select">
+                <option value="0">None</option>
+                {% for goal in goals %}
+                <optgroup label="{{ goal.title }}">
+                    {% for kr in key_results %}
+                    {% if kr.goal_id == goal.id %}
+                    <option value="{{ kr.id }}" {% if entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Prep Notes</label>
+            <textarea name="notes" class="form-textarea" rows="6"
+                      placeholder="Talking points, agenda, questions...">{% if prep_note %}{{ prep_note.notes | default(value='') }}{% endif %}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Doc URLs</label>
+            <input type="text" name="doc_urls" class="form-input"
+                   placeholder="Links to relevant docs (comma-separated)"
+                   value="{% if prep_note %}{{ prep_note.doc_urls | default(value='') }}{% endif %}">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">AI Context <span style="font-weight:normal;color:var(--color-text-secondary);">(optional)</span></label>
+            <textarea id="ai-context-snippets" class="form-textarea" rows="3"
+                      placeholder="Paste links, notes, or context for AI — one per line, up to 5"></textarea>
+        </div>
+
+        <div class="form-actions" style="margin-top:12px;flex-wrap:wrap;gap:8px;">
+            {% if has_ai %}
+            <button type="button"
+                    class="btn btn-secondary btn-sm"
+                    id="meeting-prep-ai-btn"
+                    onclick="fetchMeetingPrepAiDraft({{ entry.id }})"
+                    style="display:inline-flex;align-items:center;gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 1v2M8 13v2M3.05 3.05l1.414 1.414M11.536 11.536l1.414 1.414M1 8h2M13 8h2M3.05 12.95l1.414-1.414M11.536 4.464l1.414-1.414"/>
+                </svg>
+                AI Draft
+            </button>
+            {% else %}
+            <span style="font-size:var(--text-xs);color:var(--color-text-secondary);">
+                <a href="/integrations" style="color:var(--color-primary);">Set up Claude AI</a> for AI prep
+            </span>
+            {% endif %}
+            <div style="flex:1;"></div>
+            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closePanel()">Cancel</button>
+        </div>
+
+        <div id="meeting-prep-ai-loading" style="display:none;margin-top:var(--space-2);font-size:var(--text-xs);color:var(--color-text-secondary);">
+            <span class="spinner" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:6px;"></span>
+            Generating AI draft...
+        </div>
+    </form>
+
+    <script>
+    function fetchMeetingPrepAiDraft(entryId) {
+        var textarea = document.querySelector('#meeting-prep-panel textarea[name="notes"]');
+        var contextArea = document.getElementById('ai-context-snippets');
+        var btn = document.getElementById('meeting-prep-ai-btn');
+        var loading = document.getElementById('meeting-prep-ai-loading');
+
+        if (btn) btn.disabled = true;
+        if (loading) loading.style.display = 'block';
+
+        var formData = new URLSearchParams();
+        formData.append('context_snippets', contextArea ? contextArea.value : '');
+
+        fetch('/meeting-prep/panel/' + entryId + '/ai-draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'HX-Request': 'true' },
+            body: formData.toString()
+        })
+        .then(function(response) {
+            if (!response.ok) throw new Error('AI generation failed');
+            return response.text();
+        })
+        .then(function(text) {
+            textarea.value = text;
+            textarea.focus();
+        })
+        .catch(function() {
+            alert('AI draft failed. Check your Claude AI integration in Settings.');
+        })
+        .finally(function() {
+            if (btn) btn.disabled = false;
+            if (loading) loading.style.display = 'none';
+        });
+    }
+    </script>
+
+    {% else %}
+    <!-- Read mode -->
+    {% if prep_note and prep_note.notes %}
+    <div class="form-group">
+        <label class="form-label">Prep Notes</label>
+        <div class="text-sm markdown-content">{{ prep_note.notes | markdown | safe }}</div>
+    </div>
+    {% endif %}
+
+    {% if prep_note and prep_note.doc_urls %}
+    <div class="form-group">
+        <label class="form-label">Docs</label>
+        <div class="text-sm">
+            {% for url in prep_note.doc_urls | split(pat=",") %}
+            {% set trimmed = url | trim %}
+            {% if trimmed %}
+            <a href="{{ trimmed }}" target="_blank" rel="noopener" class="text-link" style="display:block;margin-bottom:4px;">{{ trimmed }}</a>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:12px;">
+        <button type="button" class="btn btn-secondary btn-sm"
+                hx-get="/meeting-prep/panel/{{ entry.id }}?edit=1"
+                hx-target="#meeting-prep-panel"
+                hx-swap="outerHTML">Edit</button>
+    </div>
+    {% endif %}
+</div>

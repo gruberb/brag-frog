@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Level Guide — Brag Frog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Level Guide</h1>
+    <p class="page-subtitle">
+        {% if current_level %}
+        Your level: {{ current_level.title }}
+        {% else %}
+        Set your role in <a href="/settings">Settings</a> to see personalized guidance
+        {% endif %}
+    </p>
+</div>
+
+{% if current_level %}
+<div class="clg-tabs">
+    <button class="clg-tab active" onclick="showClgTab('current', this)">
+        Your Level: {{ current_level.title }}
+    </button>
+    {% if next_level %}
+    <button class="clg-tab" onclick="showClgTab('next', this)">
+        Next Level: {{ next_level.title }}
+    </button>
+    {% endif %}
+</div>
+
+<div id="clg-current" class="clg-panel">
+    <div class="clg-one-liner">
+        <strong>{{ current_level.one_liner }}</strong>
+    </div>
+
+    <div class="clg-section">
+        <h2>Problems</h2>
+        <div class="clg-grid">
+            <div class="clg-item">
+                <h3>Task Size</h3>
+                <p>{{ current_level.problems.task_size }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Complexity</h3>
+                <p>{{ current_level.problems.complexity }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Risk Management</h3>
+                <p>{{ current_level.problems.risk_management }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Domain Expertise</h3>
+                <p>{{ current_level.problems.domain_expertise }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Strategy</h3>
+                <p>{{ current_level.problems.strategy }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="clg-section">
+        <h2>People</h2>
+        <div class="clg-grid">
+            <div class="clg-item">
+                <h3>Influence</h3>
+                <p>{{ current_level.people.influence }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Responsibility</h3>
+                <p>{{ current_level.people.responsibility }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Communication</h3>
+                <p>{{ current_level.people.communication }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Change Management</h3>
+                <p>{{ current_level.people.change_management }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Team Contributions</h3>
+                <p>{{ current_level.people.team_contributions }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>DEI</h3>
+                <p>{{ current_level.people.dei }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if next_level %}
+<div id="clg-next" class="clg-panel" style="display:none;">
+    <div class="clg-one-liner">
+        <strong>{{ next_level.one_liner }}</strong>
+    </div>
+
+    <div class="clg-section">
+        <h2>Problems</h2>
+        <div class="clg-grid">
+            <div class="clg-item">
+                <h3>Task Size</h3>
+                <p>{{ next_level.problems.task_size }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Complexity</h3>
+                <p>{{ next_level.problems.complexity }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Risk Management</h3>
+                <p>{{ next_level.problems.risk_management }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Domain Expertise</h3>
+                <p>{{ next_level.problems.domain_expertise }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Strategy</h3>
+                <p>{{ next_level.problems.strategy }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="clg-section">
+        <h2>People</h2>
+        <div class="clg-grid">
+            <div class="clg-item">
+                <h3>Influence</h3>
+                <p>{{ next_level.people.influence }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Responsibility</h3>
+                <p>{{ next_level.people.responsibility }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Communication</h3>
+                <p>{{ next_level.people.communication }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Change Management</h3>
+                <p>{{ next_level.people.change_management }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>Team Contributions</h3>
+                <p>{{ next_level.people.team_contributions }}</p>
+            </div>
+            <div class="clg-item">
+                <h3>DEI</h3>
+                <p>{{ next_level.people.dei }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <h2>No role set</h2>
+    <p>Go to <a href="/settings">Settings</a> and select your level to see your career guide.</p>
+</div>
+{% endif %}
+
+<script>
+function showClgTab(tab, btn) {
+    document.querySelectorAll('.clg-panel').forEach(function(p) { p.style.display = 'none'; });
+    document.querySelectorAll('.clg-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.getElementById('clg-' + tab).style.display = 'block';
+    btn.classList.add('active');
+}
+</script>
+{% endblock %}

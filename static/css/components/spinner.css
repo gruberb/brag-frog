@@ -1,0 +1,54 @@
+/* Loading indicator */
+.htmx-indicator {
+    display: none;
+}
+
+.htmx-request .htmx-indicator {
+    display: inline-block;
+}
+
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-gray-30);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Button loading spinner — swap label for spinner when disabled by htmx */
+.btn-loading-indicator .btn-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.btn-loading-indicator .btn-spinner {
+    display: none;
+}
+.btn-loading-indicator[disabled]:not(.btn-static-disabled) .btn-label {
+    display: none;
+}
+.btn-loading-indicator[disabled]:not(.btn-static-disabled) .btn-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+.btn-secondary.btn-loading-indicator[disabled] .btn-spinner {
+    border-color: rgba(0, 0, 0, 0.15);
+    border-top-color: var(--color-primary);
+}
+.btn-danger.btn-loading-indicator[disabled] .btn-spinner {
+    border-color: rgba(0, 0, 0, 0.15);
+    border-top-color: var(--color-error);
+}

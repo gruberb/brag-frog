@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p class="page-subtitle">
+        Week {{ current_week.iso_week }} · {{ current_week.start_date }} to {{ current_week.end_date }}
+    </p>
+</div>
+
+<!-- Quick capture — full logbook-style form -->
+<section class="card dashboard-quick-capture">
+    <form
+        class="quick-entry-form"
+        hx-post="/entries/quick"
+        hx-target="#just-added-list"
+        hx-swap="none"
+        hx-on::after-request="handleQuickAdd(this, event)"
+    >
+        <div class="quick-entry-top">
+            <input
+                type="text"
+                name="title"
+                class="form-input quick-entry-title"
+                placeholder="What are you working on?"
+                required
+                autocomplete="off"
+            />
+            <select name="entry_type" class="form-select quick-entry-type">
+                {% for et in manual_entry_types %}
+                <option value="{{ et.value }}">{{ et.label }}</option>
+                {% endfor %}
+            </select>
+            <input
+                type="date"
+                name="occurred_at"
+                class="form-input quick-entry-date"
+                value="{{ today }}"
+            />
+            <button type="submit" class="btn btn-primary quick-entry-submit">Add</button>
+        </div>
+        <div class="quick-entry-meta">
+            <select name="key_result_id" class="form-select quick-entry-meta-field">
+                <option value="">Key Result</option>
+                {% for goal in goals %}
+                <optgroup label="{{ goal.title }}">
+                    {% for kr in key_results %}{% if kr.goal_id and kr.goal_id == goal.id %}
+                    <option value="{{ kr.id }}">{{ kr.name }}</option>
+                    {% endif %}{% endfor %}
+                </optgroup>
+                {% endfor %}
+                {% for kr in key_results %}{% if not kr.goal_id %}
+                <option value="{{ kr.id }}">{{ kr.name }}</option>
+                {% endif %}{% endfor %}
+            </select>
+
+            <!-- Teams dropdown -->
+            <div class="quick-entry-meta-field quick-entry-dropdown" id="teams-dropdown">
+                <button type="button" class="chip-dropdown-trigger" onclick="toggleDropdown('teams-dropdown')">
+                    <span id="quick-teams-label">Teams</span>
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </button>
+                <input type="hidden" name="teams" id="quick-teams-value" />
+                <div class="chip-dropdown-panel hidden">
+                    {% if known_teams | length > 0 %}
+                    <div class="chip-select" id="quick-teams-chips">
+                        {% for team in known_teams %}
+                        <label class="chip-option">
+                            <input type="checkbox" value="{{ team }}" onchange="updateChipField('quick-teams')" />
+                            <span class="chip-label">{{ team }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <input type="text" class="chip-add-input" placeholder="+ team" onkeydown="addChip(event, 'quick-teams')" />
+                    {% else %}
+                    <input type="text" class="chip-add-input chip-add-input--full" placeholder="Teams (comma-separated)"
+                           oninput="this.form.querySelector('#quick-teams-value').value = this.value" />
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Collaborators dropdown -->
+            <div class="quick-entry-meta-field quick-entry-dropdown" id="collabs-dropdown">
+                <button type="button" class="chip-dropdown-trigger" onclick="toggleDropdown('collabs-dropdown')">
+                    <span id="quick-collabs-label">People</span>
+                    <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </button>
+                <input type="hidden" name="collaborators" id="quick-collabs-value" />
+                <div class="chip-dropdown-panel hidden">
+                    {% if known_collaborators | length > 0 %}
+                    <div class="chip-select" id="quick-collabs-chips">
+                        {% for collab in known_collaborators %}
+                        <label class="chip-option">
+                            <input type="checkbox" value="{{ collab }}" onchange="updateChipField('quick-collabs')" />
+                            <span class="chip-label">{{ collab }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <input type="text" class="chip-add-input" placeholder="+ name" onkeydown="addChip(event, 'quick-collabs')" />
+                    {% else %}
+                    <input type="text" class="chip-add-input chip-add-input--full" placeholder="Collaborators (comma-separated)"
+                           oninput="this.form.querySelector('#quick-collabs-value').value = this.value" />
+                    {% endif %}
+                </div>
+            </div>
+
+            <input type="url" name="source_url" class="form-input quick-entry-meta-field" placeholder="Link" />
+        </div>
+    </form>
+    <!-- Just-added entries appear here after quick capture -->
+    <div id="just-added-list"></div>
+</section>
+
+<!-- Two-column layout below the entry box -->
+<div class="dashboard-layout">
+    <div class="dashboard-main">
+        <!-- Weekly Focus -->
+        <section class="card dashboard-focus">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Weekly Focus</h2>
+                <button class="btn btn-text btn-sm" id="focus-add-btn" onclick="handleFocusAddClick()"
+                        {% if focus_items | length >= 3 %}disabled{% endif %}>+ Add</button>
+            </div>
+
+            {% if focus_items | length == 0 %}
+            <p class="text-sm text-muted">What are your top priorities this week? Add up to 3.</p>
+            {% endif %}
+
+            {% for focus in focus_items %}
+            <div class="focus-card" id="focus-card-{{ focus.id }}">
+                <div class="focus-card-header" onclick="toggleFocusExpand({{ focus.id }})">
+                    <span class="focus-card-title">{{ focus.title }}</span>
+                    <div class="focus-card-badges">
+                        {% if focus.linked_type == "kr" %}
+                            {% for kr in key_results %}{% if kr.id == focus.linked_id %}
+                            <span class="badge badge-type" style="background:{{ kr.color | default(value='#888') }};color:#fff;font-size:0.65rem;">KR: {{ kr.name }}</span>
+                            {% endif %}{% endfor %}
+                        {% elif focus.linked_type == "goal" %}
+                            {% for goal in goals %}{% if goal.id == focus.linked_id %}
+                            <span class="badge badge-type" style="font-size:0.65rem;">Goal: {{ goal.title }}</span>
+                            {% endif %}{% endfor %}
+                        {% elif focus.linked_type == "initiative" %}
+                            {% for init in initiatives %}{% if init.id == focus.linked_id %}
+                            <span class="badge badge-type" style="font-size:0.65rem;">Init: {{ init.title }}</span>
+                            {% endif %}{% endfor %}
+                        {% endif %}
+                        <svg class="focus-chevron" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+                    </div>
+                </div>
+                <div class="focus-card-body hidden" id="focus-body-{{ focus.id }}">
+                    {% set entry_ids = focus_entry_ids[loop.index0] %}
+                    {% if entry_ids | length > 0 %}
+                    <div class="focus-linked-entries">
+                        <span class="text-sm text-muted" style="font-weight:600;">Linked entries:</span>
+                        {% for eid in entry_ids %}
+                            {% for e in picker_entries %}{% if e.id == eid %}
+                            <div class="focus-entry-chip" onclick="openPanelFromUrl('{{ e.title | escape }}', '/entries/{{ e.id }}/panel')">
+                                <span class="badge badge-type" style="font-size:0.6rem;">{{ e.entry_type }}</span>
+                                <span class="text-sm">{{ e.title }}</span>
+                            </div>
+                            {% endif %}{% endfor %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    {% if focus.link_1 or focus.link_2 or focus.link_3 %}
+                    <div class="focus-links" style="margin-top:6px;">
+                        {% if focus.link_1 %}<a href="{{ focus.link_1 }}" target="_blank" rel="noopener" class="text-sm focus-link">{{ focus.link_1 }}</a>{% endif %}
+                        {% if focus.link_2 %}<a href="{{ focus.link_2 }}" target="_blank" rel="noopener" class="text-sm focus-link">{{ focus.link_2 }}</a>{% endif %}
+                        {% if focus.link_3 %}<a href="{{ focus.link_3 }}" target="_blank" rel="noopener" class="text-sm focus-link">{{ focus.link_3 }}</a>{% endif %}
+                    </div>
+                    {% endif %}
+                    <div style="display:flex;gap:6px;margin-top:8px;">
+                        <button class="btn btn-text btn-sm" onclick="toggleFocusEdit({{ focus.id }})">Edit</button>
+                        <button class="btn btn-danger btn-sm"
+                                hx-delete="/focus/{{ focus.id }}" hx-swap="none">Delete</button>
+                    </div>
+
+                    <!-- Edit form (hidden by default) -->
+                    <form class="focus-edit-form hidden" id="focus-edit-{{ focus.id }}"
+                          hx-put="/focus/{{ focus.id }}" hx-swap="none" style="margin-top:8px;">
+                        <input type="text" name="title" class="form-input" value="{{ focus.title }}" required placeholder="Focus title" />
+                        <select name="linked_ref" class="form-select" style="margin-top:6px;">
+                            <option value="">Link to...</option>
+                            {% for goal in goals %}
+                            <option value="goal:{{ goal.id }}" {% if focus.linked_type == "goal" and focus.linked_id == goal.id %}selected{% endif %}>Goal: {{ goal.title }}</option>
+                            {% endfor %}
+                            {% for kr in key_results %}
+                            <option value="kr:{{ kr.id }}" {% if focus.linked_type == "kr" and focus.linked_id == kr.id %}selected{% endif %}>KR: {{ kr.name }}</option>
+                            {% endfor %}
+                            {% for init in initiatives %}
+                            <option value="initiative:{{ init.id }}" {% if focus.linked_type == "initiative" and focus.linked_id == init.id %}selected{% endif %}>Init: {{ init.title }}</option>
+                            {% endfor %}
+                        </select>
+                        <!-- Entry autocomplete -->
+                        <div class="entry-autocomplete" id="entry-ac-{{ focus.id }}" style="margin-top:6px;">
+                            <input type="text" class="form-input" placeholder="Search entries to link..." autocomplete="off"
+                                   onfocus="showEntryResults('{{ focus.id }}')"
+                                   oninput="filterEntryResults(this, '{{ focus.id }}')" />
+                            <div class="entry-ac-results hidden" id="entry-ac-results-{{ focus.id }}">
+                                {% for e in picker_entries %}
+                                <div class="entry-ac-option" data-id="{{ e.id }}" data-title="{{ e.title }}" onmousedown="event.preventDefault(); toggleLinkedEntry(this, '{{ focus.id }}')">
+                                    <span class="badge badge-type" style="font-size:0.55rem;">{{ e.entry_type }}</span>
+                                    <span>{{ e.title }}</span>
+                                    <span class="entry-ac-date">{{ e.occurred_at }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="entry-ac-selected" id="entry-ac-selected-{{ focus.id }}">
+                                {% for eid in entry_ids %}{% for e in picker_entries %}{% if e.id == eid %}
+                                <span class="entry-ac-chip" data-id="{{ e.id }}"><span class="entry-ac-chip-label">{{ e.title }}</span> <button type="button" onclick="removeLinkedEntry(this, '{{ focus.id }}')">&times;</button></span>
+                                {% endif %}{% endfor %}{% endfor %}
+                            </div>
+                            <input type="hidden" name="entry_ids" value="{% for eid in entry_ids %}{{ eid }}{% if not loop.last %},{% endif %}{% endfor %}" />
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:8px;">
+                            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleFocusEdit({{ focus.id }})">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Add focus form (hidden by default) -->
+            <form class="focus-add-form hidden" id="focus-add-form"
+                  hx-post="/focus/week/{{ current_week.id }}" hx-swap="none" style="margin-top:8px;">
+                <input type="text" name="title" class="form-input" required placeholder="What's your focus?" autocomplete="off" />
+                <select name="linked_ref" class="form-select" style="margin-top:6px;">
+                    <option value="">Link to...</option>
+                    {% for goal in goals %}
+                    <option value="goal:{{ goal.id }}">Goal: {{ goal.title }}</option>
+                    {% endfor %}
+                    {% for kr in key_results %}
+                    <option value="kr:{{ kr.id }}">KR: {{ kr.name }}</option>
+                    {% endfor %}
+                    {% for init in initiatives %}
+                    <option value="initiative:{{ init.id }}">Init: {{ init.title }}</option>
+                    {% endfor %}
+                </select>
+                <!-- Entry autocomplete -->
+                <div class="entry-autocomplete" id="entry-ac-new" style="margin-top:6px;">
+                    <input type="text" class="form-input" placeholder="Search entries to link..." autocomplete="off"
+                           onfocus="showEntryResults('new')"
+                           oninput="filterEntryResults(this, 'new')" />
+                    <div class="entry-ac-results hidden" id="entry-ac-results-new">
+                        {% for e in picker_entries %}
+                        <div class="entry-ac-option" data-id="{{ e.id }}" data-title="{{ e.title }}" onmousedown="event.preventDefault(); toggleLinkedEntry(this, 'new')">
+                            <span class="badge badge-type" style="font-size:0.55rem;">{{ e.entry_type }}</span>
+                            <span>{{ e.title }}</span>
+                            <span class="entry-ac-date">{{ e.occurred_at }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="entry-ac-selected" id="entry-ac-selected-new"></div>
+                    <!-- hidden entry_ids inputs created dynamically by syncEntryIds() -->
+                </div>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button type="submit" class="btn btn-primary btn-sm">Add Focus</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="cancelFocusAdd()">Cancel</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Meetings card -->
+        <section class="card">
+            <h2 class="section-title">Meetings</h2>
+            {% if meetings | length > 0 %}
+            {% for day in meeting_days %}
+            <h3 class="meeting-day-headline {% if day.is_past %}meeting-day-headline--past{% endif %}">{{ day.label }}{% if day.is_today %} <span class="meeting-day-today-badge">Today</span>{% endif %}</h3>
+            <div class="dashboard-meetings">
+                {% for m in meetings %}{% if m.occurred_at == day.date %}
+                <div class="dashboard-meeting-item {% if day.is_past %}meeting-past{% endif %}" onclick="openPanelFromUrl('Meeting Prep', '/meeting-prep/panel/{{ m.id }}')" style="cursor:pointer;">
+                    <div class="meeting-info">
+                        <span class="meeting-title">{{ m.title }}</span>
+                        <span class="text-sm text-muted">{% if m.start_time %}{{ m.start_time }}{% if m.end_time %}&ndash;{{ m.end_time }}{% endif %}{% endif %}</span>
+                    </div>
+                    <div class="meeting-meta">
+                        {% if m.meeting_role %}
+                        <span class="badge badge-type">{{ m.meeting_role }}</span>
+                        {% else %}
+                        <button class="btn btn-text btn-sm"
+                                onclick="event.stopPropagation(); openPanelFromUrl('Classify Meeting', '/entries/{{ m.id }}/panel')">
+                            Classify
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}{% endfor %}
+            </div>
+            {% endfor %}
+            {% elif not has_calendar %}
+            <div class="dashboard-integration-prompt">
+                <p class="text-sm text-muted">Connect Google Calendar to see your meetings here.</p>
+                <a href="/integrations" class="btn btn-secondary btn-sm">Connect Calendar</a>
+            </div>
+            {% else %}
+            <p class="text-sm text-muted">No meetings this week.</p>
+            {% endif %}
+        </section>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="dashboard-sidebar">
+        <!-- Weekly check-in -->
+        <section class="card">
+            <h2 class="section-title">Weekly Check-in</h2>
+            {% if checkin_done %}
+            <div class="checkin-status">
+                {% if checkin_energy or checkin_productivity %}
+                <div class="checkin-highlights">
+                    {% if checkin_energy %}
+                    <div class="checkin-highlight">
+                        <span class="checkin-highlight-value">{{ checkin_energy }}/5</span>
+                        <span class="checkin-highlight-label">Energy</span>
+                    </div>
+                    {% endif %}
+                    {% if checkin_productivity %}
+                    <div class="checkin-highlight">
+                        <span class="checkin-highlight-value">{{ checkin_productivity }}/5</span>
+                        <span class="checkin-highlight-label">Productivity</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-sm text-muted" style="padding:4px 0;">Completed</p>
+                {% endif %}
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <a href="/checkin/{{ current_week.id }}" class="btn btn-text btn-sm">Edit</a>
+                <a href="/checkins" class="btn btn-text btn-sm">View history</a>
+            </div>
+            {% else %}
+            <div class="checkin-status">
+                <p class="text-sm text-muted">Reflect on your week</p>
+                <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Start Check-in</a>
+            </div>
+            {% endif %}
+        </section>
+
+        <!-- OKR + Initiatives snapshot -->
+        <section class="card">
+            <h2 class="section-title">OKR Snapshot</h2>
+            {% if goals | length == 0 %}
+            <div style="padding:4px 0;">
+                <p class="text-sm text-muted">No goals yet.</p>
+                <a href="/goals" class="btn btn-text btn-sm">Set up goals</a>
+            </div>
+            {% else %}
+            {% for goal in goals %}
+            <div class="dashboard-goal">
+                <a href="/logbook?goal_id={{ goal.id }}" class="goal-title goal-title-link">{{ goal.title }}</a>
+                {% for kr in key_results %}
+                {% if kr.goal_id == goal.id %}
+                <div class="dashboard-kr">
+                    <div class="kr-label">
+                        <span class="kr-color" style="background:{{ kr.color | default(value='#888') }}"></span>
+                        {{ kr.name }}
+                    </div>
+                    <div class="kr-score-bar">
+                        <div class="kr-score-fill" style="width:{{ kr.progress }}%;background:{{ kr.color | default(value='#888') }}"></div>
+                    </div>
+                    <span class="text-sm text-muted">{{ kr.progress }}%</span>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            {% if initiatives | length > 0 %}
+            <h3 class="text-sm" style="font-weight:600;margin:12px 0 4px;">Active Initiatives</h3>
+            {% for initiative in initiatives %}
+            {% if initiative.status != "completed" %}
+            <div class="dashboard-kr" style="margin-bottom:4px;">
+                <span class="text-sm">{{ initiative.title }}</span>
+                <span class="badge badge-type" style="font-size:0.65rem;">{{ initiative.scope }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+        </section>
+
+        <!-- Week Calendar Widget -->
+        <section class="card">
+            <h2 class="section-title">Focus Time This Week</h2>
+            <div class="week-calendar">
+                {% for day in focus_days %}
+                <div class="week-day {% if day.is_best %}week-day--best{% endif %}">
+                    <div class="week-day-header">
+                        <span class="week-day-abbr">{{ day.day_name }}</span>
+                        <span class="week-day-date">{{ day.date }}</span>
+                    </div>
+                    <div class="week-day-meetings">{{ day.meetings }} mtg{{ day.meetings | pluralize }}</div>
+                    {% if day.blocks | length > 0 %}
+                    <div class="week-day-blocks">
+                        {% for block in day.blocks %}
+                        <div class="week-day-block">
+                            <span class="week-day-block-hours">{{ block.hours }}</span>
+                            <span class="week-day-block-range">{{ block.start }}&ndash;{{ block.end }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="week-day-focus text-muted">No 2h+ block</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <p class="text-sm text-muted" style="margin-top:8px;">Highlighted days have the most uninterrupted focus time (&ge;2h blocks).</p>
+        </section>
+
+        <!-- Active Work (PRs + Revisions + Bugs + Jira) -->
+        {% if active_work | length > 0 %}
+        <section class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Active Work</h2>
+                {% if active_work | length > 5 %}
+                <button class="btn btn-text btn-sm" onclick="document.getElementById('active-work-list').classList.remove('active-work--collapsed')">Show all ({{ active_work | length }})</button>
+                {% endif %}
+            </div>
+            <div id="active-work-list" class="dashboard-meetings {% if active_work | length > 5 %}active-work--collapsed{% endif %}">
+                {% for item in active_work %}
+                <div class="dashboard-meeting-item" onclick="openPanelFromUrl('{{ item.title | escape }}', '/entries/{{ item.id }}/panel')" style="cursor:pointer;">
+                    <div class="meeting-info">
+                        <span class="badge badge-type">{{ item.source | source_label }}</span>
+                        <span class="entry-title">{{ item.title }}</span>
+                    </div>
+                    <div class="meeting-meta">
+                        {% if item.status %}
+                        <span class="badge badge-type">{{ item.status }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% elif has_code_review or has_tickets %}
+        <section class="card">
+            <h2 class="section-title">Active Work</h2>
+            <p class="text-sm text-muted">No open PRs, revisions, or tickets this week.</p>
+        </section>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,192 @@
+<div id="summary-section-{{ section.key }}" class="summary-section">
+    <div class="summary-section-header">
+        <div>
+            <h3 class="summary-section-title">{{ section.title }}</h3>
+            <p class="summary-section-question">{{ section.question }}</p>
+        </div>
+        <button class="btn-icon"
+                onclick="toggleSummaryEdit('{{ section.key }}')"
+                id="summary-toggle-btn-{{ section.key }}"
+                title="Edit section">
+            <svg id="summary-pencil-{{ section.key }}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11.333 2A1.886 1.886 0 0 1 14 4.667L5.333 13.333 2 14l.667-3.333L11.333 2z"/>
+            </svg>
+            <svg id="summary-close-{{ section.key }}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                <line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>
+            </svg>
+        </button>
+    </div>
+
+    {# -- View mode -- #}
+    <div id="summary-view-{{ section.key }}">
+        {% if section.content %}
+        <div class="summary-content markdown-content" id="summary-text-{{ section.key }}">{{ section.content | markdown | safe }}</div>
+        {% if section.generated_at %}
+        <div class="summary-meta">Generated {{ section.generated_at }}</div>
+        {% endif %}
+        {% else %}
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">No content yet. Click the pencil to start writing.</p>
+        {% endif %}
+    </div>
+
+    {# -- Edit mode -- #}
+    <div id="summary-editor-{{ section.key }}" style="display:none;">
+        <textarea id="summary-textarea-{{ section.key }}"
+                  name="content"
+                  class="summary-textarea"
+                  rows="12"
+                  placeholder="Write your self-reflection for this section...">{% if section.content %}{{ section.content }}{% endif %}</textarea>
+
+        <div style="display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-3); flex-wrap:wrap;">
+            {# AI Help -- only for non-future_plans sections #}
+            {% if section.key != "future_plans" %}
+                {% if has_ai %}
+                <button type="button"
+                        class="btn btn-sm btn-secondary"
+                        id="summary-ai-btn-{{ section.key }}"
+                        onclick="fetchAiDraft('{{ section.key }}', {{ phase.id }})"
+                        style="display:inline-flex; align-items:center; gap:6px;">
+                    {% if section.content %}
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 4v4h4"/><path d="M3.51 10a5 5 0 1 0 .49-5.32L1 8"/>
+                    </svg>
+                    Regenerate
+                    {% else %}
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M8 1v2M8 13v2M3.05 3.05l1.414 1.414M11.536 11.536l1.414 1.414M1 8h2M13 8h2M3.05 12.95l1.414-1.414M11.536 4.464l1.414-1.414"/>
+                    </svg>
+                    AI Draft
+                    {% endif %}
+                </button>
+                {% else %}
+                <span style="font-size:var(--text-xs); color:var(--color-text-secondary);">
+                    <a href="/integrations" style="color:var(--color-primary);">Set up Claude AI in Integrations</a> for AI help
+                </span>
+                {% endif %}
+            {% endif %}
+
+            <div style="flex:1;"></div>
+
+            <span id="summary-save-status-{{ section.key }}" style="font-size:var(--text-xs);"></span>
+
+            <button type="button"
+                    class="btn btn-sm btn-secondary"
+                    onclick="cancelSummaryEdit('{{ section.key }}')">
+                Cancel
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-primary"
+                    onclick="saveSummarySection('{{ section.key }}', {{ phase.id }})">
+                Save
+            </button>
+        </div>
+
+        <div id="summary-ai-loading-{{ section.key }}" style="display:none; margin-top:var(--space-2); font-size:var(--text-xs); color:var(--color-text-secondary);">
+            <span class="spinner" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:6px;"></span>
+            Generating AI draft...
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleSummaryEdit(key) {
+    var view = document.getElementById('summary-view-' + key);
+    var editor = document.getElementById('summary-editor-' + key);
+    var pencil = document.getElementById('summary-pencil-' + key);
+    var close = document.getElementById('summary-close-' + key);
+
+    if (editor.style.display === 'none') {
+        view.style.display = 'none';
+        editor.style.display = 'block';
+        pencil.style.display = 'none';
+        close.style.display = 'block';
+        document.getElementById('summary-textarea-' + key).focus();
+    } else {
+        editor.style.display = 'none';
+        view.style.display = 'block';
+        pencil.style.display = 'block';
+        close.style.display = 'none';
+    }
+}
+
+function cancelSummaryEdit(key) {
+    var view = document.getElementById('summary-view-' + key);
+    var editor = document.getElementById('summary-editor-' + key);
+    var pencil = document.getElementById('summary-pencil-' + key);
+    var close = document.getElementById('summary-close-' + key);
+    var textarea = document.getElementById('summary-textarea-' + key);
+    var textEl = document.getElementById('summary-text-' + key);
+
+    if (textEl) {
+        textarea.value = textEl.textContent.trim();
+    }
+
+    editor.style.display = 'none';
+    view.style.display = 'block';
+    pencil.style.display = 'block';
+    close.style.display = 'none';
+
+    var status = document.getElementById('summary-save-status-' + key);
+    if (status) status.innerHTML = '';
+}
+
+function saveSummarySection(key, phaseId) {
+    var textarea = document.getElementById('summary-textarea-' + key);
+    var status = document.getElementById('summary-save-status-' + key);
+    var content = textarea.value;
+
+    status.innerHTML = '<span style="color:var(--color-text-secondary);">Saving...</span>';
+
+    var formData = new URLSearchParams();
+    formData.append('content', content);
+
+    fetch('/review/' + phaseId + '/save/' + key, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'HX-Request': 'true' },
+        body: formData.toString()
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('Save failed');
+        return response.text();
+    })
+    .then(function(html) {
+        // Replace the entire section with server-rendered HTML (includes markdown, correct IDs)
+        var section = document.getElementById('summary-section-' + key);
+        section.outerHTML = html;
+    })
+    .catch(function() {
+        status.innerHTML = '<span style="color:var(--color-error);">Save failed. Try again.</span>';
+    });
+}
+
+function fetchAiDraft(key, phaseId) {
+    var textarea = document.getElementById('summary-textarea-' + key);
+    var btn = document.getElementById('summary-ai-btn-' + key);
+    var loading = document.getElementById('summary-ai-loading-' + key);
+
+    if (btn) btn.disabled = true;
+    if (loading) loading.style.display = 'block';
+
+    fetch('/review/' + phaseId + '/ai-draft/' + key, {
+        method: 'POST',
+        headers: { 'HX-Request': 'true' }
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('AI generation failed');
+        return response.text();
+    })
+    .then(function(text) {
+        textarea.value = text;
+        textarea.focus();
+    })
+    .catch(function() {
+        var status = document.getElementById('summary-save-status-' + key);
+        if (status) status.innerHTML = '<span style="color:var(--color-error);">AI draft failed. Try again.</span>';
+    })
+    .finally(function() {
+        if (btn) btn.disabled = false;
+        if (loading) loading.style.display = 'none';
+    });
+}
+
+</script>
