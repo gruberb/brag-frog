@@ -111,6 +111,11 @@ Three TOML files loaded at startup into `OnceLock` statics: `clg_levels.toml`, `
 
 16. **Encrypted fields in brag_entries.** All title, description, outcome_statement, decision_* fields are AES-256-GCM encrypted BLOBs. Cannot do SQL LIKE on them — filter in application code after decryption.
 
+## Style Guide
+
+1. **Never mention Co-Auhtored when committing code for the developer**
+2. **Always write comments and documentation as a Staff Engineer, intented for other developers**
+
 ## Further Reading
 
 - [docs/architecture.md](docs/architecture.md) — module map, request lifecycle, database design, sync architecture, AI integration
