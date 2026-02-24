@@ -20,6 +20,7 @@ async fn test_entry_crud() {
     let input = CreateEntry {
         week_id: week.id,
         key_result_id: None,
+        initiative_id: None,
         title: "Test Entry".to_string(),
         description: Some("A test entry".to_string()),
         entry_type: "other".to_string(),
@@ -46,6 +47,7 @@ async fn test_entry_crud() {
     // Update
     let update_input = brag_frog::entries::model::UpdateEntry {
         key_result_id: None,
+        initiative_id: None,
         title: "Updated Entry".to_string(),
         description: Some("Updated desc".to_string()),
         entry_type: "meeting".to_string(),
@@ -83,6 +85,7 @@ async fn test_soft_delete() {
     let input = CreateEntry {
         week_id: week.id,
         key_result_id: None,
+        initiative_id: None,
         title: "Soft Delete Me".to_string(),
         description: None,
         entry_type: "other".to_string(),
@@ -131,6 +134,7 @@ async fn test_phase_cascade_delete() {
     let input = CreateEntry {
         week_id: week.id,
         key_result_id: None,
+        initiative_id: None,
         title: "Cascade Entry".to_string(),
         description: None,
         entry_type: "other".to_string(),
@@ -257,6 +261,7 @@ async fn test_key_result_goal_hierarchy() {
     let input = CreateEntry {
         week_id: week.id,
         key_result_id: Some(kr.id),
+        initiative_id: None,
         title: "PR for viaduct".to_string(),
         description: None,
         entry_type: "pr_authored".to_string(),
@@ -796,6 +801,7 @@ async fn test_update_entry_date_changes_week() {
     // Update date to fall in week 2
     let update = UpdateEntry {
         key_result_id: None,
+        initiative_id: None,
         title: "Move me".to_string(),
         description: None,
         entry_type: "other".to_string(),

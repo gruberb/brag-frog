@@ -33,16 +33,14 @@
                 {% endfor %}
             </select>
 
-            <select id="filter-category" class="form-select analyze-toolbar-select" onchange="applyFilters()">
-                <option value="">All Types</option>
-                <option value="reviews" {% if init_category == "reviews" %}selected{% endif %}>Reviews</option>
-                <option value="code" {% if init_category == "code" %}selected{% endif %}>Code</option>
-                <option value="docs" {% if init_category == "docs" %}selected{% endif %}>Docs</option>
-                <option value="meetings" {% if init_category == "meetings" %}selected{% endif %}>Meetings</option>
-                <option value="collaboration" {% if init_category == "collaboration" %}selected{% endif %}>Collaboration</option>
-                <option value="learning" {% if init_category == "learning" %}selected{% endif %}>Learning</option>
+            {% if initiatives | length > 0 %}
+            <select id="filter-initiative" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                <option value="">All Initiatives</option>
+                {% for init in initiatives %}
+                <option value="{{ init.id }}" {% if init_initiative_id == init.id ~ "" %}selected{% endif %}>{{ init.title }}</option>
+                {% endfor %}
             </select>
-
+            {% endif %}
         </div>
 
         <div class="analyze-more-panel open" id="more-panel">
@@ -79,20 +77,26 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="analyze-checkboxes">
-                    <label class="form-label form-label--inline">Show only:</label>
-                    <label class="analyze-checkbox-label">
-                        <input type="checkbox" id="filter-no-kr" onchange="applyFilters()" {% if init_no_key_result == "1" %}checked{% endif %}>
-                        Unlinked
-                    </label>
-                    <label class="analyze-checkbox-label">
-                        <input type="checkbox" id="filter-no-team" onchange="applyFilters()" {% if init_no_team == "1" %}checked{% endif %}>
-                        Missing team
-                    </label>
-                    <label class="analyze-checkbox-label">
-                        <input type="checkbox" id="filter-no-collab" onchange="applyFilters()" {% if init_no_collaborator == "1" %}checked{% endif %}>
-                        Missing collaborator
-                    </label>
+                <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Type</label>
+                    <select id="filter-category" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All Types</option>
+                        <option value="reviews" {% if init_category == "reviews" %}selected{% endif %}>Reviews</option>
+                        <option value="code" {% if init_category == "code" %}selected{% endif %}>Code</option>
+                        <option value="docs" {% if init_category == "docs" %}selected{% endif %}>Docs</option>
+                        <option value="meetings" {% if init_category == "meetings" %}selected{% endif %}>Meetings</option>
+                        <option value="collaboration" {% if init_category == "collaboration" %}selected{% endif %}>Collaboration</option>
+                        <option value="learning" {% if init_category == "learning" %}selected{% endif %}>Learning</option>
+                    </select>
+                </div>
+                <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Show only</label>
+                    <select id="filter-show-only" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All entries</option>
+                        <option value="no_key_result" {% if init_no_key_result == "1" %}selected{% endif %}>Unlinked</option>
+                        <option value="no_team" {% if init_no_team == "1" %}selected{% endif %}>Missing team</option>
+                        <option value="no_collaborator" {% if init_no_collaborator == "1" %}selected{% endif %}>Missing collaborator</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -150,25 +154,25 @@ function applyFilters() {
     var params = new URLSearchParams();
     var goal = document.getElementById('filter-goal').value;
     var kr = document.getElementById('filter-key-result').value;
+    var initEl = document.getElementById('filter-initiative');
+    var initiative = initEl ? initEl.value : '';
     var category = document.getElementById('filter-category').value;
     var source = document.getElementById('filter-source').value;
     var team = document.getElementById('filter-team').value;
     var collab = document.getElementById('filter-collaborator').value;
     var search = document.getElementById('filter-search').value.trim();
-    var noKr = document.getElementById('filter-no-kr').checked;
-    var noTeam = document.getElementById('filter-no-team').checked;
-    var noCollab = document.getElementById('filter-no-collab').checked;
+    var showOnly = document.getElementById('filter-show-only');
+    var showOnlyVal = showOnly ? showOnly.value : '';
 
     if (goal) params.set('goal_id', goal);
     if (kr) params.set('key_result_id', kr);
+    if (initiative) params.set('initiative_id', initiative);
     if (category) params.set('category', category);
     if (source) params.set('source', source);
     if (team) params.set('team', team);
     if (collab) params.set('collaborator', collab);
     if (search) params.set('search', search);
-    if (noKr) params.set('no_key_result', '1');
-    if (noTeam) params.set('no_team', '1');
-    if (noCollab) params.set('no_collaborator', '1');
+    if (showOnlyVal) params.set(showOnlyVal, '1');
 
     htmx.ajax('GET', '/logbook/entries?' + params.toString(), {target: '#analyze-results', swap: 'innerHTML'});
 
@@ -180,19 +184,21 @@ function applyFilters() {
 
     updateFilterPills(params);
     updateClearButton(params);
+
 }
 
 function clearFilters() {
     document.getElementById('filter-goal').value = '';
     document.getElementById('filter-key-result').value = '';
+    var initEl = document.getElementById('filter-initiative');
+    if (initEl) initEl.value = '';
     document.getElementById('filter-category').value = '';
     document.getElementById('filter-source').value = '';
     document.getElementById('filter-team').value = '';
     document.getElementById('filter-collaborator').value = '';
     document.getElementById('filter-search').value = '';
-    document.getElementById('filter-no-kr').checked = false;
-    document.getElementById('filter-no-team').checked = false;
-    document.getElementById('filter-no-collab').checked = false;
+    var showOnly = document.getElementById('filter-show-only');
+    if (showOnly) showOnly.value = '';
     filterKeyResultsByGoal('');
     applyFilters();
 }
@@ -200,20 +206,23 @@ function clearFilters() {
 function removeFilter(field) {
     if (field === 'goal_id') { document.getElementById('filter-goal').value = ''; document.getElementById('filter-key-result').value = ''; filterKeyResultsByGoal(''); }
     else if (field === 'key_result_id') document.getElementById('filter-key-result').value = '';
+    else if (field === 'initiative_id') { var el = document.getElementById('filter-initiative'); if (el) el.value = ''; }
     else if (field === 'category') document.getElementById('filter-category').value = '';
     else if (field === 'source') document.getElementById('filter-source').value = '';
     else if (field === 'team') document.getElementById('filter-team').value = '';
     else if (field === 'collaborator') document.getElementById('filter-collaborator').value = '';
     else if (field === 'search') document.getElementById('filter-search').value = '';
-    else if (field === 'no_key_result') document.getElementById('filter-no-kr').checked = false;
-    else if (field === 'no_team') document.getElementById('filter-no-team').checked = false;
-    else if (field === 'no_collaborator') document.getElementById('filter-no-collab').checked = false;
+    else if (field === 'no_key_result' || field === 'no_team' || field === 'no_collaborator') {
+        var showOnly = document.getElementById('filter-show-only');
+        if (showOnly) showOnly.value = '';
+    }
     applyFilters();
 }
 
 var PILL_LABELS = {
     goal_id: 'Goal',
     key_result_id: 'Key Result',
+    initiative_id: 'Initiative',
     category: 'Type',
     source: 'Source',
     team: 'Team',
@@ -230,12 +239,14 @@ function updateFilterPills(params) {
     params.forEach(function(value, key) {
         var label = PILL_LABELS[key] || key;
         var displayValue = value;
-        // Resolve display names for IDs
         if (key === 'goal_id') {
             var opt = document.querySelector('#filter-goal option[value="' + value + '"]');
             if (opt) displayValue = opt.textContent;
         } else if (key === 'key_result_id') {
             var opt = document.querySelector('#filter-key-result option[value="' + value + '"]');
+            if (opt) displayValue = opt.textContent;
+        } else if (key === 'initiative_id') {
+            var opt = document.querySelector('#filter-initiative option[value="' + value + '"]');
             if (opt) displayValue = opt.textContent;
         } else if (key === 'no_key_result' || key === 'no_team' || key === 'no_collaborator') {
             displayValue = '';
@@ -260,6 +271,7 @@ function updateClearButton(params) {
     var params = new URLSearchParams(window.location.search);
     updateFilterPills(params);
     updateClearButton(params);
+
 })();
 </script>
 {% endblock %}

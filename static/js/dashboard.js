@@ -151,6 +151,34 @@ function filterFocusEntries(input, dropdownId) {
     });
 }
 
+// ─── OKR snapshot — collapsible goals with localStorage ──────
+function toggleDashboardGoal(goalId) {
+    var el = document.getElementById('dash-goal-' + goalId);
+    if (!el) return;
+    el.classList.toggle('collapsed');
+    // Persist state
+    var key = 'dashGoalCollapsed';
+    var stored = {};
+    try { stored = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+    if (el.classList.contains('collapsed')) {
+        stored[goalId] = true;
+    } else {
+        delete stored[goalId];
+    }
+    localStorage.setItem(key, JSON.stringify(stored));
+}
+
+// Restore collapsed state on page load
+(function() {
+    var key = 'dashGoalCollapsed';
+    var stored = {};
+    try { stored = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+    Object.keys(stored).forEach(function(goalId) {
+        var el = document.getElementById('dash-goal-' + goalId);
+        if (el) el.classList.add('collapsed');
+    });
+})();
+
 // ─── Chip dropdown helpers ───────────────────────────────────
 function toggleDropdown(id) {
     var el = document.getElementById(id);

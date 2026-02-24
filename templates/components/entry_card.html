@@ -63,6 +63,13 @@
                         {% endif %}
                     {% endfor %}
                 {% endif %}
+                {% if entry.initiative_id and initiatives is defined %}
+                    {% for init in initiatives %}
+                        {% if init.id == entry.initiative_id %}
+                            &middot; <span class="text-muted">{{ init.title }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
             </span>
         </div>
 
@@ -221,6 +228,20 @@
                         {% endif %}
                     </select>
                 </div>
+
+                {% if initiatives is defined and initiatives | length > 0 %}
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline" for="init-select-{{ entry.id }}">Initiative</label>
+                    <select id="init-select-{{ entry.id }}"
+                            class="form-select form-select--sm"
+                            name="initiative_id">
+                        <option value="">No initiative</option>
+                        {% for init in initiatives %}
+                        <option value="{{ init.id }}" {% if entry.initiative_id and entry.initiative_id == init.id %}selected{% endif %}>{{ init.title }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endif %}
 
                 <div class="entry-row-meta-item">
                     <label class="form-label form-label--inline" for="date-input-{{ entry.id }}">Date</label>

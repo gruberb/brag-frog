@@ -200,26 +200,6 @@
     gap: 2px;
 }
 
-.analyze-checkboxes {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex-wrap: wrap;
-}
-
-.analyze-checkbox-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.analyze-checkbox-label input[type="checkbox"] {
-    margin: 0;
-}
 
 /* Filter bar */
 .filter-bar {

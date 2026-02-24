@@ -193,13 +193,14 @@ impl BragEntry {
 
         let row = sqlx::query_as::<_, BragEntryRow>(
             r#"
-            INSERT INTO brag_entries (week_id, key_result_id, source, source_url, title, description, entry_type, occurred_at, teams, collaborators)
-            VALUES (?, ?, 'manual', ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO brag_entries (week_id, key_result_id, initiative_id, source, source_url, title, description, entry_type, occurred_at, teams, collaborators)
+            VALUES (?, ?, ?, 'manual', ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
             "#,
         )
         .bind(input.week_id)
         .bind(input.key_result_id)
+        .bind(input.initiative_id)
         .bind(&input.source_url)
         .bind(&enc_title)
         .bind(&enc_description)
@@ -292,7 +293,7 @@ impl BragEntry {
         let row = sqlx::query_as::<_, BragEntryRow>(
             r#"
             UPDATE brag_entries
-            SET key_result_id = ?, title = ?, description = ?, entry_type = ?,
+            SET key_result_id = ?, initiative_id = ?, title = ?, description = ?, entry_type = ?,
                 occurred_at = ?, teams = ?, collaborators = ?, source_url = ?,
                 week_id = COALESCE(?, week_id),
                 updated_at = datetime('now')
@@ -303,6 +304,7 @@ impl BragEntry {
             "#,
         )
         .bind(input.key_result_id)
+        .bind(input.initiative_id)
         .bind(&enc_title)
         .bind(&enc_description)
         .bind(&input.entry_type)

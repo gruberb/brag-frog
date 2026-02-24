@@ -445,6 +445,8 @@ pub struct CreateEntry {
     pub week_id: i64,
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
     pub key_result_id: Option<i64>,
+    #[serde(default, deserialize_with = "deserialize_optional_i64")]
+    pub initiative_id: Option<i64>,
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
@@ -463,6 +465,8 @@ pub struct CreateEntry {
 pub struct UpdateEntry {
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
     pub key_result_id: Option<i64>,
+    #[serde(default, deserialize_with = "deserialize_optional_i64")]
+    pub initiative_id: Option<i64>,
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
