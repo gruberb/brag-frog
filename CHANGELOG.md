@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [1.1.1] - 2026-02-24
+
+### Fixed
+- Logbook entry count now excludes future synced entries, so total matches visible entries with no filters
+- "Unlinked" filter now correctly treats entries linked to an initiative as linked
+
 ## [1.1.0] - 2026-02-24
 
 ### Added
