@@ -68,6 +68,8 @@ struct EventDateTime {
 struct Attendee {
     #[serde(rename = "self", default)]
     is_self: bool,
+    #[serde(default)]
+    organizer: bool,
     response_status: Option<String>,
 }
 
@@ -196,13 +198,15 @@ impl SyncService for GoogleCalendarSync {
                     continue;
                 }
 
-                // Skip unless user accepted. When attendees are omitted the
-                // user's own entry is still present, so this check still works.
-                let user_accepted = event
-                    .attendees
-                    .iter()
-                    .any(|a| a.is_self && a.response_status.as_deref() == Some("accepted"));
-                if !user_accepted {
+                // Skip unless user accepted or is the organizer. Organizers may
+                // have responseStatus "needsAction" if they never explicitly RSVP'd.
+                let user_participating = event.attendees.iter().any(|a| {
+                    a.is_self
+                        && (a.response_status.as_deref() == Some("accepted")
+                            || a.response_status.as_deref() == Some("tentative")
+                            || a.organizer)
+                });
+                if !user_participating {
                     continue;
                 }
 

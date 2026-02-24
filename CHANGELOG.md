@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [1.1.2] - 2026-02-24
+
+### Fixed
+- Google Calendar sync now includes events where the user is the organizer (responseStatus may not be "accepted")
+- Also accept tentatively-accepted events in calendar sync
+
 ## [1.1.1] - 2026-02-24
 
 ### Fixed
