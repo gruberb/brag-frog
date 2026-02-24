@@ -1,0 +1,45 @@
+# Mozilla overlay Dockerfile
+# Builds on the base brag-frog Dockerfile, adding:
+#   1. Mozilla config overlay (custom/ → overrides config/)
+#   2. KMS entrypoint wrapper (unwraps DEK at startup)
+#
+# Build from the brag-frog repo root with the overlay in place:
+#   cp -r brag-frog-mozilla/custom custom
+#   docker build -f brag-frog-mozilla/deploy/Dockerfile.mozilla -t brag-frog-mozilla .
+
+FROM rust:1.93-slim AS builder
+WORKDIR /app
+
+# 1) Copy only manifests and create a dummy main/lib to compile dependencies
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs && touch src/lib.rs
+RUN cargo build --release && rm -rf src
+
+# 2) Copy actual source and migrations, then build (only app code recompiles)
+COPY migrations/ migrations/
+COPY src/ src/
+RUN touch src/main.rs src/lib.rs && cargo build --release
+
+FROM debian:trixie-slim
+RUN apt-get update && apt-get install -y ca-certificates curl python3 && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/brag-frog /usr/local/bin/
+COPY templates/ /app/templates/
+COPY static/ /app/static/
+COPY migrations/ /app/migrations/
+COPY config/ /app/config/
+
+# Mozilla overlay: custom config files override defaults
+COPY custom/ /app/custom/
+
+# KMS entrypoint wrapper
+COPY brag-frog-mozilla/deploy/gcp-kms-entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+WORKDIR /app
+ENV PORT=8080
+ENV BRAGFROG_DATABASE_PATH=/data/bragfrog.db
+ENV SQLITE_JOURNAL_MODE=delete
+EXPOSE 8080
+
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["brag-frog"]
