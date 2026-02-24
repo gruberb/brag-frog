@@ -317,3 +317,30 @@
     color: var(--color-text-secondary);
     font-weight: var(--font-weight-medium);
 }
+
+/* Impact signal badges on entry subtitles */
+.impact-badge {
+    display: inline-block;
+    padding: 0 6px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+.impact-badge--reach {
+    background: var(--color-tint-blue);
+    color: var(--color-info);
+}
+
+.impact-badge--complexity {
+    background: var(--color-tint-purple);
+    color: #8E24AA;
+}
+
+.impact-badge--role {
+    background: var(--color-tint-green);
+    color: var(--color-success);
+}

@@ -6,7 +6,7 @@ pub mod app;
 pub mod db;
 pub mod entries;
 pub mod identity;
-pub mod okr;
+pub mod goals;
 pub mod review;
 pub mod routes;
 pub mod shared;

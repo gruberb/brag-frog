@@ -1,0 +1,58 @@
+# Check-in section configuration.
+# Same sections used for weekly (lightweight) and quarterly (synthesized).
+# Override via custom/checkin_sections.toml.
+
+[[sections]]
+slug = "highlights_impact"
+title = "Highlights & Impact"
+weekly_question = "What outcomes or progress are you most proud of this week?"
+quarterly_question = "What outcomes or progress are you most proud of this quarter, and how did your work contribute to team or organizational outcomes? Which skills or behaviors supported that impact?"
+ai_prompt = """Synthesize the weekly highlights into a quarterly narrative. Focus on:
+- Concrete outcomes and their impact on team/org goals
+- Behaviors and skills demonstrated
+- Instances of elevating others' work
+Use first person. Be specific and evidence-based."""
+
+[[sections]]
+slug = "learnings_adjustments"
+title = "Learnings & Adjustments"
+weekly_question = "What have you learned or observed this week?"
+quarterly_question = "What have you learned or observed recently—from feedback, results, or experiences—and how might that shape what you continue, start, or adjust next quarter?"
+ai_prompt = """Synthesize weekly learnings into quarterly themes. Focus on:
+- Patterns in feedback received or observations made
+- Concrete adjustments made in response to learnings
+- How these learnings connect to broader growth
+Use first person. Be reflective and forward-looking."""
+
+[[sections]]
+slug = "growth_development"
+title = "Growth & Development"
+weekly_question = "What skills or areas did you stretch this week?"
+quarterly_question = "Looking at the skills most relevant to your role, what experiences, projects, or responsibilities would stretch or strengthen your growth next quarter?"
+ai_prompt = """Synthesize weekly growth moments into a quarterly development narrative. Focus on:
+- Skills that were stretched or strengthened
+- Specific projects or experiences that drove growth
+- Connection to role expectations and career goals
+Use first person. Be specific about growth areas."""
+
+[[sections]]
+slug = "support_feedback"
+title = "Support & Feedback"
+weekly_question = "What support or feedback would help you have greater impact?"
+quarterly_question = "What support, feedback, or resources would help you have a greater impact next quarter? Are there ways we could improve how we collaborate or communicate as a team?"
+ai_prompt = """Synthesize weekly support needs into quarterly themes. Focus on:
+- Recurring patterns in what support would help
+- Collaboration or communication improvements
+- Resource or tooling needs
+Use first person. Be constructive and specific."""
+
+[[sections]]
+slug = "looking_ahead"
+title = "Looking Ahead"
+weekly_question = "What are you most focused on next week?"
+quarterly_question = "What areas or initiatives are you most energized to focus on next quarter? Where would alignment with your manager or team be most valuable?"
+ai_prompt = """Synthesize weekly focus areas into a quarterly forward look. Focus on:
+- Key initiatives and why they matter
+- Areas where manager/team alignment would help
+- Connection to team or organizational priorities
+Use first person. Be energized and strategic."""

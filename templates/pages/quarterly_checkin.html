@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Quarterly Check-in: {{ quarter }} {{ year }} — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Quarterly Check-in: {{ quarter }} {{ year }}</h1>
+    <p class="page-subtitle">{{ phase.name }}</p>
+</div>
+
+<form hx-post="/quarterly-checkin/{{ quarter }}/{{ year }}" hx-swap="none">
+
+    {% for section in checkin_sections %}
+    <section class="card" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <h2 class="section-title" style="margin:0;">{{ section.title }}</h2>
+            <button type="button" class="btn-icon btn-icon--sm" title="Copy to clipboard" onclick="copyCheckinSection('{{ section.slug }}')">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+            </button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">{{ section.quarterly_question }}</label>
+            <textarea id="qc-{{ section.slug }}" name="{{ section.slug }}" class="form-textarea" rows="6">{% if section.slug == "highlights_impact" %}{% if checkin %}{{ checkin.highlights_impact | default(value="") }}{% endif %}{% elif section.slug == "learnings_adjustments" %}{% if checkin %}{{ checkin.learnings_adjustments | default(value="") }}{% endif %}{% elif section.slug == "growth_development" %}{% if checkin %}{{ checkin.growth_development | default(value="") }}{% endif %}{% elif section.slug == "support_feedback" %}{% if checkin %}{{ checkin.support_feedback | default(value="") }}{% endif %}{% elif section.slug == "looking_ahead" %}{% if checkin %}{{ checkin.looking_ahead | default(value="") }}{% endif %}{% endif %}</textarea>
+        </div>
+        {% if has_ai %}
+        <div style="margin-top:8px;">
+            <button type="button" class="btn btn-secondary btn-sm" disabled title="AI Draft coming soon">AI Draft</button>
+        </div>
+        {% endif %}
+    </section>
+    {% endfor %}
+
+    <!-- Weekly Reflections Reference -->
+    {% if weekly_reflections | length > 0 %}
+    <section class="card" style="margin-bottom:16px;">
+        <details>
+            <summary class="section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
+                <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
+                Weekly Reflections ({{ weekly_reflections | length }})
+            </summary>
+            <div style="margin-top:12px;">
+                {% for reflection in weekly_reflections %}
+                <details class="weekly-reflection-row" style="margin-bottom:8px;">
+                    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--color-border);">
+                        <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
+                        <span class="text-sm" style="font-weight:600;">Week {{ reflection.iso_week }}</span>
+                        <span class="text-sm text-muted">{{ reflection.week_start }} to {{ reflection.week_end }}</span>
+                        {% if reflection.energy_level %}
+                        <span class="text-sm text-muted">Energy: {{ reflection.energy_level }}/5</span>
+                        {% endif %}
+                    </summary>
+                    <div style="padding:8px 0 8px 24px;">
+                        {% if reflection.highlights_impact %}
+                        <div class="checkin-field">
+                            <label class="form-label">Highlights & Impact</label>
+                            <p class="text-sm">{{ reflection.highlights_impact }}</p>
+                        </div>
+                        {% endif %}
+                        {% if reflection.learnings_adjustments %}
+                        <div class="checkin-field">
+                            <label class="form-label">Learnings & Adjustments</label>
+                            <p class="text-sm">{{ reflection.learnings_adjustments }}</p>
+                        </div>
+                        {% endif %}
+                        {% if reflection.growth_development %}
+                        <div class="checkin-field">
+                            <label class="form-label">Growth & Development</label>
+                            <p class="text-sm">{{ reflection.growth_development }}</p>
+                        </div>
+                        {% endif %}
+                        {% if reflection.support_feedback %}
+                        <div class="checkin-field">
+                            <label class="form-label">Support & Feedback</label>
+                            <p class="text-sm">{{ reflection.support_feedback }}</p>
+                        </div>
+                        {% endif %}
+                        {% if reflection.looking_ahead %}
+                        <div class="checkin-field">
+                            <label class="form-label">Looking Ahead</label>
+                            <p class="text-sm">{{ reflection.looking_ahead }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
+        </details>
+    </section>
+    {% endif %}
+
+</form>
+
+<div class="form-actions">
+    <button class="btn btn-primary" hx-post="/quarterly-checkin/{{ quarter }}/{{ year }}" hx-include="previous form" hx-swap="none">Save Check-in</button>
+    <a href="/checkins" class="btn btn-secondary">Cancel</a>
+</div>
+
+<style>
+.weekly-reflection-row[open] > summary .intg-card-chevron {
+    transform: rotate(90deg);
+}
+.checkin-field {
+    margin-bottom: var(--space-3);
+}
+.checkin-field .form-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+}
+.checkin-field p {
+    margin: 0;
+    white-space: pre-wrap;
+}
+</style>
+
+<script>
+function copyCheckinSection(slug) {
+    var textarea = document.getElementById('qc-' + slug);
+    if (!textarea) return;
+    var text = textarea.value.trim();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+        // Brief visual feedback handled by browser
+    });
+}
+</script>
+{% endblock %}

@@ -85,8 +85,8 @@ impl BragEntry {
     pub async fn list_for_phase_filtered(
         pool: &SqlitePool,
         phase_id: i64,
-        key_result_id: Option<i64>,
-        goal_id: Option<i64>,
+        priority_id: Option<i64>,
+        department_goal_id: Option<i64>,
         entry_types: &[String],
         start_date: Option<&str>,
         end_date: Option<&str>,
@@ -106,11 +106,11 @@ impl BragEntry {
             sql.push_str(" AND e.occurred_at <= ?");
         }
 
-        if key_result_id.is_some() {
-            sql.push_str(" AND e.key_result_id = ?");
+        if priority_id.is_some() {
+            sql.push_str(" AND e.priority_id = ?");
         }
-        if goal_id.is_some() {
-            sql.push_str(" AND e.key_result_id IN (SELECT id FROM key_results WHERE goal_id = ?)");
+        if department_goal_id.is_some() {
+            sql.push_str(" AND e.priority_id IN (SELECT id FROM priorities WHERE department_goal_id = ?)");
         }
         if !entry_types.is_empty() {
             let placeholders: Vec<&str> = entry_types.iter().map(|_| "?").collect();
@@ -134,10 +134,10 @@ impl BragEntry {
         if let Some(ed) = end_date {
             query = query.bind(ed);
         }
-        if let Some(kr_id) = key_result_id {
-            query = query.bind(kr_id);
+        if let Some(pri_id) = priority_id {
+            query = query.bind(pri_id);
         }
-        if let Some(gid) = goal_id {
+        if let Some(gid) = department_goal_id {
             query = query.bind(gid);
         }
         for et in entry_types {
@@ -222,14 +222,13 @@ impl BragEntry {
 
         let row = sqlx::query_as::<_, BragEntryRow>(
             r#"
-            INSERT INTO brag_entries (week_id, key_result_id, initiative_id, source, source_url, title, description, entry_type, occurred_at, teams, collaborators)
-            VALUES (?, ?, ?, 'manual', ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO brag_entries (week_id, priority_id, source, source_url, title, description, entry_type, occurred_at, teams, collaborators, reach, complexity, role)
+            VALUES (?, ?, 'manual', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
             "#,
         )
         .bind(input.week_id)
-        .bind(input.key_result_id)
-        .bind(input.initiative_id)
+        .bind(input.priority_id)
         .bind(&input.source_url)
         .bind(&enc_title)
         .bind(&enc_description)
@@ -237,6 +236,9 @@ impl BragEntry {
         .bind(&input.occurred_at)
         .bind(&enc_teams)
         .bind(&enc_collaborators)
+        .bind(&input.reach)
+        .bind(&input.complexity)
+        .bind(&input.role)
         .fetch_one(pool)
         .await?;
 
@@ -322,8 +324,9 @@ impl BragEntry {
         let row = sqlx::query_as::<_, BragEntryRow>(
             r#"
             UPDATE brag_entries
-            SET key_result_id = ?, initiative_id = ?, title = ?, description = ?, entry_type = ?,
+            SET priority_id = ?, title = ?, description = ?, entry_type = ?,
                 occurred_at = ?, teams = ?, collaborators = ?, source_url = ?,
+                reach = ?, complexity = ?, role = ?,
                 week_id = COALESCE(?, week_id),
                 updated_at = datetime('now')
             WHERE id = ? AND week_id IN (
@@ -332,8 +335,7 @@ impl BragEntry {
             RETURNING *
             "#,
         )
-        .bind(input.key_result_id)
-        .bind(input.initiative_id)
+        .bind(input.priority_id)
         .bind(&enc_title)
         .bind(&enc_description)
         .bind(&input.entry_type)
@@ -341,6 +343,9 @@ impl BragEntry {
         .bind(&enc_teams)
         .bind(&enc_collaborators)
         .bind(&input.source_url)
+        .bind(&input.reach)
+        .bind(&input.complexity)
+        .bind(&input.role)
         .bind(new_week_id)
         .bind(id)
         .bind(user_id)

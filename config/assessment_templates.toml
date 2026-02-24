@@ -1,0 +1,38 @@
+# Self-assessment templates for mid-year and year-end reviews.
+# Override via custom/assessment_templates.toml.
+
+[mid_year]
+title = "Mid-year Self-Assessment"
+max_examples = 2
+question = "Describe 1–2 examples of your work so far this year that illustrate your level of contribution and impact."
+guidance = "For each example, summarize:"
+bullets = [
+    "The outcome or progress made (or impact still in progress)",
+    "The skills and behaviors that were key to success and how they were demonstrated",
+    "What you learned that you'll carry forward, and what you will do next to continue your development",
+]
+tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work."
+ai_prompt = """Using the linked entries and priority context, draft a contribution example for a mid-year self-assessment. Structure as:
+- **Outcome**: What was achieved or is in progress
+- **Skills & Behaviors**: Which key behaviors were demonstrated and how
+- **Learnings**: What was learned and carried forward
+Use first person. Be specific and quantitative where possible."""
+
+[year_end]
+title = "Year-end Self-Assessment"
+max_examples = 4
+question = "Describe up to 4 examples from this year that illustrate your contributions."
+guidance = "For each, summarize:"
+bullets = [
+    "The results or outcomes achieved (or still in progress)",
+    "The skills and behaviors that were key to success and how they were demonstrated",
+    "The level of impact — on your work, your team, or the organization overall",
+    "What you learned that you'll carry forward",
+]
+tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work."
+ai_prompt = """Using the linked entries and priority context, draft a contribution example for a year-end self-assessment. Structure as:
+- **Outcome**: Results and business impact
+- **Skills & Behaviors**: Key behaviors demonstrated
+- **Impact Level**: Team, cross-team, org, or company-wide
+- **Learnings**: What was learned
+Use first person. Be specific and quantitative where possible."""

@@ -56,20 +56,16 @@
             <span class="entry-row-title">{{ entry.title }}</span>
             <span class="entry-row-subtitle">
                 {{ entry.entry_type | entry_type_label | lower }}
-                {% if entry.key_result_id %}
-                    {% for kr in key_results %}
-                        {% if kr.id == entry.key_result_id %}
-                            &middot; <span style="color:{{ kr.color | default(value='#999') }}">{{ kr.name }}</span>
+                {% if entry.priority_id %}
+                    {% for p in priorities %}
+                        {% if p.id == entry.priority_id %}
+                            &middot; <span style="color:{{ p.color | default(value='#999') }}">{{ p.title }}</span>
                         {% endif %}
                     {% endfor %}
                 {% endif %}
-                {% if entry.initiative_id and initiatives is defined %}
-                    {% for init in initiatives %}
-                        {% if init.id == entry.initiative_id %}
-                            &middot; <span class="text-muted">{{ init.title }}</span>
-                        {% endif %}
-                    {% endfor %}
-                {% endif %}
+                {% if entry.reach %}<span class="impact-badge impact-badge--reach">{{ entry.reach }}</span>{% endif %}
+                {% if entry.complexity %}<span class="impact-badge impact-badge--complexity">{{ entry.complexity }}</span>{% endif %}
+                {% if entry.role %}<span class="impact-badge impact-badge--role">{{ entry.role }}</span>{% endif %}
             </span>
         </div>
 
@@ -204,40 +200,15 @@
                               style="resize:vertical;">{{ entry.description | default(value="") }}</textarea>
                 </div>
 
+                {% if priorities is defined %}
                 <div class="entry-row-meta-item">
-                    <label class="form-label form-label--inline" for="kr-select-{{ entry.id }}">Key Result</label>
-                    <select id="kr-select-{{ entry.id }}"
+                    <label class="form-label form-label--inline" for="priority-select-{{ entry.id }}">Priority</label>
+                    <select id="priority-select-{{ entry.id }}"
                             class="form-select form-select--sm"
-                            name="key_result_id">
-                        <option value="">No key result</option>
-                        {% if goals is defined %}
-                        {% for goal in goals %}
-                        <optgroup label="{{ goal.title }}">
-                            {% for kr in key_results %}{% if kr.goal_id and kr.goal_id == goal.id %}
-                            <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
-                            {% endif %}{% endfor %}
-                        </optgroup>
-                        {% endfor %}
-                        {% for kr in key_results %}{% if not kr.goal_id %}
-                        <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
-                        {% endif %}{% endfor %}
-                        {% else %}
-                        {% for kr in key_results %}
-                        <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
-                        {% endfor %}
-                        {% endif %}
-                    </select>
-                </div>
-
-                {% if initiatives is defined and initiatives | length > 0 %}
-                <div class="entry-row-meta-item">
-                    <label class="form-label form-label--inline" for="init-select-{{ entry.id }}">Initiative</label>
-                    <select id="init-select-{{ entry.id }}"
-                            class="form-select form-select--sm"
-                            name="initiative_id">
-                        <option value="">No initiative</option>
-                        {% for init in initiatives %}
-                        <option value="{{ init.id }}" {% if entry.initiative_id and entry.initiative_id == init.id %}selected{% endif %}>{{ init.title }}</option>
+                            name="priority_id">
+                        <option value="">No priority</option>
+                        {% for p in priorities %}
+                        <option value="{{ p.id }}" {% if entry.priority_id and entry.priority_id == p.id %}selected{% endif %}>{{ p.title }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -268,6 +239,39 @@
                            name="collaborators"
                            value="{{ entry.collaborators | default(value='') }}"
                            placeholder="e.g. Alice, Bob">
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline">Reach</label>
+                    <select name="reach" class="form-select form-select--sm">
+                        <option value="">—</option>
+                        <option value="team" {% if entry.reach == "team" %}selected{% endif %}>Team</option>
+                        <option value="cross_team" {% if entry.reach == "cross_team" %}selected{% endif %}>Cross-team</option>
+                        <option value="org" {% if entry.reach == "org" %}selected{% endif %}>Org</option>
+                        <option value="company" {% if entry.reach == "company" %}selected{% endif %}>Company</option>
+                    </select>
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline">Complexity</label>
+                    <select name="complexity" class="form-select form-select--sm">
+                        <option value="">—</option>
+                        <option value="routine" {% if entry.complexity == "routine" %}selected{% endif %}>Routine</option>
+                        <option value="moderate" {% if entry.complexity == "moderate" %}selected{% endif %}>Moderate</option>
+                        <option value="complex" {% if entry.complexity == "complex" %}selected{% endif %}>Complex</option>
+                        <option value="novel" {% if entry.complexity == "novel" %}selected{% endif %}>Novel</option>
+                    </select>
+                </div>
+
+                <div class="entry-row-meta-item">
+                    <label class="form-label form-label--inline">Role</label>
+                    <select name="role" class="form-select form-select--sm">
+                        <option value="">—</option>
+                        <option value="contributor" {% if entry.role == "contributor" %}selected{% endif %}>Contributor</option>
+                        <option value="owner" {% if entry.role == "owner" %}selected{% endif %}>Owner</option>
+                        <option value="lead" {% if entry.role == "lead" %}selected{% endif %}>Lead</option>
+                        <option value="architect" {% if entry.role == "architect" %}selected{% endif %}>Architect</option>
+                    </select>
                 </div>
 
                 <div class="entry-row-meta-item">

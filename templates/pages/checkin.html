@@ -11,36 +11,22 @@
 {% if checkin %}
 <section class="card" style="margin-bottom:16px;">
     <h2 class="section-title">Saved Check-in</h2>
-    {% if checkin.proud_of %}
+    {% for section in checkin_sections %}
     <div class="form-group">
-        <label class="form-label">What are you most proud of this week?</label>
-        <p class="text-sm">{{ checkin.proud_of }}</p>
+        <label class="form-label">{{ section.title }}</label>
+        {% if section.slug == "highlights_impact" %}
+            {% if checkin.highlights_impact %}<p class="text-sm">{{ checkin.highlights_impact }}</p>{% else %}<p class="text-sm text-muted">—</p>{% endif %}
+        {% elif section.slug == "learnings_adjustments" %}
+            {% if checkin.learnings_adjustments %}<p class="text-sm">{{ checkin.learnings_adjustments }}</p>{% else %}<p class="text-sm text-muted">—</p>{% endif %}
+        {% elif section.slug == "growth_development" %}
+            {% if checkin.growth_development %}<p class="text-sm">{{ checkin.growth_development }}</p>{% else %}<p class="text-sm text-muted">—</p>{% endif %}
+        {% elif section.slug == "support_feedback" %}
+            {% if checkin.support_feedback %}<p class="text-sm">{{ checkin.support_feedback }}</p>{% else %}<p class="text-sm text-muted">—</p>{% endif %}
+        {% elif section.slug == "looking_ahead" %}
+            {% if checkin.looking_ahead %}<p class="text-sm">{{ checkin.looking_ahead }}</p>{% else %}<p class="text-sm text-muted">—</p>{% endif %}
+        {% endif %}
     </div>
-    {% endif %}
-    {% if checkin.learned %}
-    <div class="form-group">
-        <label class="form-label">What did you learn?</label>
-        <p class="text-sm">{{ checkin.learned }}</p>
-    </div>
-    {% endif %}
-    {% if checkin.wants_to_change %}
-    <div class="form-group">
-        <label class="form-label">What would you like to change?</label>
-        <p class="text-sm">{{ checkin.wants_to_change }}</p>
-    </div>
-    {% endif %}
-    {% if checkin.frustrations %}
-    <div class="form-group">
-        <label class="form-label">Frustrations or blockers?</label>
-        <p class="text-sm">{{ checkin.frustrations }}</p>
-    </div>
-    {% endif %}
-    {% if checkin.notes %}
-    <div class="form-group">
-        <label class="form-label">Notes</label>
-        <p class="text-sm">{{ checkin.notes }}</p>
-    </div>
-    {% endif %}
+    {% endfor %}
     {% if checkin.energy_level %}
     <div class="form-group">
         <label class="form-label">Energy: {{ checkin.energy_level }}/5 · Productivity: {{ checkin.productivity_rating | default(value="—") }}/5</label>
@@ -50,16 +36,16 @@
 {% endif %}
 
 <form hx-post="/checkin/{{ week.id }}" hx-swap="none">
-    <!-- KR Check-in Section -->
-    {% if key_results | length > 0 %}
+    <!-- Priorities Section -->
+    {% if priorities | length > 0 %}
     <section class="card" style="margin-bottom:16px;">
-        <h2 class="section-title">Key Results Progress</h2>
-        {% for kr in key_results %}
-        <div class="checkin-kr-item">
-            <div class="checkin-kr-header">
-                <span class="kr-color" style="background:{{ kr.color | default(value='#888') }}"></span>
-                <span class="kr-name">{{ kr.name }}</span>
-                <span class="text-sm text-muted">{{ kr.progress }}%</span>
+        <h2 class="section-title">Active Priorities</h2>
+        {% for priority in priorities %}
+        <div class="checkin-priority-item">
+            <div class="checkin-priority-header">
+                <span class="kr-inline-dot" style="background:{{ priority.color | default(value='#888') }};"></span>
+                <span class="checkin-priority-name">{{ priority.title }}</span>
+                <span class="text-sm text-muted">{{ priority.progress | default(value=0) }}%</span>
             </div>
         </div>
         {% endfor %}
@@ -70,30 +56,12 @@
     <section class="card" style="margin-bottom:16px;">
         <h2 class="section-title">Reflection</h2>
 
+        {% for section in checkin_sections %}
         <div class="form-group">
-            <label class="form-label">What are you most proud of this week?</label>
-            <textarea name="proud_of" class="form-textarea" rows="3" placeholder="Accomplishments, wins, things that went well...">{% if checkin %}{{ checkin.proud_of | default(value="") }}{% endif %}</textarea>
+            <label class="form-label">{{ section.weekly_question }}</label>
+            <textarea name="{{ section.slug }}" class="form-textarea" rows="3">{% if section.slug == "highlights_impact" %}{% if checkin %}{{ checkin.highlights_impact | default(value="") }}{% endif %}{% elif section.slug == "learnings_adjustments" %}{% if checkin %}{{ checkin.learnings_adjustments | default(value="") }}{% endif %}{% elif section.slug == "growth_development" %}{% if checkin %}{{ checkin.growth_development | default(value="") }}{% endif %}{% elif section.slug == "support_feedback" %}{% if checkin %}{{ checkin.support_feedback | default(value="") }}{% endif %}{% elif section.slug == "looking_ahead" %}{% if checkin %}{{ checkin.looking_ahead | default(value="") }}{% endif %}{% endif %}</textarea>
         </div>
-
-        <div class="form-group">
-            <label class="form-label">What did you learn?</label>
-            <textarea name="learned" class="form-textarea" rows="3" placeholder="New skills, insights, things you discovered...">{% if checkin %}{{ checkin.learned | default(value="") }}{% endif %}</textarea>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">What would you like to change?</label>
-            <textarea name="wants_to_change" class="form-textarea" rows="3" placeholder="Process improvements, habits, things to try differently...">{% if checkin %}{{ checkin.wants_to_change | default(value="") }}{% endif %}</textarea>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Frustrations or blockers?</label>
-            <textarea name="frustrations" class="form-textarea" rows="2" placeholder="Things that got in your way...">{% if checkin %}{{ checkin.frustrations | default(value="") }}{% endif %}</textarea>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Notes</label>
-            <textarea name="notes" class="form-textarea" rows="2" placeholder="Anything else on your mind...">{% if checkin %}{{ checkin.notes | default(value="") }}{% endif %}</textarea>
-        </div>
+        {% endfor %}
     </section>
 
     <!-- Vibe Check -->
@@ -134,8 +102,9 @@
 </div>
 
 <style>
-.checkin-kr-item { margin-bottom: 12px; }
-.checkin-kr-header { display: flex; align-items: center; gap: 8px; }
+.checkin-priority-item { margin-bottom: 12px; }
+.checkin-priority-header { display: flex; align-items: center; gap: 8px; }
+.checkin-priority-name { font-weight: 500; }
 .vibe-dots { display: flex; gap: 8px; }
 .vibe-dot-label { cursor: pointer; }
 .vibe-dot-label input { display: none; }

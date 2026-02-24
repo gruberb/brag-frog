@@ -15,15 +15,15 @@
     </div>
 </div>
 
-<!-- By Goal -->
+<!-- By Dept Goal -->
 <div class="report-section">
-    <div class="report-section-title">By Goal</div>
+    <div class="report-section-title">By Dept Goal</div>
     {% if insights.goal_breakdown | length > 0 or insights.unlinked_count > 0 %}
     <div class="sidebar-list">
         {% for item in insights.goal_breakdown %}
         <div class="sidebar-list-item sidebar-list-item--accented">
             <span class="sidebar-list-item-title">
-                {% for goal in goals %}{% if goal.id == item.id %}{{ goal.title }}{% endif %}{% endfor %}
+                {% for dg in dept_goals %}{% if dg.id == item.id %}{{ dg.title }}{% endif %}{% endfor %}
             </span>
             <span class="report-count">{{ item.count }}</span>
         </div>
@@ -36,27 +36,27 @@
         {% endif %}
     </div>
     {% else %}
-    <p class="report-empty">No goal data</p>
+    <p class="report-empty">No dept goal data</p>
     {% endif %}
 </div>
 
-<!-- By Key Result -->
+<!-- By Priority -->
 <div class="report-section">
-    <div class="report-section-title">By Key Result</div>
-    {% if insights.kr_breakdown | length > 0 %}
+    <div class="report-section-title">By Priority</div>
+    {% if insights.priority_breakdown | length > 0 %}
     <div class="sidebar-list">
-        {% for item in insights.kr_breakdown %}
+        {% for item in insights.priority_breakdown %}
         <div class="sidebar-list-item">
-            {% for kr in key_results %}{% if kr.id == item.id %}<span class="sidebar-list-item-dot" style="background:{{ kr.color | default(value='#999') }}"></span>{% endif %}{% endfor %}
+            {% for p in priorities %}{% if p.id == item.id %}<span class="sidebar-list-item-dot" style="background:{{ p.color | default(value='#999') }}"></span>{% endif %}{% endfor %}
             <span class="sidebar-list-item-title">
-                {% for kr in key_results %}{% if kr.id == item.id %}{{ kr.name }}{% endif %}{% endfor %}
+                {% for p in priorities %}{% if p.id == item.id %}{{ p.title }}{% endif %}{% endfor %}
             </span>
             <span class="report-count">{{ item.count }}</span>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <p class="report-empty">No key result data</p>
+    <p class="report-empty">No priority data</p>
     {% endif %}
 </div>
 
@@ -102,6 +102,45 @@
     </div>
     {% else %}
     <p class="report-empty">No team data</p>
+    {% endif %}
+</div>
+
+<!-- By Impact -->
+<div class="report-section">
+    <div class="report-section-title">By Impact</div>
+    {% if insights.reach_breakdown | length > 0 or insights.complexity_breakdown | length > 0 or insights.role_breakdown | length > 0 %}
+    {% if insights.reach_breakdown | length > 0 %}
+    <div style="margin-bottom:8px;">
+        <span class="text-sm text-muted" style="display:block;margin-bottom:4px;">Reach</span>
+        <div class="report-chip-grid">
+            {% for item in insights.reach_breakdown %}
+            <span class="report-chip"><span class="report-chip-label">{{ item.name }}</span><span class="report-chip-count">{{ item.count }}</span></span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% if insights.complexity_breakdown | length > 0 %}
+    <div style="margin-bottom:8px;">
+        <span class="text-sm text-muted" style="display:block;margin-bottom:4px;">Complexity</span>
+        <div class="report-chip-grid">
+            {% for item in insights.complexity_breakdown %}
+            <span class="report-chip"><span class="report-chip-label">{{ item.name }}</span><span class="report-chip-count">{{ item.count }}</span></span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% if insights.role_breakdown | length > 0 %}
+    <div style="margin-bottom:8px;">
+        <span class="text-sm text-muted" style="display:block;margin-bottom:4px;">Role</span>
+        <div class="report-chip-grid">
+            {% for item in insights.role_breakdown %}
+            <span class="report-chip"><span class="report-chip-label">{{ item.name }}</span><span class="report-chip-count">{{ item.count }}</span></span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="report-empty">No impact data</p>
     {% endif %}
 </div>
 

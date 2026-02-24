@@ -19,28 +19,19 @@
                    value="{{ init_search }}"
                    oninput="debounceApply()">
 
-            <select id="filter-goal" class="form-select analyze-toolbar-select" onchange="onGoalChange()">
-                <option value="">All Goals</option>
-                {% for goal in goals %}
-                <option value="{{ goal.id }}" {% if init_goal_id == goal.id ~ "" %}selected{% endif %}>{{ goal.title }}</option>
+            <select id="filter-dept-goal" class="form-select analyze-toolbar-select" onchange="onDeptGoalChange()">
+                <option value="">All Dept Goals</option>
+                {% for dg in dept_goals %}
+                <option value="{{ dg.id }}" {% if init_department_goal_id == dg.id ~ "" %}selected{% endif %}>{{ dg.title }}</option>
                 {% endfor %}
             </select>
 
-            <select id="filter-key-result" class="form-select analyze-toolbar-select" onchange="applyFilters()">
-                <option value="">All Key Results</option>
-                {% for kr in key_results %}
-                <option value="{{ kr.id }}" data-goal-id="{{ kr.goal_id | default(value='') }}" {% if init_key_result_id == kr.id ~ "" %}selected{% endif %}>{{ kr.name }}</option>
+            <select id="filter-priority" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                <option value="">All Priorities</option>
+                {% for p in priorities %}
+                <option value="{{ p.id }}" data-dept-goal-id="{{ p.department_goal_id | default(value='') }}" {% if init_priority_id == p.id ~ "" %}selected{% endif %}>{{ p.title }}</option>
                 {% endfor %}
             </select>
-
-            {% if initiatives | length > 0 %}
-            <select id="filter-initiative" class="form-select analyze-toolbar-select" onchange="applyFilters()">
-                <option value="">All Initiatives</option>
-                {% for init in initiatives %}
-                <option value="{{ init.id }}" {% if init_initiative_id == init.id ~ "" %}selected{% endif %}>{{ init.title }}</option>
-                {% endfor %}
-            </select>
-            {% endif %}
         </div>
 
         <div class="analyze-more-panel open" id="more-panel">
@@ -90,10 +81,39 @@
                     </select>
                 </div>
                 <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Reach</label>
+                    <select id="filter-reach" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All Reach</option>
+                        <option value="individual" {% if init_reach == "individual" %}selected{% endif %}>Individual</option>
+                        <option value="team" {% if init_reach == "team" %}selected{% endif %}>Team</option>
+                        <option value="org" {% if init_reach == "org" %}selected{% endif %}>Org</option>
+                        <option value="company" {% if init_reach == "company" %}selected{% endif %}>Company</option>
+                    </select>
+                </div>
+                <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Complexity</label>
+                    <select id="filter-complexity" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All Complexity</option>
+                        <option value="low" {% if init_complexity == "low" %}selected{% endif %}>Low</option>
+                        <option value="medium" {% if init_complexity == "medium" %}selected{% endif %}>Medium</option>
+                        <option value="high" {% if init_complexity == "high" %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="analyze-more-field">
+                    <label class="form-label form-label--inline">Role</label>
+                    <select id="filter-role" class="form-select analyze-toolbar-select" onchange="applyFilters()">
+                        <option value="">All Roles</option>
+                        <option value="driver" {% if init_role == "driver" %}selected{% endif %}>Driver</option>
+                        <option value="contributor" {% if init_role == "contributor" %}selected{% endif %}>Contributor</option>
+                        <option value="reviewer" {% if init_role == "reviewer" %}selected{% endif %}>Reviewer</option>
+                        <option value="consulted" {% if init_role == "consulted" %}selected{% endif %}>Consulted</option>
+                    </select>
+                </div>
+                <div class="analyze-more-field">
                     <label class="form-label form-label--inline">Show only</label>
                     <select id="filter-show-only" class="form-select analyze-toolbar-select" onchange="applyFilters()">
                         <option value="">All entries</option>
-                        <option value="no_key_result" {% if init_no_key_result == "1" %}selected{% endif %}>Unlinked</option>
+                        <option value="no_priority" {% if init_no_priority == "1" %}selected{% endif %}>Unlinked</option>
                         <option value="no_team" {% if init_no_team == "1" %}selected{% endif %}>Missing team</option>
                         <option value="no_collaborator" {% if init_no_collaborator == "1" %}selected{% endif %}>Missing collaborator</option>
                     </select>
@@ -120,26 +140,23 @@ function toggleReportSidebar() {
     document.getElementById('report-overlay').classList.toggle('open');
 }
 
-// Goal → key result IDs (for cascading dropdown)
-var GOAL_KEY_RESULTS = {{ goal_key_results_json | safe }};
-
 var _debounceTimer = null;
 function debounceApply() {
     clearTimeout(_debounceTimer);
     _debounceTimer = setTimeout(applyFilters, 300);
 }
 
-function onGoalChange() {
-    document.getElementById('filter-key-result').value = '';
-    filterKeyResultsByGoal(document.getElementById('filter-goal').value);
+function onDeptGoalChange() {
+    document.getElementById('filter-priority').value = '';
+    filterPrioritesByDeptGoal(document.getElementById('filter-dept-goal').value);
     applyFilters();
 }
 
-function filterKeyResultsByGoal(goalId) {
-    var select = document.getElementById('filter-key-result');
-    var options = select.querySelectorAll('option[data-goal-id]');
+function filterPrioritesByDeptGoal(deptGoalId) {
+    var select = document.getElementById('filter-priority');
+    var options = select.querySelectorAll('option[data-dept-goal-id]');
     options.forEach(function(opt) {
-        if (!goalId || opt.dataset.goalId === goalId) {
+        if (!deptGoalId || opt.dataset.deptGoalId === deptGoalId) {
             opt.style.display = '';
             opt.disabled = false;
         } else {
@@ -152,10 +169,8 @@ function filterKeyResultsByGoal(goalId) {
 
 function applyFilters() {
     var params = new URLSearchParams();
-    var goal = document.getElementById('filter-goal').value;
-    var kr = document.getElementById('filter-key-result').value;
-    var initEl = document.getElementById('filter-initiative');
-    var initiative = initEl ? initEl.value : '';
+    var deptGoal = document.getElementById('filter-dept-goal').value;
+    var priority = document.getElementById('filter-priority').value;
     var category = document.getElementById('filter-category').value;
     var source = document.getElementById('filter-source').value;
     var team = document.getElementById('filter-team').value;
@@ -163,16 +178,21 @@ function applyFilters() {
     var search = document.getElementById('filter-search').value.trim();
     var showOnly = document.getElementById('filter-show-only');
     var showOnlyVal = showOnly ? showOnly.value : '';
+    var reach = document.getElementById('filter-reach').value;
+    var complexity = document.getElementById('filter-complexity').value;
+    var role = document.getElementById('filter-role').value;
 
-    if (goal) params.set('goal_id', goal);
-    if (kr) params.set('key_result_id', kr);
-    if (initiative) params.set('initiative_id', initiative);
+    if (deptGoal) params.set('department_goal_id', deptGoal);
+    if (priority) params.set('priority_id', priority);
     if (category) params.set('category', category);
     if (source) params.set('source', source);
     if (team) params.set('team', team);
     if (collab) params.set('collaborator', collab);
     if (search) params.set('search', search);
     if (showOnlyVal) params.set(showOnlyVal, '1');
+    if (reach) params.set('reach', reach);
+    if (complexity) params.set('complexity', complexity);
+    if (role) params.set('role', role);
 
     htmx.ajax('GET', '/logbook/entries?' + params.toString(), {target: '#analyze-results', swap: 'innerHTML'});
 
@@ -188,31 +208,34 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    document.getElementById('filter-goal').value = '';
-    document.getElementById('filter-key-result').value = '';
-    var initEl = document.getElementById('filter-initiative');
-    if (initEl) initEl.value = '';
+    document.getElementById('filter-dept-goal').value = '';
+    document.getElementById('filter-priority').value = '';
     document.getElementById('filter-category').value = '';
     document.getElementById('filter-source').value = '';
     document.getElementById('filter-team').value = '';
     document.getElementById('filter-collaborator').value = '';
     document.getElementById('filter-search').value = '';
+    document.getElementById('filter-reach').value = '';
+    document.getElementById('filter-complexity').value = '';
+    document.getElementById('filter-role').value = '';
     var showOnly = document.getElementById('filter-show-only');
     if (showOnly) showOnly.value = '';
-    filterKeyResultsByGoal('');
+    filterPrioritesByDeptGoal('');
     applyFilters();
 }
 
 function removeFilter(field) {
-    if (field === 'goal_id') { document.getElementById('filter-goal').value = ''; document.getElementById('filter-key-result').value = ''; filterKeyResultsByGoal(''); }
-    else if (field === 'key_result_id') document.getElementById('filter-key-result').value = '';
-    else if (field === 'initiative_id') { var el = document.getElementById('filter-initiative'); if (el) el.value = ''; }
+    if (field === 'department_goal_id') { document.getElementById('filter-dept-goal').value = ''; document.getElementById('filter-priority').value = ''; filterPrioritesByDeptGoal(''); }
+    else if (field === 'priority_id') document.getElementById('filter-priority').value = '';
     else if (field === 'category') document.getElementById('filter-category').value = '';
     else if (field === 'source') document.getElementById('filter-source').value = '';
     else if (field === 'team') document.getElementById('filter-team').value = '';
     else if (field === 'collaborator') document.getElementById('filter-collaborator').value = '';
     else if (field === 'search') document.getElementById('filter-search').value = '';
-    else if (field === 'no_key_result' || field === 'no_team' || field === 'no_collaborator') {
+    else if (field === 'reach') document.getElementById('filter-reach').value = '';
+    else if (field === 'complexity') document.getElementById('filter-complexity').value = '';
+    else if (field === 'role') document.getElementById('filter-role').value = '';
+    else if (field === 'no_priority' || field === 'no_team' || field === 'no_collaborator') {
         var showOnly = document.getElementById('filter-show-only');
         if (showOnly) showOnly.value = '';
     }
@@ -220,15 +243,17 @@ function removeFilter(field) {
 }
 
 var PILL_LABELS = {
-    goal_id: 'Goal',
-    key_result_id: 'Key Result',
-    initiative_id: 'Initiative',
+    department_goal_id: 'Dept Goal',
+    priority_id: 'Priority',
     category: 'Type',
     source: 'Source',
     team: 'Team',
     collaborator: 'Person',
     search: 'Search',
-    no_key_result: 'Unlinked',
+    reach: 'Reach',
+    complexity: 'Complexity',
+    role: 'Role',
+    no_priority: 'Unlinked',
     no_team: 'Missing team',
     no_collaborator: 'Missing collaborator'
 };
@@ -239,16 +264,13 @@ function updateFilterPills(params) {
     params.forEach(function(value, key) {
         var label = PILL_LABELS[key] || key;
         var displayValue = value;
-        if (key === 'goal_id') {
-            var opt = document.querySelector('#filter-goal option[value="' + value + '"]');
+        if (key === 'department_goal_id') {
+            var opt = document.querySelector('#filter-dept-goal option[value="' + value + '"]');
             if (opt) displayValue = opt.textContent;
-        } else if (key === 'key_result_id') {
-            var opt = document.querySelector('#filter-key-result option[value="' + value + '"]');
+        } else if (key === 'priority_id') {
+            var opt = document.querySelector('#filter-priority option[value="' + value + '"]');
             if (opt) displayValue = opt.textContent;
-        } else if (key === 'initiative_id') {
-            var opt = document.querySelector('#filter-initiative option[value="' + value + '"]');
-            if (opt) displayValue = opt.textContent;
-        } else if (key === 'no_key_result' || key === 'no_team' || key === 'no_collaborator') {
+        } else if (key === 'no_priority' || key === 'no_team' || key === 'no_collaborator') {
             displayValue = '';
         }
         html += '<span class="filter-pill">' + label + (displayValue ? ': ' + displayValue : '') +
@@ -262,10 +284,10 @@ function updateClearButton(params) {
     row.style.display = params.toString() ? '' : 'none';
 }
 
-// On page load: apply initial goal filter to cascade KR dropdown
+// On page load: apply initial dept goal filter to cascade priority dropdown
 (function() {
-    var initGoal = '{{ init_goal_id }}';
-    if (initGoal) filterKeyResultsByGoal(initGoal);
+    var initDeptGoal = '{{ init_department_goal_id }}';
+    if (initDeptGoal) filterPrioritesByDeptGoal(initDeptGoal);
 
     // Show clear button if any filters are active
     var params = new URLSearchParams(window.location.search);

@@ -1,7 +1,8 @@
+pub mod annual_alignment;
 pub mod checkins;
+pub mod contribution_examples;
 pub mod dashboard;
 pub mod export;
-pub mod impact_stories;
 pub mod logbook;
 pub mod meeting_prep;
 pub mod phases;

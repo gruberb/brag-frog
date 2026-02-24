@@ -324,8 +324,7 @@ impl EntryType {
 pub struct BragEntryRow {
     pub id: i64,
     pub week_id: i64,
-    pub key_result_id: Option<i64>,
-    pub initiative_id: Option<i64>,
+    pub priority_id: Option<i64>,
     pub source: String,
     pub source_id: Option<String>,
     pub source_url: Option<String>,
@@ -365,8 +364,7 @@ impl BragEntryRow {
         Ok(BragEntry {
             id: self.id,
             week_id: self.week_id,
-            key_result_id: self.key_result_id,
-            initiative_id: self.initiative_id,
+            priority_id: self.priority_id,
             source: self.source,
             source_id: self.source_id,
             source_url: self.source_url,
@@ -404,8 +402,7 @@ impl BragEntryRow {
 pub struct BragEntry {
     pub id: i64,
     pub week_id: i64,
-    pub key_result_id: Option<i64>,
-    pub initiative_id: Option<i64>,
+    pub priority_id: Option<i64>,
     pub source: String,
     pub source_id: Option<String>,
     pub source_url: Option<String>,
@@ -444,9 +441,7 @@ pub struct BragEntry {
 pub struct CreateEntry {
     pub week_id: i64,
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
-    pub key_result_id: Option<i64>,
-    #[serde(default, deserialize_with = "deserialize_optional_i64")]
-    pub initiative_id: Option<i64>,
+    pub priority_id: Option<i64>,
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
@@ -458,15 +453,19 @@ pub struct CreateEntry {
     pub collaborators: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub source_url: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub reach: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub complexity: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub role: Option<String>,
 }
 
 /// Form payload for updating an existing entry.
 #[derive(Debug, Deserialize)]
 pub struct UpdateEntry {
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
-    pub key_result_id: Option<i64>,
-    #[serde(default, deserialize_with = "deserialize_optional_i64")]
-    pub initiative_id: Option<i64>,
+    pub priority_id: Option<i64>,
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
@@ -478,6 +477,12 @@ pub struct UpdateEntry {
     pub collaborators: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub source_url: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub reach: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub complexity: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub role: Option<String>,
 }
 
 #[cfg(test)]

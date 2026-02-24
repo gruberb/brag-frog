@@ -2,7 +2,6 @@ use axum::{
     extract::{Query, State},
     response::{Html, IntoResponse, Redirect, Response},
 };
-use std::collections::HashMap;
 use tower_sessions::Session;
 
 use crate::AppState;
@@ -13,7 +12,7 @@ use crate::analytics::insights::{
 use crate::entries::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
-use crate::okr::model::{Goal, Initiative, KeyResult};
+use crate::goals::model::{DepartmentGoal, Priority};
 use crate::review::model::BragPhase;
 use crate::shared::error::AppError;
 
@@ -66,21 +65,10 @@ pub async fn logbook(
         }
     };
 
-    let goals = Goal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
-    let key_results = KeyResult::list_active_for_user(&state.db, auth.user_id).await?;
-    let initiatives = Initiative::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
 
     let today_str = chrono::Local::now().format("%Y-%m-%d").to_string();
-
-    // Build goal → key result IDs map (for JS cascading)
-    let mut goal_key_results_map: HashMap<i64, Vec<i64>> = HashMap::new();
-    for kr in &key_results {
-        if let Some(gid) = kr.goal_id {
-            goal_key_results_map.entry(gid).or_default().push(kr.id);
-        }
-    }
-    let goal_key_results_json =
-        serde_json::to_string(&goal_key_results_map).unwrap_or_else(|_| "{}".to_string());
 
     // Fetch entries WITHOUT category filter (so insights reflect the full base set)
     // Use full phase end date so manual entries with future dates are included.
@@ -93,17 +81,17 @@ pub async fn logbook(
         .filter(|s| !s.is_empty())
         .collect();
 
-    let goal_id: Option<i64> = page_query.goal_id.as_deref().and_then(|s| s.parse().ok());
-    let key_result_id: Option<i64> = page_query
-        .key_result_id
+    let department_goal_id: Option<i64> = page_query.department_goal_id.as_deref().and_then(|s| s.parse().ok());
+    let priority_id: Option<i64> = page_query
+        .priority_id
         .as_deref()
         .and_then(|s| s.parse().ok());
 
     let mut entries = BragEntry::list_for_phase_filtered(
         &state.db,
         phase.id,
-        key_result_id,
-        goal_id,
+        priority_id,
+        department_goal_id,
         &[],
         Some(phase.start_date.as_str()),
         Some(&phase.end_date),
@@ -119,7 +107,7 @@ pub async fn logbook(
     apply_in_memory_filters(&mut entries, &page_query);
 
     // Compute insights from the base set (before category filter)
-    let insights = compute_insights(&entries, &key_results);
+    let insights = compute_insights(&entries, &priorities);
 
     // Now apply category filter in-memory
     if let Some(ref cat) = page_query.category
@@ -152,13 +140,11 @@ pub async fn logbook(
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
-    ctx.insert("goals", &goals);
-    ctx.insert("key_results", &key_results);
-    ctx.insert("initiatives", &initiatives);
+    ctx.insert("dept_goals", &dept_goals);
+    ctx.insert("priorities", &priorities);
     ctx.insert("total_entries", &all_entries.len());
     ctx.insert("filtered_count", &entries.len());
     ctx.insert("current_page", "logbook");
-    ctx.insert("goal_key_results_json", &goal_key_results_json);
     ctx.insert("all_teams", &all_teams);
     ctx.insert("all_collaborators", &all_collaborators);
     ctx.insert("insights", &insights);
@@ -181,14 +167,10 @@ pub async fn logbook(
     );
 
     // Pass initial filter values for URL state restoration
-    ctx.insert("init_goal_id", &page_query.goal_id.as_deref().unwrap_or(""));
+    ctx.insert("init_department_goal_id", &page_query.department_goal_id.as_deref().unwrap_or(""));
     ctx.insert(
-        "init_key_result_id",
-        &page_query.key_result_id.as_deref().unwrap_or(""),
-    );
-    ctx.insert(
-        "init_initiative_id",
-        &page_query.initiative_id.as_deref().unwrap_or(""),
+        "init_priority_id",
+        &page_query.priority_id.as_deref().unwrap_or(""),
     );
     ctx.insert(
         "init_category",
@@ -202,14 +184,20 @@ pub async fn logbook(
     );
     ctx.insert("init_search", &page_query.search.as_deref().unwrap_or(""));
     ctx.insert(
-        "init_no_key_result",
-        &page_query.no_key_result.as_deref().unwrap_or(""),
+        "init_no_priority",
+        &page_query.no_priority.as_deref().unwrap_or(""),
     );
     ctx.insert("init_no_team", &page_query.no_team.as_deref().unwrap_or(""));
     ctx.insert(
         "init_no_collaborator",
         &page_query.no_collaborator.as_deref().unwrap_or(""),
     );
+    ctx.insert("init_reach", &page_query.reach.as_deref().unwrap_or(""));
+    ctx.insert(
+        "init_complexity",
+        &page_query.complexity.as_deref().unwrap_or(""),
+    );
+    ctx.insert("init_role", &page_query.role.as_deref().unwrap_or(""));
 
     let html = state.templates.render("pages/analyze.html", &ctx)?;
     Ok(Html(html))
@@ -240,8 +228,8 @@ pub async fn logbook_filtered_entries(
     let mut entries = BragEntry::list_for_phase_filtered(
         &state.db,
         phase.id,
-        query.key_result_id,
-        query.goal_id,
+        query.priority_id,
+        query.department_goal_id,
         &[],
         Some(phase.start_date.as_str()),
         Some(&phase.end_date),
@@ -255,26 +243,27 @@ pub async fn logbook_filtered_entries(
 
     // Build a page_query-compatible struct for in-memory filters
     let page_query = AnalyzePageQuery {
-        goal_id: query.goal_id.map(|id| id.to_string()),
-        key_result_id: query.key_result_id.map(|id| id.to_string()),
-        initiative_id: query.initiative_id.map(|id| id.to_string()),
+        department_goal_id: query.department_goal_id.map(|id: i64| id.to_string()),
+        priority_id: query.priority_id.map(|id: i64| id.to_string()),
         category: query.category.clone(),
         source: query.source,
         team: query.team,
         collaborator: query.collaborator,
         search: query.search,
-        no_key_result: query.no_key_result,
+        no_priority: query.no_priority,
         no_team: query.no_team,
         no_collaborator: query.no_collaborator,
+        reach: query.reach,
+        complexity: query.complexity,
+        role: query.role,
     };
     apply_in_memory_filters(&mut entries, &page_query);
 
-    let key_results = KeyResult::list_active_for_user(&state.db, auth.user_id).await?;
-    let goals = Goal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
-    let initiatives = Initiative::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     // Compute insights from base set (before category filter)
-    let insights = compute_insights(&entries, &key_results);
+    let insights = compute_insights(&entries, &priorities);
 
     // Now apply category filter in-memory
     if let Some(ref cat) = query.category
@@ -288,9 +277,8 @@ pub async fn logbook_filtered_entries(
 
     let mut ctx = tera::Context::new();
     ctx.insert("entries", &entries);
-    ctx.insert("key_results", &key_results);
-    ctx.insert("goals", &goals);
-    ctx.insert("initiatives", &initiatives);
+    ctx.insert("priorities", &priorities);
+    ctx.insert("dept_goals", &dept_goals);
     ctx.insert("insights", &insights);
     ctx.insert("date_groups", &date_groups);
     ctx.insert("filtered_count", &entries.len());

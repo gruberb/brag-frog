@@ -40,28 +40,12 @@
             <button type="submit" class="btn btn-primary quick-entry-submit">Add</button>
         </div>
         <div class="quick-entry-meta">
-            <select name="key_result_id" class="form-select quick-entry-meta-field">
-                <option value="">Key Result</option>
-                {% for goal in goals %}
-                <optgroup label="{{ goal.title }}">
-                    {% for kr in key_results %}{% if kr.goal_id and kr.goal_id == goal.id %}
-                    <option value="{{ kr.id }}">{{ kr.name }}</option>
-                    {% endif %}{% endfor %}
-                </optgroup>
-                {% endfor %}
-                {% for kr in key_results %}{% if not kr.goal_id %}
-                <option value="{{ kr.id }}">{{ kr.name }}</option>
-                {% endif %}{% endfor %}
-            </select>
-
-            {% if initiatives | length > 0 %}
-            <select name="initiative_id" class="form-select quick-entry-meta-field">
-                <option value="">Initiative</option>
-                {% for init in initiatives %}
-                <option value="{{ init.id }}">{{ init.title }}</option>
+            <select name="priority_id" class="form-select quick-entry-meta-field">
+                <option value="">Priority</option>
+                {% for p in priorities %}
+                <option value="{{ p.id }}">{{ p.title }}</option>
                 {% endfor %}
             </select>
-            {% endif %}
 
             <!-- Teams dropdown -->
             <div class="quick-entry-meta-field quick-entry-dropdown" id="teams-dropdown">
@@ -118,6 +102,28 @@
             </div>
 
             <input type="url" name="source_url" class="form-input quick-entry-meta-field" placeholder="Link" />
+
+            <select name="reach" class="form-select quick-entry-meta-field quick-entry-impact">
+                <option value="">Reach</option>
+                <option value="team">Team</option>
+                <option value="cross_team">Cross-team</option>
+                <option value="org">Org</option>
+                <option value="company">Company</option>
+            </select>
+            <select name="complexity" class="form-select quick-entry-meta-field quick-entry-impact">
+                <option value="">Complexity</option>
+                <option value="routine">Routine</option>
+                <option value="moderate">Moderate</option>
+                <option value="complex">Complex</option>
+                <option value="novel">Novel</option>
+            </select>
+            <select name="role" class="form-select quick-entry-meta-field quick-entry-impact">
+                <option value="">Role</option>
+                <option value="contributor">Contributor</option>
+                <option value="owner">Owner</option>
+                <option value="lead">Lead</option>
+                <option value="architect">Architect</option>
+            </select>
         </div>
     </form>
     <!-- Just-added entries appear here after quick capture -->
@@ -144,17 +150,13 @@
                 <div class="focus-card-header" onclick="toggleFocusExpand({{ focus.id }})">
                     <span class="focus-card-title">{{ focus.title }}</span>
                     <div class="focus-card-badges">
-                        {% if focus.linked_type == "kr" %}
-                            {% for kr in key_results %}{% if kr.id == focus.linked_id %}
-                            <span class="badge badge-type" style="background:{{ kr.color | default(value='#888') }};color:#fff;font-size:0.65rem;">KR: {{ kr.name }}</span>
+                        {% if focus.linked_type == "priority" %}
+                            {% for p in priorities %}{% if p.id == focus.linked_id %}
+                            <span class="badge badge-type" style="background:{{ p.color | default(value='#888') }};color:#fff;font-size:0.65rem;">{{ p.title }}</span>
                             {% endif %}{% endfor %}
-                        {% elif focus.linked_type == "goal" %}
-                            {% for goal in goals %}{% if goal.id == focus.linked_id %}
-                            <span class="badge badge-type" style="font-size:0.65rem;">Goal: {{ goal.title }}</span>
-                            {% endif %}{% endfor %}
-                        {% elif focus.linked_type == "initiative" %}
-                            {% for init in initiatives %}{% if init.id == focus.linked_id %}
-                            <span class="badge badge-type" style="font-size:0.65rem;">Init: {{ init.title }}</span>
+                        {% elif focus.linked_type == "dept_goal" %}
+                            {% for dg in dept_goals %}{% if dg.id == focus.linked_id %}
+                            <span class="badge badge-type" style="font-size:0.65rem;">{{ dg.title }}</span>
                             {% endif %}{% endfor %}
                         {% endif %}
                         <svg class="focus-chevron" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
@@ -194,14 +196,11 @@
                         <input type="text" name="title" class="form-input" value="{{ focus.title }}" required placeholder="Focus title" />
                         <select name="linked_ref" class="form-select" style="margin-top:6px;">
                             <option value="">Link to...</option>
-                            {% for goal in goals %}
-                            <option value="goal:{{ goal.id }}" {% if focus.linked_type == "goal" and focus.linked_id == goal.id %}selected{% endif %}>Goal: {{ goal.title }}</option>
+                            {% for dg in dept_goals %}
+                            <option value="dept_goal:{{ dg.id }}" {% if focus.linked_type == "dept_goal" and focus.linked_id == dg.id %}selected{% endif %}>{{ dg.title }}</option>
                             {% endfor %}
-                            {% for kr in key_results %}
-                            <option value="kr:{{ kr.id }}" {% if focus.linked_type == "kr" and focus.linked_id == kr.id %}selected{% endif %}>KR: {{ kr.name }}</option>
-                            {% endfor %}
-                            {% for init in initiatives %}
-                            <option value="initiative:{{ init.id }}" {% if focus.linked_type == "initiative" and focus.linked_id == init.id %}selected{% endif %}>Init: {{ init.title }}</option>
+                            {% for p in priorities %}
+                            <option value="priority:{{ p.id }}" {% if focus.linked_type == "priority" and focus.linked_id == p.id %}selected{% endif %}>{{ p.title }}</option>
                             {% endfor %}
                         </select>
                         <!-- Entry autocomplete -->
@@ -240,14 +239,11 @@
                 <input type="text" name="title" class="form-input" required placeholder="What's your focus?" autocomplete="off" />
                 <select name="linked_ref" class="form-select" style="margin-top:6px;">
                     <option value="">Link to...</option>
-                    {% for goal in goals %}
-                    <option value="goal:{{ goal.id }}">Goal: {{ goal.title }}</option>
+                    {% for dg in dept_goals %}
+                    <option value="dept_goal:{{ dg.id }}">{{ dg.title }}</option>
                     {% endfor %}
-                    {% for kr in key_results %}
-                    <option value="kr:{{ kr.id }}">KR: {{ kr.name }}</option>
-                    {% endfor %}
-                    {% for init in initiatives %}
-                    <option value="initiative:{{ init.id }}">Init: {{ init.title }}</option>
+                    {% for p in priorities %}
+                    <option value="priority:{{ p.id }}">{{ p.title }}</option>
                     {% endfor %}
                 </select>
                 <!-- Entry autocomplete -->
@@ -350,56 +346,26 @@
             {% endif %}
         </section>
 
-        <!-- OKR + Initiatives snapshot -->
+        <!-- Priorities snapshot -->
         <section class="card">
-            <h2 class="section-title">OKR Snapshot</h2>
-            {% if goals | length == 0 %}
+            <h2 class="section-title">Priorities</h2>
+            {% if priorities | length == 0 %}
             <div style="padding:4px 0;">
-                <p class="text-sm text-muted">No goals yet.</p>
-                <a href="/goals" class="btn btn-text btn-sm">Set up goals</a>
+                <p class="text-sm text-muted">No priorities yet.</p>
+                <a href="/priorities" class="btn btn-text btn-sm">Set up priorities</a>
             </div>
             {% else %}
-            {% for goal in goals %}
-            {% set_global goal_all_complete = true %}
-            {% set_global goal_has_krs = false %}
-            {% for kr in key_results %}{% if kr.goal_id == goal.id %}
-                {% set_global goal_has_krs = true %}
-                {% if kr.progress < 100 %}{% set_global goal_all_complete = false %}{% endif %}
-            {% endif %}{% endfor %}
-            {% if not goal_has_krs or not goal_all_complete %}
-            <div class="dashboard-goal" id="dash-goal-{{ goal.id }}">
-                <div class="dashboard-goal-header" onclick="toggleDashboardGoal({{ goal.id }})" style="cursor:pointer;display:flex;align-items:center;gap:6px;">
-                    <svg class="dashboard-goal-chevron" width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
-                    <a href="/logbook?goal_id={{ goal.id }}" class="goal-title goal-title-link" onclick="event.stopPropagation();">{{ goal.title }}</a>
+            {% for p in priorities %}
+            {% if p.progress < 100 %}
+            <div class="dashboard-kr">
+                <div class="kr-label">
+                    <span class="kr-color" style="background:{{ p.color | default(value='#888') }}"></span>
+                    {{ p.title }}
                 </div>
-                <div class="dashboard-goal-krs" id="dash-goal-krs-{{ goal.id }}">
-                    {% for kr in key_results %}
-                    {% if kr.goal_id == goal.id %}
-                    <div class="dashboard-kr">
-                        <div class="kr-label">
-                            <span class="kr-color" style="background:{{ kr.color | default(value='#888') }}"></span>
-                            {{ kr.name }}
-                        </div>
-                        <div class="kr-score-bar">
-                            <div class="kr-score-fill" style="width:{{ kr.progress }}%;background:{{ kr.color | default(value='#888') }}"></div>
-                        </div>
-                        <span class="text-sm text-muted">{{ kr.progress }}%</span>
-                    </div>
-                    {% endif %}
-                    {% endfor %}
+                <div class="kr-score-bar">
+                    <div class="kr-score-fill" style="width:{{ p.progress }}%;background:{{ p.color | default(value='#888') }}"></div>
                 </div>
-            </div>
-            {% endif %}
-            {% endfor %}
-            {% endif %}
-
-            {% if initiatives | length > 0 %}
-            <h3 class="text-sm" style="font-weight:600;margin:12px 0 4px;">Active Initiatives</h3>
-            {% for initiative in initiatives %}
-            {% if initiative.status != "completed" %}
-            <div class="dashboard-kr" style="margin-bottom:4px;">
-                <span class="text-sm">{{ initiative.title }}</span>
-                <span class="badge badge-type" style="font-size:0.65rem;">{{ initiative.scope }}</span>
+                <span class="text-sm text-muted">{{ p.progress }}%</span>
             </div>
             {% endif %}
             {% endfor %}

@@ -253,14 +253,14 @@ async fn test_sync_upserts_on_duplicate_source_id() {
 }
 
 #[tokio::test]
-async fn test_sync_preserves_user_key_result() {
-    let (pool, crypto, user_id, _phase_id) = setup_sync_test().await;
+async fn test_sync_preserves_user_priority() {
+    let (pool, crypto, user_id, phase_id) = setup_sync_test().await;
     let http_client = reqwest::Client::new();
 
     // First sync
     let mock1 = MockSyncService::new(vec![make_entry(
-        "gh-kr",
-        "PR with KR",
+        "gh-pri",
+        "PR with priority",
         "pr_authored",
         "2025-03-10",
     )]);
@@ -268,15 +268,23 @@ async fn test_sync_preserves_user_key_result() {
         .await
         .unwrap();
 
-    // Manually assign a key result
-    let kr = common::create_test_key_result(&pool, user_id, "My KR", None).await;
+    // Manually assign a priority
     let user_crypto = crypto.for_user(user_id).unwrap();
-    let entry = BragEntry::find_by_source(&pool, "github", "gh-kr", user_id, &user_crypto)
+    let priority = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "My Priority",
+        None,
+        &user_crypto,
+    )
+    .await;
+    let entry = BragEntry::find_by_source(&pool, "github", "gh-pri", user_id, &user_crypto)
         .await
         .unwrap()
         .unwrap();
-    sqlx::query("UPDATE brag_entries SET key_result_id = ? WHERE id = ?")
-        .bind(kr.id)
+    sqlx::query("UPDATE brag_entries SET priority_id = ? WHERE id = ?")
+        .bind(priority.id)
         .bind(entry.id)
         .execute(&pool)
         .await
@@ -284,8 +292,8 @@ async fn test_sync_preserves_user_key_result() {
 
     // Re-sync
     let mock2 = MockSyncService::new(vec![make_entry(
-        "gh-kr",
-        "PR with KR updated",
+        "gh-pri",
+        "PR with priority updated",
         "pr_authored",
         "2025-03-10",
     )]);
@@ -293,15 +301,15 @@ async fn test_sync_preserves_user_key_result() {
         .await
         .unwrap();
 
-    // key_result_id should be preserved
+    // priority_id should be preserved
     let found = BragEntry::find_by_id(&pool, entry.id, user_id, &user_crypto)
         .await
         .unwrap()
         .unwrap();
     assert_eq!(
-        found.key_result_id,
-        Some(kr.id),
-        "key_result_id should be preserved"
+        found.priority_id,
+        Some(priority.id),
+        "priority_id should be preserved"
     );
 }
 

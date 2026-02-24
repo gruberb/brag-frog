@@ -10,21 +10,24 @@ use crate::entries::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::clg::ClgLevel;
 use crate::identity::model::User;
-use crate::okr::model::{Goal, KeyResult};
-use crate::review::model::{BragPhase, Summary, section_question, section_title};
+use crate::goals::model::{DepartmentGoal, Priority};
+use crate::review::model::{
+    BragPhase, ContributionExample, Summary, assessment_config, rating_scale_config,
+    section_question, section_title,
+};
 use crate::review::routes::{get_ai_client, has_ai_for_user};
 use crate::shared::error::AppError;
 
 // Aggregated data needed to build AI prompts for summary generation.
 struct SummaryData {
     entries: Vec<BragEntry>,
-    goals: Vec<Goal>,
-    key_results: Vec<KeyResult>,
+    dept_goals: Vec<DepartmentGoal>,
+    priorities: Vec<Priority>,
     clg_level: Option<&'static ClgLevel>,
     wants_promotion: bool,
 }
 
-// Loads entries, goals, key results, and CLG level for building AI prompts.
+// Loads entries, department goals, priorities, and CLG level for building AI prompts.
 async fn load_summary_data(
     state: &AppState,
     phase_id: i64,
@@ -32,8 +35,8 @@ async fn load_summary_data(
 ) -> Result<SummaryData, AppError> {
     let user_crypto = state.crypto.for_user(user_id)?;
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &user_crypto).await?;
-    let goals = Goal::list_for_phase(&state.db, phase_id, &user_crypto).await?;
-    let key_results = KeyResult::list_active_for_user(&state.db, user_id).await?;
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &user_crypto).await?;
+    let priorities = Priority::list_active_for_user(&state.db, user_id, &user_crypto).await?;
 
     let user = User::find_by_id(&state.db, user_id)
         .await?
@@ -45,8 +48,8 @@ async fn load_summary_data(
 
     Ok(SummaryData {
         entries,
-        goals,
-        key_results,
+        dept_goals,
+        priorities,
         clg_level,
         wants_promotion: user.wants_promotion,
     })
@@ -68,6 +71,10 @@ pub async fn summary_page(
 
     let summaries = Summary::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
+    let examples =
+        ContributionExample::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let assessment = assessment_config();
+    let rating_scale = rating_scale_config();
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
@@ -75,6 +82,10 @@ pub async fn summary_page(
     ctx.insert("sections", &build_sections_json(&summaries));
     ctx.insert("has_ai", &has_ai);
     ctx.insert("current_page", "summary");
+    ctx.insert("examples", &examples);
+    ctx.insert("assessment_mid_year", &assessment.mid_year);
+    ctx.insert("assessment_year_end", &assessment.year_end);
+    ctx.insert("rating_scale", &rating_scale.ratings);
 
     let html = state.templates.render("pages/summary.html", &ctx)?;
     Ok(Html(html))
@@ -97,9 +108,9 @@ pub async fn generate_all(
     for section in &crate::review::model::section_slugs() {
         let prompt = build_self_reflection_prompt(
             section,
-            &data.goals,
+            &data.dept_goals,
             &data.entries,
-            &data.key_results,
+            &data.priorities,
             &phase.name,
             data.clg_level,
             data.wants_promotion,
@@ -147,9 +158,9 @@ pub async fn ai_draft_section(
 
     let prompt = build_self_reflection_prompt(
         &section,
-        &data.goals,
+        &data.dept_goals,
         &data.entries,
-        &data.key_results,
+        &data.priorities,
         &phase.name,
         data.clg_level,
         data.wants_promotion,

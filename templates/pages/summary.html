@@ -7,8 +7,8 @@
     <div class="page-header-inner">
         <h1>Self Review</h1>
         <p class="page-subtitle">{{ phase.name }} &mdash; {{ phase.start_date }} to {{ phase.end_date }}</p>
-        {% if has_ai %}
-        <div class="page-header-actions">
+        <div class="page-header-actions" style="gap:8px;">
+            {% if has_ai %}
             <button class="btn btn-primary"
                     hx-post="/review/{{ phase.id }}/generate"
                     hx-target="#summary-sections"
@@ -18,11 +18,122 @@
                 Generate All Sections
             </button>
             <span id="generate-all-spinner" class="htmx-indicator spinner">Generating...</span>
+            {% endif %}
+            <a href="/level-guide" class="btn btn-text btn-sm">Level Guide</a>
         </div>
-        {% endif %}
     </div>
 </div>
 
+<!-- Assessment Template Guidance -->
+<div class="card" style="margin-bottom:16px;">
+    <details>
+        <summary class="section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
+            <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
+            Assessment Guidelines
+        </summary>
+        <div style="margin-top:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                <div>
+                    <h4 style="margin:0 0 4px;">{{ assessment_mid_year.title }}</h4>
+                    <p class="text-sm text-muted">{{ assessment_mid_year.question }}</p>
+                    <p class="text-sm" style="margin-top:4px;">{{ assessment_mid_year.guidance }}</p>
+                    <ul class="text-sm" style="margin:4px 0 0 16px;padding:0;">
+                        {% for b in assessment_mid_year.bullets %}
+                        <li>{{ b }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% if assessment_mid_year.tip %}
+                    <p class="text-sm text-muted" style="margin-top:6px;font-style:italic;">{{ assessment_mid_year.tip }}</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <h4 style="margin:0 0 4px;">{{ assessment_year_end.title }}</h4>
+                    <p class="text-sm text-muted">{{ assessment_year_end.question }}</p>
+                    <p class="text-sm" style="margin-top:4px;">{{ assessment_year_end.guidance }}</p>
+                    <ul class="text-sm" style="margin:4px 0 0 16px;padding:0;">
+                        {% for b in assessment_year_end.bullets %}
+                        <li>{{ b }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% if assessment_year_end.tip %}
+                    <p class="text-sm text-muted" style="margin-top:6px;font-style:italic;">{{ assessment_year_end.tip }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </details>
+</div>
+
+<!-- Contribution Examples -->
+{% if examples | length > 0 %}
+<div class="card" style="margin-bottom:16px;">
+    <details>
+        <summary class="section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
+            <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
+            Contribution Examples ({{ examples | length }})
+        </summary>
+        <div style="margin-top:12px;">
+            {% for example in examples %}
+            <div style="padding:8px 0;{% if not loop.last %}border-bottom:1px solid var(--color-border);{% endif %}">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span style="font-weight:600;">{{ example.title }}</span>
+                    <span class="badge badge-status badge-status--{{ example.status }}">{{ example.status }}</span>
+                    {% if example.assessment_type %}
+                    <span class="badge" style="font-size:0.7rem;">{{ example.assessment_type | replace(from="_", to=" ") }}</span>
+                    {% endif %}
+                    {% if example.impact_level %}
+                    <span class="badge badge-category badge-category--{{ example.impact_level }}">{{ example.impact_level | replace(from="_", to=" ") }}</span>
+                    {% endif %}
+                </div>
+                {% if example.outcome %}
+                <p class="text-sm" style="margin:4px 0 0;">{{ example.outcome | truncate(length=200) }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <a href="/contribution-examples" class="btn btn-text btn-sm" style="margin-top:8px;">Edit Contribution Examples</a>
+        </div>
+    </details>
+</div>
+{% else %}
+<div class="card" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+    <span class="text-sm text-muted">No contribution examples yet.</span>
+    <a href="/contribution-examples" class="btn btn-text btn-sm">Create Examples</a>
+</div>
+{% endif %}
+
+<!-- Rating Scale Reference -->
+<div class="card" style="margin-bottom:16px;">
+    <details>
+        <summary class="section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
+            <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
+            Rating Scale Reference
+        </summary>
+        <div style="margin-top:12px;">
+            <table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);">
+                <thead>
+                    <tr style="text-align:left;border-bottom:2px solid var(--color-border);">
+                        <th style="padding:4px 8px;">Rating</th>
+                        <th style="padding:4px 8px;">Definition</th>
+                        <th style="padding:4px 8px;">Anchor</th>
+                        <th style="padding:4px 8px;text-align:right;">Bonus %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tier in rating_scale %}
+                    <tr style="border-bottom:1px solid var(--color-border);">
+                        <td style="padding:4px 8px;font-weight:600;white-space:nowrap;">{{ tier.label }}</td>
+                        <td style="padding:4px 8px;">{{ tier.definition }}</td>
+                        <td style="padding:4px 8px;color:var(--color-text-secondary);">{{ tier.anchor }}</td>
+                        <td style="padding:4px 8px;text-align:right;">{{ tier.percentage }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </details>
+</div>
+
+<!-- Narrative Sections -->
 <div id="summary-sections" class="summary-layout">
     {% for section in sections %}
     {% include "components/summary_section.html" %}

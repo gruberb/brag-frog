@@ -12,7 +12,7 @@ use crate::entries::model::BragEntry;
 use crate::entries::model::EntryType;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
-use crate::okr::model::{Goal, KeyResult};
+use crate::goals::model::{DepartmentGoal, Priority};
 use crate::review::model::{BragPhase, Week};
 use crate::shared::error::AppError;
 
@@ -70,12 +70,12 @@ pub async fn export_download(
     .await?;
 
     let weeks = Week::list_for_phase(&state.db, phase.id).await?;
-    let key_results = KeyResult::list_for_user(&state.db, auth.user_id).await?;
-    let goals = Goal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     // Build lookup maps
-    let kr_map: HashMap<i64, &KeyResult> = key_results.iter().map(|kr| (kr.id, kr)).collect();
-    let goal_map: HashMap<i64, &Goal> = goals.iter().map(|g| (g.id, g)).collect();
+    let priority_map: HashMap<i64, &Priority> = priorities.iter().map(|p| (p.id, p)).collect();
+    let dept_goal_map: HashMap<i64, &DepartmentGoal> = dept_goals.iter().map(|g| (g.id, g)).collect();
     let week_map: HashMap<i64, &Week> = weeks.iter().map(|w| (w.id, w)).collect();
 
     // Group entries by week_id
@@ -115,10 +115,10 @@ pub async fn export_download(
                 &phase,
                 &sorted_weeks,
                 &entries_by_week,
-                &goals,
-                &key_results,
-                &kr_map,
-                &goal_map,
+                &dept_goals,
+                &priorities,
+                &priority_map,
+                &dept_goal_map,
                 include_goals,
             );
             let filename = format!("brag-frog-{}.json", safe_name);
@@ -141,10 +141,10 @@ pub async fn export_download(
                 &phase,
                 &sorted_weeks,
                 &entries_by_week,
-                &goals,
-                &key_results,
-                &kr_map,
-                &goal_map,
+                &dept_goals,
+                &priorities,
+                &priority_map,
+                &dept_goal_map,
                 &week_map,
                 include_goals,
             );
@@ -168,16 +168,16 @@ pub async fn export_download(
     }
 }
 
-// Builds a Markdown brag document with optional goals/KRs section and weekly entry groups.
+// Builds a Markdown brag document with optional dept goals/priorities section and weekly entry groups.
 #[allow(clippy::too_many_arguments)]
 fn build_markdown(
     phase: &BragPhase,
     sorted_weeks: &[Week],
     entries_by_week: &HashMap<i64, Vec<&BragEntry>>,
-    goals: &[Goal],
-    key_results: &[KeyResult],
-    kr_map: &HashMap<i64, &KeyResult>,
-    goal_map: &HashMap<i64, &Goal>,
+    dept_goals: &[DepartmentGoal],
+    priorities: &[Priority],
+    priority_map: &HashMap<i64, &Priority>,
+    dept_goal_map: &HashMap<i64, &DepartmentGoal>,
     _week_map: &HashMap<i64, &Week>,
     include_goals: bool,
 ) -> String {
@@ -189,11 +189,11 @@ fn build_markdown(
         phase.start_date, phase.end_date
     ));
 
-    if include_goals && !goals.is_empty() {
-        out.push_str("\n---\n\n## Goals & Key Results\n");
+    if include_goals && !dept_goals.is_empty() {
+        out.push_str("\n---\n\n## Department Goals & Priorities\n");
 
-        for goal in goals {
-            out.push_str(&format!("\n### Goal: {}\n", goal.title));
+        for goal in dept_goals {
+            out.push_str(&format!("\n### Department Goal: {}\n", goal.title));
 
             let mut meta = Vec::new();
             if let Some(ref cat) = goal.category
@@ -210,32 +210,32 @@ fn build_markdown(
                 out.push_str(&format!("\n{}\n", desc));
             }
 
-            // Key results under this goal
-            let goal_krs: Vec<&KeyResult> = key_results
+            // Priorities under this department goal
+            let goal_priorities: Vec<&Priority> = priorities
                 .iter()
-                .filter(|kr| kr.goal_id == Some(goal.id))
+                .filter(|p| p.department_goal_id == Some(goal.id))
                 .collect();
 
-            for kr in &goal_krs {
+            for p in &goal_priorities {
                 out.push_str(&format!(
-                    "\n- **Key Result:** {} — {}% complete\n",
-                    kr.name, kr.progress
+                    "\n- **Priority:** {} — {}% complete\n",
+                    p.title, p.progress
                 ));
             }
         }
 
-        // Unassigned key results
-        let unassigned: Vec<&KeyResult> = key_results
+        // Unassigned priorities
+        let unassigned: Vec<&Priority> = priorities
             .iter()
-            .filter(|kr| kr.goal_id.is_none() && !kr.is_archived)
+            .filter(|p| p.department_goal_id.is_none() && p.status != "cancelled")
             .collect();
 
         if !unassigned.is_empty() {
-            out.push_str("\n### Unassigned Key Results\n");
-            for kr in &unassigned {
+            out.push_str("\n### Unassigned Priorities\n");
+            for p in &unassigned {
                 out.push_str(&format!(
-                    "\n- **Key Result:** {} — {}% complete\n",
-                    kr.name, kr.progress
+                    "\n- **Priority:** {} — {}% complete\n",
+                    p.title, p.progress
                 ));
             }
         }
@@ -260,14 +260,14 @@ fn build_markdown(
             out.push_str(&format!("\n### {}: {}\n", type_name, entry.title));
             out.push_str(&format!("- **Date:** {}\n", entry.occurred_at));
 
-            if let Some(kr_id) = entry.key_result_id
-                && let Some(kr) = kr_map.get(&kr_id)
+            if let Some(pri_id) = entry.priority_id
+                && let Some(pri) = priority_map.get(&pri_id)
             {
-                out.push_str(&format!("- **Key Result:** {}\n", kr.name));
-                if let Some(goal_id) = kr.goal_id
-                    && let Some(goal) = goal_map.get(&goal_id)
+                out.push_str(&format!("- **Priority:** {}\n", pri.title));
+                if let Some(goal_id) = pri.department_goal_id
+                    && let Some(goal) = dept_goal_map.get(&goal_id)
                 {
-                    out.push_str(&format!("- **Goal:** {}\n", goal.title));
+                    out.push_str(&format!("- **Department Goal:** {}\n", goal.title));
                 }
             }
 
@@ -300,16 +300,16 @@ fn build_markdown(
     out
 }
 
-// Builds a JSON brag document with phase metadata, optional goals/KRs, and weekly entries.
+// Builds a JSON brag document with phase metadata, optional dept goals/priorities, and weekly entries.
 #[allow(clippy::too_many_arguments)]
 fn build_json(
     phase: &BragPhase,
     sorted_weeks: &[Week],
     entries_by_week: &HashMap<i64, Vec<&BragEntry>>,
-    goals: &[Goal],
-    key_results: &[KeyResult],
-    kr_map: &HashMap<i64, &KeyResult>,
-    _goal_map: &HashMap<i64, &Goal>,
+    dept_goals: &[DepartmentGoal],
+    priorities: &[Priority],
+    priority_map: &HashMap<i64, &Priority>,
+    _dept_goal_map: &HashMap<i64, &DepartmentGoal>,
     include_goals: bool,
 ) -> String {
     let mut root = serde_json::json!({
@@ -321,7 +321,7 @@ fn build_json(
     });
 
     if include_goals {
-        let goals_json: Vec<serde_json::Value> = goals
+        let goals_json: Vec<serde_json::Value> = dept_goals
             .iter()
             .map(|g| {
                 serde_json::json!({
@@ -333,22 +333,22 @@ fn build_json(
                 })
             })
             .collect();
-        root["goals"] = serde_json::json!(goals_json);
+        root["department_goals"] = serde_json::json!(goals_json);
 
-        let krs_json: Vec<serde_json::Value> = key_results
+        let priorities_json: Vec<serde_json::Value> = priorities
             .iter()
-            .filter(|kr| !kr.is_archived)
-            .map(|kr| {
+            .filter(|p| p.status != "cancelled")
+            .map(|p| {
                 serde_json::json!({
-                    "id": kr.id,
-                    "name": kr.name,
-                    "goal_id": kr.goal_id,
-                    "status": kr.status,
-                    "progress": kr.progress,
+                    "id": p.id,
+                    "title": p.title,
+                    "department_goal_id": p.department_goal_id,
+                    "status": p.status,
+                    "progress": p.progress,
                 })
             })
             .collect();
-        root["key_results"] = serde_json::json!(krs_json);
+        root["priorities"] = serde_json::json!(priorities_json);
     }
 
     let weeks_json: Vec<serde_json::Value> = sorted_weeks
@@ -381,10 +381,10 @@ fn build_json(
                     if let Some(ref collaborators) = e.collaborators {
                         ej["collaborators"] = serde_json::json!(collaborators);
                     }
-                    if let Some(kr_id) = e.key_result_id {
-                        ej["key_result_id"] = serde_json::json!(kr_id);
-                        if let Some(kr) = kr_map.get(&kr_id) {
-                            ej["key_result_name"] = serde_json::json!(kr.name);
+                    if let Some(pri_id) = e.priority_id {
+                        ej["priority_id"] = serde_json::json!(pri_id);
+                        if let Some(pri) = priority_map.get(&pri_id) {
+                            ej["priority_title"] = serde_json::json!(pri.title);
                         }
                     }
                     ej
