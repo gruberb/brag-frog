@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [1.1.3] - 2026-02-24
+
+### Fixed
+- Dashboard meetings widget now shows all synced calendar meetings, including ones deleted from the logbook
+- Manual meeting entries no longer appear in the dashboard meetings widget
+
 ## [1.1.2] - 2026-02-24
 
 ### Fixed

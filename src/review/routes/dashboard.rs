@@ -215,17 +215,18 @@ pub async fn dashboard(
     )
     .await?;
 
-    // Separate meetings (sorted ascending by date, then start_time)
+    // Calendar meetings for the week — includes soft-deleted (excluded) entries,
+    // excludes manually-created meetings. Already sorted by date + start_time.
     let today_str = now.format("%Y-%m-%d").to_string();
-    let mut meetings: Vec<&BragEntry> = week_entries
-        .iter()
-        .filter(|e| e.entry_type == "meeting")
-        .collect();
-    meetings.sort_by(|a, b| {
-        a.occurred_at
-            .cmp(&b.occurred_at)
-            .then_with(|| a.start_time.cmp(&b.start_time))
-    });
+    let calendar_meetings = BragEntry::list_calendar_meetings_in_range(
+        &state.db,
+        phase.id,
+        &current_week.start_date,
+        &current_week.end_date,
+        &auth.crypto,
+    )
+    .await?;
+    let meetings: Vec<&BragEntry> = calendar_meetings.iter().collect();
 
     // Group meetings by day (ascending: Mon→Fri)
     let mut seen_dates = std::collections::BTreeSet::new();
