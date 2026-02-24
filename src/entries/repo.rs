@@ -50,6 +50,35 @@ impl BragEntry {
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
+    /// Calendar meetings in a date range, regardless of soft-delete status.
+    /// Used by the dashboard to show all synced meetings (even excluded ones)
+    /// without including manually-created meeting entries.
+    pub async fn list_calendar_meetings_in_range(
+        pool: &SqlitePool,
+        phase_id: i64,
+        start_date: &str,
+        end_date: &str,
+        crypto: &UserCrypto,
+    ) -> Result<Vec<Self>, AppError> {
+        let rows = sqlx::query_as::<_, BragEntryRow>(
+            r#"
+            SELECT e.* FROM brag_entries e
+            JOIN weeks w ON e.week_id = w.id
+            WHERE w.phase_id = ?
+              AND e.occurred_at >= ? AND e.occurred_at <= ?
+              AND e.entry_type = 'meeting'
+              AND e.source = 'google_calendar'
+            ORDER BY e.occurred_at ASC, e.start_time ASC
+            "#,
+        )
+        .bind(phase_id)
+        .bind(start_date)
+        .bind(end_date)
+        .fetch_all(pool)
+        .await?;
+        rows.into_iter().map(|r| r.decrypt(crypto)).collect()
+    }
+
     /// Filtered entry listing with optional key_result, goal, type, date range, and source filters.
     /// Builds the WHERE clause dynamically.
     #[allow(clippy::too_many_arguments)]
