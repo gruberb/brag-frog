@@ -2,6 +2,11 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [1.1.4] - 2026-02-24
+
+### Fixed
+- SQLite journal mode now configurable via `SQLITE_JOURNAL_MODE` env var (default: WAL)
+
 ## [1.1.3] - 2026-02-24
 
 ### Fixed

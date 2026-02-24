@@ -2,13 +2,26 @@ use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
 
-/// Initializes the SQLite connection pool with WAL journal mode, foreign keys enabled,
-/// create-if-missing, and a max of 5 connections. Panics on failure.
+/// Initializes the SQLite connection pool with foreign keys enabled,
+/// create-if-missing, and a max of 5 connections.
+///
+/// Journal mode defaults to WAL for local disks. Set `SQLITE_JOURNAL_MODE=delete`
+/// for FUSE/NFS-mounted volumes where WAL's shared-memory files cause stale handle errors.
 pub async fn setup_pool(database_path: &str) -> SqlitePool {
+    let journal_mode = match std::env::var("SQLITE_JOURNAL_MODE")
+        .unwrap_or_default()
+        .to_lowercase()
+        .as_str()
+    {
+        "delete" => sqlx::sqlite::SqliteJournalMode::Delete,
+        "truncate" => sqlx::sqlite::SqliteJournalMode::Truncate,
+        _ => sqlx::sqlite::SqliteJournalMode::Wal,
+    };
+
     let options = SqliteConnectOptions::from_str(&format!("sqlite:{}", database_path))
         .expect("Invalid database path")
         .create_if_missing(true)
-        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+        .journal_mode(journal_mode)
         .foreign_keys(true);
 
     SqlitePoolOptions::new()
