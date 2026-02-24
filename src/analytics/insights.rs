@@ -338,13 +338,13 @@ pub fn apply_in_memory_filters(entries: &mut Vec<BragEntry>, query: &AnalyzePage
         entries.retain(|e| e.initiative_id == Some(init_id));
     }
 
-    // Special: unlinked entries (no key result)
+    // Special: unlinked entries (no key result AND no initiative)
     if query
         .no_key_result
         .as_deref()
         .is_some_and(|s| s == "1" || s == "true")
     {
-        entries.retain(|e| e.key_result_id.is_none());
+        entries.retain(|e| e.key_result_id.is_none() && e.initiative_id.is_none());
     }
 
     // Special: missing team

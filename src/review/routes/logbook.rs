@@ -129,8 +129,9 @@ pub async fn logbook(
         entries.retain(|e| allowed.contains(&e.entry_type.as_str()));
     }
 
-    // Collect unique teams and collaborators from ALL phase entries for dropdown options
-    let all_entries = BragEntry::list_for_phase_in_range(
+    // Collect unique teams and collaborators from ALL phase entries for dropdown options.
+    // Apply the same future-entry exclusion so total_entries matches what the user can see.
+    let mut all_entries = BragEntry::list_for_phase_in_range(
         &state.db,
         phase.id,
         &phase.start_date,
@@ -138,6 +139,7 @@ pub async fn logbook(
         &auth.crypto,
     )
     .await?;
+    all_entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
 
     let mut all_teams: Vec<String> = collect_unique_values(&all_entries, |e| e.teams.as_deref());
     all_teams.sort();
