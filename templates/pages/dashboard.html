@@ -54,6 +54,15 @@
                 {% endif %}{% endfor %}
             </select>
 
+            {% if initiatives | length > 0 %}
+            <select name="initiative_id" class="form-select quick-entry-meta-field">
+                <option value="">Initiative</option>
+                {% for init in initiatives %}
+                <option value="{{ init.id }}">{{ init.title }}</option>
+                {% endfor %}
+            </select>
+            {% endif %}
+
             <!-- Teams dropdown -->
             <div class="quick-entry-meta-field quick-entry-dropdown" id="teams-dropdown">
                 <button type="button" class="chip-dropdown-trigger" onclick="toggleDropdown('teams-dropdown')">
@@ -351,23 +360,36 @@
             </div>
             {% else %}
             {% for goal in goals %}
-            <div class="dashboard-goal">
-                <a href="/logbook?goal_id={{ goal.id }}" class="goal-title goal-title-link">{{ goal.title }}</a>
-                {% for kr in key_results %}
-                {% if kr.goal_id == goal.id %}
-                <div class="dashboard-kr">
-                    <div class="kr-label">
-                        <span class="kr-color" style="background:{{ kr.color | default(value='#888') }}"></span>
-                        {{ kr.name }}
-                    </div>
-                    <div class="kr-score-bar">
-                        <div class="kr-score-fill" style="width:{{ kr.progress }}%;background:{{ kr.color | default(value='#888') }}"></div>
-                    </div>
-                    <span class="text-sm text-muted">{{ kr.progress }}%</span>
+            {% set_global goal_all_complete = true %}
+            {% set_global goal_has_krs = false %}
+            {% for kr in key_results %}{% if kr.goal_id == goal.id %}
+                {% set_global goal_has_krs = true %}
+                {% if kr.progress < 100 %}{% set_global goal_all_complete = false %}{% endif %}
+            {% endif %}{% endfor %}
+            {% if not goal_has_krs or not goal_all_complete %}
+            <div class="dashboard-goal" id="dash-goal-{{ goal.id }}">
+                <div class="dashboard-goal-header" onclick="toggleDashboardGoal({{ goal.id }})" style="cursor:pointer;display:flex;align-items:center;gap:6px;">
+                    <svg class="dashboard-goal-chevron" width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>
+                    <a href="/logbook?goal_id={{ goal.id }}" class="goal-title goal-title-link" onclick="event.stopPropagation();">{{ goal.title }}</a>
                 </div>
-                {% endif %}
-                {% endfor %}
+                <div class="dashboard-goal-krs" id="dash-goal-krs-{{ goal.id }}">
+                    {% for kr in key_results %}
+                    {% if kr.goal_id == goal.id %}
+                    <div class="dashboard-kr">
+                        <div class="kr-label">
+                            <span class="kr-color" style="background:{{ kr.color | default(value='#888') }}"></span>
+                            {{ kr.name }}
+                        </div>
+                        <div class="kr-score-bar">
+                            <div class="kr-score-fill" style="width:{{ kr.progress }}%;background:{{ kr.color | default(value='#888') }}"></div>
+                        </div>
+                        <span class="text-sm text-muted">{{ kr.progress }}%</span>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
             </div>
+            {% endif %}
             {% endfor %}
             {% endif %}
 

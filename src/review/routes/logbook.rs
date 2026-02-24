@@ -13,7 +13,7 @@ use crate::analytics::insights::{
 use crate::entries::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
-use crate::okr::model::{Goal, KeyResult};
+use crate::okr::model::{Goal, Initiative, KeyResult};
 use crate::review::model::BragPhase;
 use crate::shared::error::AppError;
 
@@ -68,6 +68,7 @@ pub async fn logbook(
 
     let goals = Goal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
     let key_results = KeyResult::list_active_for_user(&state.db, auth.user_id).await?;
+    let initiatives = Initiative::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     let today_str = chrono::Local::now().format("%Y-%m-%d").to_string();
 
@@ -151,6 +152,7 @@ pub async fn logbook(
     ctx.insert("phase", &phase);
     ctx.insert("goals", &goals);
     ctx.insert("key_results", &key_results);
+    ctx.insert("initiatives", &initiatives);
     ctx.insert("total_entries", &all_entries.len());
     ctx.insert("filtered_count", &entries.len());
     ctx.insert("current_page", "logbook");
@@ -181,6 +183,10 @@ pub async fn logbook(
     ctx.insert(
         "init_key_result_id",
         &page_query.key_result_id.as_deref().unwrap_or(""),
+    );
+    ctx.insert(
+        "init_initiative_id",
+        &page_query.initiative_id.as_deref().unwrap_or(""),
     );
     ctx.insert(
         "init_category",
@@ -249,6 +255,7 @@ pub async fn logbook_filtered_entries(
     let page_query = AnalyzePageQuery {
         goal_id: query.goal_id.map(|id| id.to_string()),
         key_result_id: query.key_result_id.map(|id| id.to_string()),
+        initiative_id: query.initiative_id.map(|id| id.to_string()),
         category: query.category.clone(),
         source: query.source,
         team: query.team,
@@ -262,6 +269,7 @@ pub async fn logbook_filtered_entries(
 
     let key_results = KeyResult::list_active_for_user(&state.db, auth.user_id).await?;
     let goals = Goal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let initiatives = Initiative::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     // Compute insights from base set (before category filter)
     let insights = compute_insights(&entries, &key_results);
@@ -280,6 +288,7 @@ pub async fn logbook_filtered_entries(
     ctx.insert("entries", &entries);
     ctx.insert("key_results", &key_results);
     ctx.insert("goals", &goals);
+    ctx.insert("initiatives", &initiatives);
     ctx.insert("insights", &insights);
     ctx.insert("date_groups", &date_groups);
     ctx.insert("filtered_count", &entries.len());

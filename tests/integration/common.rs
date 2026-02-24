@@ -332,6 +332,7 @@ pub async fn create_test_entry(
         &CreateEntry {
             week_id,
             key_result_id,
+            initiative_id: None,
             title: title.to_string(),
             description: None,
             entry_type: entry_type.to_string(),

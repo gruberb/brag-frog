@@ -165,6 +165,25 @@
     transition: width 300ms var(--ease-out-expo);
 }
 
+/* OKR snapshot — collapsible goals */
+.dashboard-goal-header {
+    user-select: none;
+}
+.dashboard-goal-header:hover .goal-title-link {
+    color: var(--color-primary);
+}
+.dashboard-goal-chevron {
+    transition: transform 200ms ease;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+}
+.dashboard-goal.collapsed .dashboard-goal-chevron {
+    transform: rotate(-90deg);
+}
+.dashboard-goal.collapsed .dashboard-goal-krs {
+    display: none;
+}
+
 /* Past meetings dimmed */
 .meeting-past {
     opacity: 0.5;

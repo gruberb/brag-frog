@@ -250,6 +250,7 @@ fn format_date_label(date: &str, today: &str, yesterday: &str) -> String {
 pub struct AnalyzePageQuery {
     pub goal_id: Option<String>,
     pub key_result_id: Option<String>,
+    pub initiative_id: Option<String>,
     pub category: Option<String>,
     pub source: Option<String>,
     pub team: Option<String>,
@@ -265,6 +266,7 @@ pub struct AnalyzePageQuery {
 pub struct AnalyzeFilterQuery {
     pub goal_id: Option<i64>,
     pub key_result_id: Option<i64>,
+    pub initiative_id: Option<i64>,
     pub category: Option<String>,
     pub source: Option<String>,
     pub team: Option<String>,
@@ -327,6 +329,13 @@ pub fn apply_in_memory_filters(entries: &mut Vec<BragEntry>, query: &AnalyzePage
                 false
             }
         });
+    }
+
+    // Filter by initiative_id
+    if let Some(ref init_id_str) = query.initiative_id
+        && let Ok(init_id) = init_id_str.parse::<i64>()
+    {
+        entries.retain(|e| e.initiative_id == Some(init_id));
     }
 
     // Special: unlinked entries (no key result)

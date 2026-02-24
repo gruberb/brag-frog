@@ -30,6 +30,10 @@ struct CalendarEvent {
     end: Option<EventDateTime>,
     #[serde(default)]
     attendees: Vec<Attendee>,
+    /// True when the full attendee list was omitted (e.g., large events with
+    /// hidden guest lists). The API only returns the user's own entry in this case.
+    #[serde(default)]
+    attendees_omitted: bool,
     html_link: Option<String>,
     location: Option<String>,
     recurring_event_id: Option<String>,
@@ -186,12 +190,14 @@ impl SyncService for GoogleCalendarSync {
                     None => continue,
                 };
 
-                // Skip events with fewer than 2 attendees
-                if event.attendees.len() < 2 {
+                // Skip events with fewer than 2 attendees, unless the full list
+                // was omitted by the API (large events with hidden guest lists).
+                if !event.attendees_omitted && event.attendees.len() < 2 {
                     continue;
                 }
 
-                // Skip unless user accepted
+                // Skip unless user accepted. When attendees are omitted the
+                // user's own entry is still present, so this check still works.
                 let user_accepted = event
                     .attendees
                     .iter()

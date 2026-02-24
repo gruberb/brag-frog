@@ -175,6 +175,7 @@
                             {% if service.has_token %}<span class="text-muted">(saved, enter new to replace)</span>{% endif %}
                         </label>
                         <input type="password" name="token" class="form-input"
+                               data-1p-ignore
                                placeholder="{% if service.has_token %}Enter new token to replace{% else %}Paste your token here{% endif %}">
                         {% if service.has_token and service.token_url %}
                         <a href="{{ service.token_url }}" target="_blank" rel="noopener" class="text-sm" style="margin-top:var(--space-1);display:inline-block;">Get new token</a>
