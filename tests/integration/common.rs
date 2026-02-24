@@ -14,9 +14,9 @@ use brag_frog::AppState;
 use brag_frog::db;
 use brag_frog::entries::model::BragEntry;
 use brag_frog::entries::model::CreateEntry;
-use brag_frog::okr::model::CreateGoal;
-use brag_frog::okr::model::CreateKeyResult;
-use brag_frog::okr::model::{Goal, KeyResult};
+use brag_frog::goals::model::{
+    CreateDepartmentGoal, CreatePriority, DepartmentGoal, Priority,
+};
 use brag_frog::review::model::Week;
 use brag_frog::shared::config::Config;
 use brag_frog::shared::crypto::{Crypto, UserCrypto};
@@ -29,6 +29,9 @@ fn init_test_configs() {
     INIT.call_once(|| {
         brag_frog::identity::clg::load_levels("config/clg_levels.toml");
         brag_frog::review::model::load_review_config("config/review_sections.toml");
+        brag_frog::review::model::load_checkin_config("config/checkin_sections.toml");
+        brag_frog::review::model::load_assessment_config("config/assessment_templates.toml");
+        brag_frog::review::model::load_rating_scale("config/rating_scale.toml");
         brag_frog::sync::services_config::load("config/services.toml");
     });
 }
@@ -265,19 +268,19 @@ pub async fn create_test_phase(pool: &SqlitePool, user_id: i64) -> i64 {
     .unwrap()
 }
 
-/// Create a goal under the given phase and return it.
-pub async fn create_test_goal(
+/// Create a department goal under the given phase and return it.
+pub async fn create_test_department_goal(
     pool: &SqlitePool,
     phase_id: i64,
     user_id: i64,
     title: &str,
     crypto: &UserCrypto,
-) -> Goal {
-    Goal::create(
+) -> DepartmentGoal {
+    DepartmentGoal::create(
         pool,
         phase_id,
         user_id,
-        &CreateGoal {
+        &CreateDepartmentGoal {
             title: title.to_string(),
             description: None,
             category: None,
@@ -289,20 +292,25 @@ pub async fn create_test_goal(
     .unwrap()
 }
 
-/// Create a key result, optionally under a goal, and return it.
-pub async fn create_test_key_result(
+/// Create a priority, optionally under a department goal, and return it.
+pub async fn create_test_priority(
     pool: &SqlitePool,
+    phase_id: i64,
     user_id: i64,
-    name: &str,
-    goal_id: Option<i64>,
-) -> KeyResult {
-    KeyResult::create(
+    title: &str,
+    department_goal_id: Option<i64>,
+    crypto: &UserCrypto,
+) -> Priority {
+    Priority::create(
         pool,
+        phase_id,
         user_id,
-        &CreateKeyResult {
-            name: name.to_string(),
-            goal_id,
+        &CreatePriority {
+            title: title.to_string(),
+            description: None,
             status: Some("active".to_string()),
+            scope: None,
+            department_goal_id,
             kr_type: None,
             direction: None,
             unit: None,
@@ -310,6 +318,7 @@ pub async fn create_test_key_result(
             target: None,
             target_date: None,
         },
+        crypto,
     )
     .await
     .unwrap()
@@ -324,15 +333,14 @@ pub async fn create_test_entry(
     title: &str,
     entry_type: &str,
     occurred_at: &str,
-    key_result_id: Option<i64>,
+    priority_id: Option<i64>,
     crypto: &UserCrypto,
 ) -> BragEntry {
     BragEntry::create(
         pool,
         &CreateEntry {
             week_id,
-            key_result_id,
-            initiative_id: None,
+            priority_id,
             title: title.to_string(),
             description: None,
             entry_type: entry_type.to_string(),
@@ -340,6 +348,9 @@ pub async fn create_test_entry(
             teams: None,
             collaborators: None,
             source_url: None,
+            reach: None,
+            complexity: None,
+            role: None,
         },
         user_id,
         crypto,

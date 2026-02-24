@@ -9,7 +9,7 @@ use chrono::{Local, NaiveDate};
 use crate::AppState;
 use crate::entries::model::{BragEntry, CreateEntry, EntryType};
 use crate::identity::auth::middleware::AuthUser;
-use crate::okr::model::{Goal, Initiative, KeyResult};
+use crate::goals::model::Priority;
 use crate::review::model::{BragPhase, Week};
 use crate::shared::error::AppError;
 use crate::shared::serde_helpers::deserialize_optional_i64;
@@ -21,23 +21,19 @@ async fn build_entry_context(
     entry: &BragEntry,
 ) -> Result<tera::Context, AppError> {
     let user_crypto = state.crypto.for_user(user_id)?;
-    let key_results = KeyResult::list_active_for_user(&state.db, user_id).await?;
-    let goals = Goal::list_for_active_phase(&state.db, user_id, &user_crypto).await?;
 
     let phase = BragPhase::get_active(&state.db, user_id).await?;
-    let (known_teams, initiatives) = if let Some(ref p) = phase {
+    let (known_teams, priorities) = if let Some(ref p) = phase {
         let teams = BragEntry::distinct_teams_for_phase(&state.db, p.id, &user_crypto).await?;
-        let inits = Initiative::list_for_phase(&state.db, p.id, &user_crypto).await?;
-        (teams, inits)
+        let pris = Priority::list_for_phase(&state.db, p.id, &user_crypto).await?;
+        (teams, pris)
     } else {
         (Vec::new(), Vec::new())
     };
 
     let mut ctx = tera::Context::new();
     ctx.insert("entry", entry);
-    ctx.insert("key_results", &key_results);
-    ctx.insert("goals", &goals);
-    ctx.insert("initiatives", &initiatives);
+    ctx.insert("priorities", &priorities);
     ctx.insert("known_teams", &known_teams);
     ctx.insert("entry_types", &EntryType::as_json_options());
     ctx.insert("manual_entry_types", &EntryType::as_manual_json_options());
@@ -119,15 +115,19 @@ pub struct QuickCreateEntry {
     #[serde(default)]
     pub occurred_at: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
-    pub key_result_id: Option<i64>,
-    #[serde(default, deserialize_with = "deserialize_optional_i64")]
-    pub initiative_id: Option<i64>,
+    pub priority_id: Option<i64>,
     #[serde(default)]
     pub teams: Option<String>,
     #[serde(default)]
     pub collaborators: Option<String>,
     #[serde(default)]
     pub source_url: Option<String>,
+    #[serde(default)]
+    pub reach: Option<String>,
+    #[serde(default)]
+    pub complexity: Option<String>,
+    #[serde(default)]
+    pub role: Option<String>,
 }
 
 /// HTMX handler: creates an entry from the quick-add bar, auto-resolving the week from the date.
@@ -183,8 +183,7 @@ pub async fn quick_create_entry(
 
     let create_input = CreateEntry {
         week_id: week.id,
-        key_result_id: input.key_result_id,
-        initiative_id: input.initiative_id,
+        priority_id: input.priority_id,
         title: input.title,
         description: None,
         entry_type: input.entry_type,
@@ -192,6 +191,9 @@ pub async fn quick_create_entry(
         teams,
         collaborators,
         source_url,
+        reach: input.reach,
+        complexity: input.complexity,
+        role: input.role,
     };
 
     let entry = BragEntry::create(&state.db, &create_input, auth.user_id, &auth.crypto).await?;

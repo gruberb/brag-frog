@@ -12,8 +12,8 @@ use crate::shared::render::{static_page_privacy, static_page_terms};
 use crate::identity::routes as identity_routes;
 // Entries context routes
 use crate::entries::routes as entries_routes;
-// OKR context routes
-use crate::okr::routes as okr_routes;
+// Goals context routes
+use crate::goals::routes as goals_routes;
 // Review context routes
 use crate::review::routes as review_routes;
 // Sync context routes
@@ -85,38 +85,55 @@ pub fn create_router() -> Router<AppState> {
                 .post(review_routes::checkins::save_checkin)
                 .delete(review_routes::checkins::delete_checkin),
         )
-        // Impact Stories
+        // Annual Alignment
         .route(
-            "/impact-stories",
-            get(review_routes::impact_stories::impact_stories_page)
-                .post(review_routes::impact_stories::create_impact_story),
+            "/annual-alignment",
+            get(review_routes::annual_alignment::annual_alignment_page)
+                .post(review_routes::annual_alignment::save_annual_alignment),
+        )
+        // Contribution Examples
+        .route(
+            "/contribution-examples",
+            get(review_routes::contribution_examples::contribution_examples_page)
+                .post(review_routes::contribution_examples::create_contribution_example),
         )
         .route(
-            "/impact-stories/{id}",
-            put(review_routes::impact_stories::update_impact_story)
-                .delete(review_routes::impact_stories::delete_impact_story),
+            "/contribution-examples/{id}",
+            put(review_routes::contribution_examples::update_contribution_example)
+                .delete(review_routes::contribution_examples::delete_contribution_example),
+        )
+        .route(
+            "/contribution-examples/{example_id}/entries/{entry_id}",
+            post(review_routes::contribution_examples::link_entry_to_example)
+                .delete(review_routes::contribution_examples::unlink_entry_from_example),
+        )
+        // Quarterly Check-ins
+        .route(
+            "/quarterly-checkin/{quarter}/{year}",
+            get(review_routes::checkins::quarterly_checkin_page)
+                .post(review_routes::checkins::save_quarterly_checkin),
         )
         // Logbook filtered entries (HTMX)
         .route(
             "/logbook/entries",
             get(review_routes::logbook::logbook_filtered_entries),
         )
-        // Key Results (CRUD API only, no page route)
-        .route("/key-results", post(okr_routes::create_key_result))
-        .route("/key-results/{id}", put(okr_routes::update_key_result))
-        .route("/key-results/{id}", delete(okr_routes::delete_key_result))
-        // Goals page + CRUD
+        // Priorities
+        .route("/priorities", get(goals_routes::priorities_page))
         .route(
-            "/goals",
-            get(okr_routes::goals_page).post(okr_routes::create_goal),
+            "/priorities/goals",
+            post(goals_routes::create_department_goal),
         )
-        .route("/goals/{id}", put(okr_routes::update_goal))
-        .route("/goals/{id}", delete(okr_routes::delete_goal))
-        // Initiatives
-        .route("/initiatives", post(okr_routes::create_initiative))
-        .route("/initiatives/{id}", put(okr_routes::update_initiative))
-        .route("/initiatives/{id}", delete(okr_routes::delete_initiative))
-        .route("/initiatives/{id}/panel", get(okr_routes::initiative_panel))
+        .route(
+            "/priorities/goals/{id}",
+            put(goals_routes::update_department_goal)
+                .delete(goals_routes::delete_department_goal),
+        )
+        .route("/priorities/create", post(goals_routes::create_priority))
+        .route(
+            "/priorities/{id}",
+            put(goals_routes::update_priority).delete(goals_routes::delete_priority),
+        )
         // Phases (Performance Cycle)
         .route("/phases", post(review_routes::phases::create_phase))
         .route("/phases/{id}", delete(review_routes::phases::delete_phase))

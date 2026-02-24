@@ -1,0 +1,44 @@
+# Performance rating scale.
+# Override via custom/rating_scale.toml.
+
+[[ratings]]
+id = "transformational"
+label = "Transformational"
+definition = "Materially improves how or what work is delivered; redefines success for the role."
+anchor = "Next-level mastery; enables systems-level change."
+percentage = 150
+
+[[ratings]]
+id = "greatly_exceeds"
+label = "Greatly Exceeds"
+definition = "Sustained, measurable impact beyond current level; exceeds all expected contributions."
+anchor = "Next-level behaviors consistently demonstrated."
+percentage = 135
+
+[[ratings]]
+id = "exceeds"
+label = "Exceeds"
+definition = "Frequent stretch beyond current level; advances team and org goals in meaningful ways."
+anchor = "Strong ownership; strong behaviors across contexts."
+percentage = 120
+
+[[ratings]]
+id = "meets"
+label = "Meets"
+definition = "Reliable delivery at current level; may occasionally exceed expected contributions."
+anchor = "Behaviors consistently at-level."
+percentage = 100
+
+[[ratings]]
+id = "mostly_meets"
+label = "Mostly Meets"
+definition = "Mostly meets expectations; impact or consistency still building; improves with support."
+anchor = "Gaps in some areas; growth trajectory expected."
+percentage = 80
+
+[[ratings]]
+id = "does_not_meet"
+label = "Does Not Meet"
+definition = "Consistently below expectations; immediate improvement required."
+anchor = "Behaviors below expectations; improvement plan required."
+percentage = 0

@@ -48,23 +48,12 @@
 
         <div class="form-row">
             <div class="form-group">
-                <label class="form-label" for="edit-kr-{{ entry.id }}">Key Result</label>
-                <select id="edit-kr-{{ entry.id }}" name="key_result_id" class="form-select">
-                    <option value="">No key result</option>
-                    {% if goals is defined %}
-                    {% for goal in goals %}
-                    <optgroup label="{{ goal.title }}">
-                        {% for kr in key_results %}{% if kr.goal_id and kr.goal_id == goal.id %}
-                        <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
-                        {% endif %}{% endfor %}
-                    </optgroup>
-                    {% endfor %}
-                    {% for kr in key_results %}{% if not kr.goal_id %}
-                    <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
-                    {% endif %}{% endfor %}
-                    {% else %}
-                    {% for kr in key_results %}
-                    <option value="{{ kr.id }}" {% if entry.key_result_id and entry.key_result_id == kr.id %}selected{% endif %}>{{ kr.name }}</option>
+                <label class="form-label" for="edit-priority-{{ entry.id }}">Priority</label>
+                <select id="edit-priority-{{ entry.id }}" name="priority_id" class="form-select">
+                    <option value="">No priority</option>
+                    {% if priorities is defined %}
+                    {% for p in priorities %}
+                    <option value="{{ p.id }}" {% if entry.priority_id and entry.priority_id == p.id %}selected{% endif %}>{{ p.title }}</option>
                     {% endfor %}
                     {% endif %}
                 </select>

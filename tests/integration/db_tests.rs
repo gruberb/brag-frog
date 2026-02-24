@@ -2,7 +2,7 @@ use super::common;
 
 use brag_frog::entries::model::BragEntry;
 use brag_frog::entries::model::{CreateEntry, UpdateEntry};
-use brag_frog::okr::model::Goal;
+use brag_frog::goals::model::DepartmentGoal;
 use brag_frog::review::model::{BragPhase, Summary, Week};
 
 #[tokio::test]
@@ -19,8 +19,7 @@ async fn test_entry_crud() {
 
     let input = CreateEntry {
         week_id: week.id,
-        key_result_id: None,
-        initiative_id: None,
+        priority_id: None,
         title: "Test Entry".to_string(),
         description: Some("A test entry".to_string()),
         entry_type: "other".to_string(),
@@ -28,6 +27,9 @@ async fn test_entry_crud() {
         teams: None,
         collaborators: None,
         source_url: None,
+        reach: None,
+        complexity: None,
+        role: None,
     };
 
     // Create
@@ -46,8 +48,7 @@ async fn test_entry_crud() {
 
     // Update
     let update_input = brag_frog::entries::model::UpdateEntry {
-        key_result_id: None,
-        initiative_id: None,
+        priority_id: None,
         title: "Updated Entry".to_string(),
         description: Some("Updated desc".to_string()),
         entry_type: "meeting".to_string(),
@@ -55,6 +56,9 @@ async fn test_entry_crud() {
         teams: None,
         collaborators: None,
         source_url: None,
+        reach: None,
+        complexity: None,
+        role: None,
     };
     let updated = BragEntry::update(&pool, entry.id, user_id, &update_input, None, &user_crypto)
         .await
@@ -84,8 +88,7 @@ async fn test_soft_delete() {
 
     let input = CreateEntry {
         week_id: week.id,
-        key_result_id: None,
-        initiative_id: None,
+        priority_id: None,
         title: "Soft Delete Me".to_string(),
         description: None,
         entry_type: "other".to_string(),
@@ -93,6 +96,9 @@ async fn test_soft_delete() {
         teams: None,
         collaborators: None,
         source_url: None,
+        reach: None,
+        complexity: None,
+        role: None,
     };
 
     let entry = BragEntry::create(&pool, &input, user_id, &user_crypto)
@@ -126,15 +132,14 @@ async fn test_phase_cascade_delete() {
     let user_crypto = common::test_user_crypto(&crypto, user_id);
     let phase_id = common::create_test_phase(&pool, user_id).await;
 
-    // Create a week, entry, goal, and summary
+    // Create a week, entry, department goal, and summary
     let week = Week::find_or_create(&pool, phase_id, 3, 2025, "2025-01-20", "2025-01-26")
         .await
         .unwrap();
 
     let input = CreateEntry {
         week_id: week.id,
-        key_result_id: None,
-        initiative_id: None,
+        priority_id: None,
         title: "Cascade Entry".to_string(),
         description: None,
         entry_type: "other".to_string(),
@@ -142,20 +147,22 @@ async fn test_phase_cascade_delete() {
         teams: None,
         collaborators: None,
         source_url: None,
+        reach: None,
+        complexity: None,
+        role: None,
     };
     BragEntry::create(&pool, &input, user_id, &user_crypto)
         .await
         .unwrap();
 
-    let goal_input = brag_frog::okr::model::CreateGoal {
-        title: "Cascade Goal".to_string(),
-        description: None,
-        category: None,
-        status: None,
-    };
-    Goal::create(&pool, phase_id, user_id, &goal_input, &user_crypto)
-        .await
-        .unwrap();
+    let _goal = common::create_test_department_goal(
+        &pool,
+        phase_id,
+        user_id,
+        "Cascade Goal",
+        &user_crypto,
+    )
+    .await;
 
     Summary::upsert(
         &pool,
@@ -176,7 +183,7 @@ async fn test_phase_cascade_delete() {
     let weeks = Week::list_for_phase(&pool, phase_id).await.unwrap();
     assert!(weeks.is_empty());
 
-    let goals = Goal::list_for_phase(&pool, phase_id, &user_crypto)
+    let goals = DepartmentGoal::list_for_phase(&pool, phase_id, &user_crypto)
         .await
         .unwrap();
     assert!(goals.is_empty());
@@ -208,9 +215,7 @@ async fn test_week_find_or_create() {
 }
 
 #[tokio::test]
-async fn test_key_result_goal_hierarchy() {
-    use brag_frog::okr::model::KeyResult;
-
+async fn test_priority_department_goal_hierarchy() {
     let pool = common::test_pool().await;
     let crypto = common::test_crypto();
     let user_id = common::create_test_user(&pool).await;
@@ -221,47 +226,32 @@ async fn test_key_result_goal_hierarchy() {
         .await
         .unwrap();
 
-    // Create a goal
-    let goal = Goal::create(
+    // Create a department goal
+    let goal = common::create_test_department_goal(
         &pool,
         phase_id,
         user_id,
-        &brag_frog::okr::model::CreateGoal {
-            title: "Ship OHTTP".to_string(),
-            description: None,
-            category: Some("technical".to_string()),
-            status: None,
-        },
+        "Ship OHTTP",
         &user_crypto,
     )
-    .await
-    .unwrap();
+    .await;
 
-    // Create a key result under the goal
-    let kr = KeyResult::create(
+    // Create a priority under the department goal
+    let priority = common::create_test_priority(
         &pool,
+        phase_id,
         user_id,
-        &brag_frog::okr::model::CreateKeyResult {
-            name: "Viaduct component".to_string(),
-            goal_id: Some(goal.id),
-            status: Some("active".to_string()),
-            kr_type: None,
-            direction: None,
-            unit: None,
-            baseline: None,
-            target: None,
-            target_date: None,
-        },
+        "Viaduct component",
+        Some(goal.id),
+        &user_crypto,
     )
-    .await
-    .unwrap();
-    assert_eq!(kr.goal_id, Some(goal.id));
+    .await;
+    assert_eq!(priority.department_goal_id, Some(goal.id));
 
-    // Create an entry linked to the key result
+    // Create an entry linked to the priority
     let input = CreateEntry {
         week_id: week.id,
-        key_result_id: Some(kr.id),
-        initiative_id: None,
+        priority_id: Some(priority.id),
         title: "PR for viaduct".to_string(),
         description: None,
         entry_type: "pr_authored".to_string(),
@@ -269,13 +259,16 @@ async fn test_key_result_goal_hierarchy() {
         teams: None,
         collaborators: None,
         source_url: None,
+        reach: None,
+        complexity: None,
+        role: None,
     };
     let entry = BragEntry::create(&pool, &input, user_id, &user_crypto)
         .await
         .unwrap();
-    assert_eq!(entry.key_result_id, Some(kr.id));
+    assert_eq!(entry.priority_id, Some(priority.id));
 
-    // Verify filtering by goal_id finds the entry (through key result)
+    // Verify filtering by department_goal_id finds the entry (through priority)
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
@@ -294,7 +287,7 @@ async fn test_key_result_goal_hierarchy() {
 }
 
 #[tokio::test]
-async fn test_filter_by_goal_id() {
+async fn test_filter_by_department_goal_id() {
     let pool = common::test_pool().await;
     let crypto = common::test_crypto();
     let user_id = common::create_test_user(&pool).await;
@@ -303,10 +296,30 @@ async fn test_filter_by_goal_id() {
     let week =
         common::create_test_week(&pool, phase_id, 10, 2025, "2025-03-03", "2025-03-09").await;
 
-    let goal_a = common::create_test_goal(&pool, phase_id, user_id, "Goal A", &user_crypto).await;
-    let goal_b = common::create_test_goal(&pool, phase_id, user_id, "Goal B", &user_crypto).await;
-    let kr_a = common::create_test_key_result(&pool, user_id, "KR under A", Some(goal_a.id)).await;
-    let kr_b = common::create_test_key_result(&pool, user_id, "KR under B", Some(goal_b.id)).await;
+    let goal_a =
+        common::create_test_department_goal(&pool, phase_id, user_id, "Goal A", &user_crypto)
+            .await;
+    let goal_b =
+        common::create_test_department_goal(&pool, phase_id, user_id, "Goal B", &user_crypto)
+            .await;
+    let pri_a = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "Priority under A",
+        Some(goal_a.id),
+        &user_crypto,
+    )
+    .await;
+    let pri_b = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "Priority under B",
+        Some(goal_b.id),
+        &user_crypto,
+    )
+    .await;
 
     let entry_a = common::create_test_entry(
         &pool,
@@ -315,7 +328,7 @@ async fn test_filter_by_goal_id() {
         "Entry A",
         "other",
         "2025-03-04",
-        Some(kr_a.id),
+        Some(pri_a.id),
         &user_crypto,
     )
     .await;
@@ -326,12 +339,12 @@ async fn test_filter_by_goal_id() {
         "Entry B",
         "other",
         "2025-03-05",
-        Some(kr_b.id),
+        Some(pri_b.id),
         &user_crypto,
     )
     .await;
 
-    // Filter by goal A → only entry A
+    // Filter by goal A -> only entry A
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
@@ -348,7 +361,7 @@ async fn test_filter_by_goal_id() {
     assert_eq!(filtered.len(), 1);
     assert_eq!(filtered[0].id, entry_a.id);
 
-    // Filter by goal B → only entry B
+    // Filter by goal B -> only entry B
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
@@ -367,7 +380,7 @@ async fn test_filter_by_goal_id() {
 }
 
 #[tokio::test]
-async fn test_filter_by_key_result_id() {
+async fn test_filter_by_priority_id() {
     let pool = common::test_pool().await;
     let crypto = common::test_crypto();
     let user_id = common::create_test_user(&pool).await;
@@ -376,8 +389,24 @@ async fn test_filter_by_key_result_id() {
     let week =
         common::create_test_week(&pool, phase_id, 11, 2025, "2025-03-10", "2025-03-16").await;
 
-    let kr1 = common::create_test_key_result(&pool, user_id, "KR 1", None).await;
-    let kr2 = common::create_test_key_result(&pool, user_id, "KR 2", None).await;
+    let pri1 = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "Priority 1",
+        None,
+        &user_crypto,
+    )
+    .await;
+    let pri2 = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "Priority 2",
+        None,
+        &user_crypto,
+    )
+    .await;
 
     let e1 = common::create_test_entry(
         &pool,
@@ -386,7 +415,7 @@ async fn test_filter_by_key_result_id() {
         "E1",
         "other",
         "2025-03-11",
-        Some(kr1.id),
+        Some(pri1.id),
         &user_crypto,
     )
     .await;
@@ -397,7 +426,7 @@ async fn test_filter_by_key_result_id() {
         "E2",
         "meeting",
         "2025-03-12",
-        Some(kr2.id),
+        Some(pri2.id),
         &user_crypto,
     )
     .await;
@@ -405,7 +434,7 @@ async fn test_filter_by_key_result_id() {
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
-        Some(kr1.id),
+        Some(pri1.id),
         None,
         &[],
         None,
@@ -420,7 +449,7 @@ async fn test_filter_by_key_result_id() {
 }
 
 #[tokio::test]
-async fn test_filter_by_both_goal_and_key_result() {
+async fn test_filter_by_both_goal_and_priority() {
     let pool = common::test_pool().await;
     let crypto = common::test_crypto();
     let user_id = common::create_test_user(&pool).await;
@@ -429,19 +458,36 @@ async fn test_filter_by_both_goal_and_key_result() {
     let week =
         common::create_test_week(&pool, phase_id, 12, 2025, "2025-03-17", "2025-03-23").await;
 
-    let goal = common::create_test_goal(&pool, phase_id, user_id, "Goal X", &user_crypto).await;
-    let kr_in_goal =
-        common::create_test_key_result(&pool, user_id, "KR in goal", Some(goal.id)).await;
-    let kr_other = common::create_test_key_result(&pool, user_id, "KR other", None).await;
+    let goal =
+        common::create_test_department_goal(&pool, phase_id, user_id, "Goal X", &user_crypto)
+            .await;
+    let pri_in_goal = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "Priority in goal",
+        Some(goal.id),
+        &user_crypto,
+    )
+    .await;
+    let pri_other = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "Priority other",
+        None,
+        &user_crypto,
+    )
+    .await;
 
     let _e1 = common::create_test_entry(
         &pool,
         user_id,
         week.id,
-        "In goal KR",
+        "In goal priority",
         "other",
         "2025-03-18",
-        Some(kr_in_goal.id),
+        Some(pri_in_goal.id),
         &user_crypto,
     )
     .await;
@@ -449,19 +495,19 @@ async fn test_filter_by_both_goal_and_key_result() {
         &pool,
         user_id,
         week.id,
-        "Other KR",
+        "Other priority",
         "other",
         "2025-03-19",
-        Some(kr_other.id),
+        Some(pri_other.id),
         &user_crypto,
     )
     .await;
 
-    // Filter by both goal and the KR that doesn't belong to it → 0 results
+    // Filter by both goal and the priority that doesn't belong to it -> 0 results
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
-        Some(kr_other.id),
+        Some(pri_other.id),
         Some(goal.id),
         &[],
         None,
@@ -474,14 +520,14 @@ async fn test_filter_by_both_goal_and_key_result() {
     assert_eq!(
         filtered.len(),
         0,
-        "KR doesn't belong to goal, should return 0"
+        "Priority doesn't belong to goal, should return 0"
     );
 
-    // Filter by both goal and matching KR → 1 result
+    // Filter by both goal and matching priority -> 1 result
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
-        Some(kr_in_goal.id),
+        Some(pri_in_goal.id),
         Some(goal.id),
         &[],
         None,
@@ -722,7 +768,7 @@ async fn test_filter_returns_empty_for_no_match() {
     )
     .await;
 
-    // Non-existent goal
+    // Non-existent department goal
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
@@ -738,7 +784,7 @@ async fn test_filter_returns_empty_for_no_match() {
     .unwrap();
     assert!(filtered.is_empty());
 
-    // Non-existent key result
+    // Non-existent priority
     let filtered = BragEntry::list_for_phase_filtered(
         &pool,
         phase_id,
@@ -800,8 +846,7 @@ async fn test_update_entry_date_changes_week() {
 
     // Update date to fall in week 2
     let update = UpdateEntry {
-        key_result_id: None,
-        initiative_id: None,
+        priority_id: None,
         title: "Move me".to_string(),
         description: None,
         entry_type: "other".to_string(),
@@ -809,6 +854,9 @@ async fn test_update_entry_date_changes_week() {
         teams: None,
         collaborators: None,
         source_url: None,
+        reach: None,
+        complexity: None,
+        role: None,
     };
     let updated = BragEntry::update(
         &pool,
@@ -825,7 +873,7 @@ async fn test_update_entry_date_changes_week() {
 }
 
 #[tokio::test]
-async fn test_entry_sync_upsert_preserves_key_result() {
+async fn test_entry_sync_upsert_preserves_priority() {
     let pool = common::test_pool().await;
     let crypto = common::test_crypto();
     let user_id = common::create_test_user(&pool).await;
@@ -834,9 +882,17 @@ async fn test_entry_sync_upsert_preserves_key_result() {
     let week =
         common::create_test_week(&pool, phase_id, 17, 2025, "2025-04-21", "2025-04-27").await;
 
-    let kr = common::create_test_key_result(&pool, user_id, "My KR", None).await;
+    let priority = common::create_test_priority(
+        &pool,
+        phase_id,
+        user_id,
+        "My Priority",
+        None,
+        &user_crypto,
+    )
+    .await;
 
-    // Create entry from sync (no key_result_id)
+    // Create entry from sync (no priority_id)
     let synced = BragEntry::create_from_sync(
         &pool,
         week.id,
@@ -857,11 +913,11 @@ async fn test_entry_sync_upsert_preserves_key_result() {
     )
     .await
     .unwrap();
-    assert_eq!(synced.key_result_id, None);
+    assert_eq!(synced.priority_id, None);
 
-    // Manually assign a key result
-    sqlx::query("UPDATE brag_entries SET key_result_id = ? WHERE id = ?")
-        .bind(kr.id)
+    // Manually assign a priority
+    sqlx::query("UPDATE brag_entries SET priority_id = ? WHERE id = ?")
+        .bind(priority.id)
         .bind(synced.id)
         .execute(&pool)
         .await
@@ -893,15 +949,15 @@ async fn test_entry_sync_upsert_preserves_key_result() {
     assert_eq!(re_synced.id, synced.id);
     assert_eq!(re_synced.title, "Updated PR Title");
 
-    // key_result_id should be preserved (upsert doesn't touch it)
+    // priority_id should be preserved (upsert doesn't touch it)
     let found = BragEntry::find_by_id(&pool, synced.id, user_id, &user_crypto)
         .await
         .unwrap()
         .unwrap();
     assert_eq!(
-        found.key_result_id,
-        Some(kr.id),
-        "key_result_id should be preserved after sync upsert"
+        found.priority_id,
+        Some(priority.id),
+        "priority_id should be preserved after sync upsert"
     );
 }
 

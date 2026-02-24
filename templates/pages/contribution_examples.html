@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Contribution Examples — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+            <h1>Contribution Examples</h1>
+            <p class="page-subtitle">{{ phase.name }} — Concrete examples of your impact</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-example-form').classList.toggle('hidden')">+ New Example</button>
+    </div>
+</div>
+
+<!-- New example form (hidden by default) -->
+<div id="new-example-form" class="card hidden" style="margin-bottom:16px;">
+    <form hx-post="/contribution-examples" hx-target="#examples-container" hx-swap="beforeend" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');}">
+        <div class="form-group">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-input" required placeholder="e.g., Led cross-team debugging effort for production outage">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Outcome</label>
+            <textarea name="outcome" class="form-textarea" rows="3" placeholder="What was the result? What impact did this have?"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Behaviors Demonstrated</label>
+            <textarea name="behaviors" class="form-textarea" rows="3" placeholder="What skills, competencies, or behaviors did you demonstrate?"></textarea>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Impact Level</label>
+                <select name="impact_level" class="form-select">
+                    <option value="">Select level</option>
+                    <option value="individual">Individual</option>
+                    <option value="team">Team</option>
+                    <option value="org">Organization</option>
+                    <option value="company">Company</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Assessment Type</label>
+                <select name="assessment_type" class="form-select">
+                    <option value="">Select type</option>
+                    <option value="strength">Strength</option>
+                    <option value="growth_area">Growth Area</option>
+                    <option value="neutral">Neutral</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Learnings</label>
+            <textarea name="learnings" class="form-textarea" rows="2" placeholder="What did you learn from this experience?"></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-sm">Create Example</button>
+            <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden')">Cancel</button>
+        </div>
+    </form>
+</div>
+
+<div id="examples-container">
+    {% for example in examples %}
+    {% include "components/contribution_example_card.html" %}
+    {% endfor %}
+
+    {% if examples | length == 0 %}
+    <div class="card empty-state">
+        <div class="pixel-frog-watermark"></div>
+        <h2>No contribution examples yet</h2>
+        <p>Contribution examples help you document concrete instances of impact, behaviors, and learnings to support your performance review.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function copyExampleToClipboard(exampleId) {
+    var card = document.getElementById('example-' + exampleId);
+    if (!card) return;
+    var view = card.querySelector('[id^="example-view-"]');
+    if (!view) return;
+
+    var title = '';
+    var parts = [];
+    var titleEl = view.querySelector('span[style*="font-weight:600"]');
+    if (titleEl) title = titleEl.textContent.trim();
+
+    view.querySelectorAll('.form-label').forEach(function(label) {
+        var p = label.parentElement.querySelector('p');
+        if (p && p.textContent.trim()) {
+            parts.push(label.textContent.trim() + ': ' + p.textContent.trim());
+        }
+    });
+
+    var text = title + '\n\n' + parts.join('\n\n');
+    navigator.clipboard.writeText(text).then(function() {
+        var btn = card.querySelector('[title="Copy to clipboard"]');
+        if (btn) { btn.title = 'Copied!'; setTimeout(function() { btn.title = 'Copy to clipboard'; }, 2000); }
+    });
+}
+</script>
+{% endblock %}

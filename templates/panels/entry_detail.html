@@ -16,15 +16,15 @@
 
     <div class="dither-divider"></div>
 
-    <!-- Key Result assignment -->
+    <!-- Priority assignment -->
     <div class="panel-entry-field">
-        <label class="form-label">Key Result</label>
-        {% if entry.key_result_id %}
-            {% for kr in key_results %}
-                {% if kr.id == entry.key_result_id %}
+        <label class="form-label">Priority</label>
+        {% if entry.priority_id %}
+            {% for p in priorities %}
+                {% if p.id == entry.priority_id %}
                 <span class="kr-label">
-                    <span class="kr-color" style="background:{{ kr.color | default(value='#888') }}"></span>
-                    {{ kr.name }}
+                    <span class="kr-color" style="background:{{ p.color | default(value='#888') }}"></span>
+                    {{ p.title }}
                 </span>
                 {% endif %}
             {% endfor %}

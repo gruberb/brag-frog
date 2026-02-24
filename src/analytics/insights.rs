@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::entries::model::BragEntry;
-use crate::okr::model::KeyResult;
+use crate::goals::model::Priority;
 
 /// Map category name to the set of entry type slugs it contains.
 pub fn category_to_entry_types(category: &str) -> Vec<&'static str> {
@@ -59,7 +59,7 @@ fn entry_type_category(entry_type: &str) -> Option<&'static str> {
 }
 
 /// Compute insight stats from a filtered set of entries.
-pub fn compute_insights(entries: &[BragEntry], key_results: &[KeyResult]) -> serde_json::Value {
+pub fn compute_insights(entries: &[BragEntry], priorities: &[Priority]) -> serde_json::Value {
     let mut reviews = 0i64;
     let mut code = 0i64;
     let mut docs = 0i64;
@@ -74,11 +74,14 @@ pub fn compute_insights(entries: &[BragEntry], key_results: &[KeyResult]) -> ser
     let mut kr_counts: HashMap<i64, i64> = HashMap::new();
     let mut unlinked_count: i64 = 0;
 
-    // Build KR → goal_id lookup
-    let kr_to_goal: HashMap<i64, Option<i64>> =
-        key_results.iter().map(|kr| (kr.id, kr.goal_id)).collect();
+    // Build priority → department_goal_id lookup
+    let priority_to_dept_goal: HashMap<i64, Option<i64>> =
+        priorities.iter().map(|p| (p.id, p.department_goal_id)).collect();
 
     let mut goal_counts: HashMap<i64, i64> = HashMap::new();
+    let mut reach_counts: HashMap<String, i64> = HashMap::new();
+    let mut complexity_counts: HashMap<String, i64> = HashMap::new();
+    let mut role_counts: HashMap<String, i64> = HashMap::new();
 
     for entry in entries {
         match entry_type_category(&entry.entry_type) {
@@ -123,10 +126,27 @@ pub fn compute_insights(entries: &[BragEntry], key_results: &[KeyResult]) -> ser
             *weekday_counts.entry(weekday).or_insert(0) += 1;
         }
 
-        // KR and goal breakdowns
-        if let Some(kr_id) = entry.key_result_id {
-            *kr_counts.entry(kr_id).or_insert(0) += 1;
-            if let Some(Some(goal_id)) = kr_to_goal.get(&kr_id) {
+        // Impact signal breakdowns
+        if let Some(ref reach) = entry.reach
+            && !reach.is_empty()
+        {
+            *reach_counts.entry(reach.clone()).or_insert(0) += 1;
+        }
+        if let Some(ref complexity) = entry.complexity
+            && !complexity.is_empty()
+        {
+            *complexity_counts.entry(complexity.clone()).or_insert(0) += 1;
+        }
+        if let Some(ref role) = entry.role
+            && !role.is_empty()
+        {
+            *role_counts.entry(role.clone()).or_insert(0) += 1;
+        }
+
+        // Priority and dept goal breakdowns
+        if let Some(pri_id) = entry.priority_id {
+            *kr_counts.entry(pri_id).or_insert(0) += 1;
+            if let Some(Some(goal_id)) = priority_to_dept_goal.get(&pri_id) {
                 *goal_counts.entry(*goal_id).or_insert(0) += 1;
             }
         } else {
@@ -163,11 +183,37 @@ pub fn compute_insights(entries: &[BragEntry], key_results: &[KeyResult]) -> ser
         .map(|(id, count)| serde_json::json!({"id": id, "count": count}))
         .collect();
 
-    // KR breakdown
-    let kr_breakdown: Vec<serde_json::Value> = kr_counts
+    let priority_breakdown: Vec<serde_json::Value> = kr_counts
         .iter()
         .map(|(id, count)| serde_json::json!({"id": id, "count": count}))
         .collect();
+
+    let reach_breakdown: Vec<serde_json::Value> = {
+        let mut items: Vec<_> = reach_counts.iter().collect();
+        items.sort_by(|a, b| b.1.cmp(a.1));
+        items
+            .into_iter()
+            .map(|(k, v)| serde_json::json!({"name": k, "count": v}))
+            .collect()
+    };
+
+    let complexity_breakdown: Vec<serde_json::Value> = {
+        let mut items: Vec<_> = complexity_counts.iter().collect();
+        items.sort_by(|a, b| b.1.cmp(a.1));
+        items
+            .into_iter()
+            .map(|(k, v)| serde_json::json!({"name": k, "count": v}))
+            .collect()
+    };
+
+    let role_breakdown: Vec<serde_json::Value> = {
+        let mut items: Vec<_> = role_counts.iter().collect();
+        items.sort_by(|a, b| b.1.cmp(a.1));
+        items
+            .into_iter()
+            .map(|(k, v)| serde_json::json!({"name": k, "count": v}))
+            .collect()
+    };
 
     serde_json::json!({
         "reviews": reviews,
@@ -182,8 +228,11 @@ pub fn compute_insights(entries: &[BragEntry], key_results: &[KeyResult]) -> ser
         "top_teams": top_teams,
         "productive_days": productive_days,
         "goal_breakdown": goal_breakdown,
-        "kr_breakdown": kr_breakdown,
+        "priority_breakdown": priority_breakdown,
         "unlinked_count": unlinked_count,
+        "reach_breakdown": reach_breakdown,
+        "complexity_breakdown": complexity_breakdown,
+        "role_breakdown": role_breakdown,
     })
 }
 
@@ -248,33 +297,37 @@ fn format_date_label(date: &str, today: &str, yesterday: &str) -> String {
 /// Query parameters for analyze filters (string types for URL state round-tripping).
 #[derive(serde::Deserialize)]
 pub struct AnalyzePageQuery {
-    pub goal_id: Option<String>,
-    pub key_result_id: Option<String>,
-    pub initiative_id: Option<String>,
+    pub department_goal_id: Option<String>,
+    pub priority_id: Option<String>,
     pub category: Option<String>,
     pub source: Option<String>,
     pub team: Option<String>,
     pub collaborator: Option<String>,
     pub search: Option<String>,
-    pub no_key_result: Option<String>,
+    pub no_priority: Option<String>,
     pub no_team: Option<String>,
     pub no_collaborator: Option<String>,
+    pub reach: Option<String>,
+    pub complexity: Option<String>,
+    pub role: Option<String>,
 }
 
 /// Query parameters for the HTMX-driven filter endpoint (typed fields).
 #[derive(serde::Deserialize)]
 pub struct AnalyzeFilterQuery {
-    pub goal_id: Option<i64>,
-    pub key_result_id: Option<i64>,
-    pub initiative_id: Option<i64>,
+    pub department_goal_id: Option<i64>,
+    pub priority_id: Option<i64>,
     pub category: Option<String>,
     pub source: Option<String>,
     pub team: Option<String>,
     pub collaborator: Option<String>,
     pub search: Option<String>,
-    pub no_key_result: Option<String>,
+    pub no_priority: Option<String>,
     pub no_team: Option<String>,
     pub no_collaborator: Option<String>,
+    pub reach: Option<String>,
+    pub complexity: Option<String>,
+    pub role: Option<String>,
 }
 
 /// Apply in-memory filters that can't be done via SQL (encrypted fields, text search, special filters).
@@ -331,20 +384,37 @@ pub fn apply_in_memory_filters(entries: &mut Vec<BragEntry>, query: &AnalyzePage
         });
     }
 
-    // Filter by initiative_id
-    if let Some(ref init_id_str) = query.initiative_id
-        && let Ok(init_id) = init_id_str.parse::<i64>()
-    {
-        entries.retain(|e| e.initiative_id == Some(init_id));
+    // Filter by reach
+    if let Some(ref reach) = query.reach {
+        let reach = reach.trim();
+        if !reach.is_empty() {
+            entries.retain(|e| e.reach.as_deref() == Some(reach));
+        }
     }
 
-    // Special: unlinked entries (no key result AND no initiative)
+    // Filter by complexity
+    if let Some(ref complexity) = query.complexity {
+        let complexity = complexity.trim();
+        if !complexity.is_empty() {
+            entries.retain(|e| e.complexity.as_deref() == Some(complexity));
+        }
+    }
+
+    // Filter by role
+    if let Some(ref role) = query.role {
+        let role = role.trim();
+        if !role.is_empty() {
+            entries.retain(|e| e.role.as_deref() == Some(role));
+        }
+    }
+
+    // Special: unlinked entries (no priority)
     if query
-        .no_key_result
+        .no_priority
         .as_deref()
         .is_some_and(|s| s == "1" || s == "true")
     {
-        entries.retain(|e| e.key_result_id.is_none() && e.initiative_id.is_none());
+        entries.retain(|e| e.priority_id.is_none());
     }
 
     // Special: missing team

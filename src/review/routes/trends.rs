@@ -6,7 +6,7 @@ use crate::AppState;
 use crate::entries::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
-use crate::okr::model::{Goal, KeyResult};
+use crate::goals::model::{DepartmentGoal, Priority};
 use crate::review::model::BragPhase;
 use crate::shared::error::AppError;
 
@@ -96,82 +96,82 @@ pub async fn trends_page(
     )
     .await?;
 
-    // Entries by Goal — group entries by goal (via key_result_id → goal_id)
-    let goals = Goal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
-    let all_krs = KeyResult::list_for_user(&state.db, auth.user_id).await?;
+    // Entries by Department Goal — group entries by dept goal (via priority_id → department_goal_id)
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let all_priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
-    // Count entries per KR and per-KR category breakdown
-    let mut kr_counts: HashMap<i64, usize> = HashMap::new();
-    let mut kr_categories: HashMap<i64, HashMap<&str, usize>> = HashMap::new();
+    // Count entries per priority and per-priority category breakdown
+    let mut priority_counts: HashMap<i64, usize> = HashMap::new();
+    let mut priority_categories: HashMap<i64, HashMap<&str, usize>> = HashMap::new();
     for entry in &entries {
-        if let Some(kr_id) = entry.key_result_id {
-            *kr_counts.entry(kr_id).or_insert(0) += 1;
+        if let Some(pri_id) = entry.priority_id {
+            *priority_counts.entry(pri_id).or_insert(0) += 1;
             let cat = entry_category(&entry.entry_type);
-            *kr_categories
-                .entry(kr_id)
+            *priority_categories
+                .entry(pri_id)
                 .or_default()
                 .entry(cat)
                 .or_insert(0) += 1;
         }
     }
 
-    // Build goal cards: each goal with its KRs showing progress + entry count
-    let mut goal_cards: Vec<serde_json::Value> = goals
+    // Build goal cards: each dept goal with its priorities showing progress + entry count
+    let mut goal_cards: Vec<serde_json::Value> = dept_goals
         .iter()
         .filter_map(|g| {
-            let krs: Vec<serde_json::Value> = all_krs
+            let pris: Vec<serde_json::Value> = all_priorities
                 .iter()
-                .filter(|kr| kr.goal_id == Some(g.id) && !kr.is_archived)
-                .map(|kr| {
-                    let entry_count = kr_counts.get(&kr.id).copied().unwrap_or(0);
-                    let categories = build_kr_category_json(&kr_categories, kr.id);
+                .filter(|p| p.department_goal_id == Some(g.id) && p.status != "cancelled")
+                .map(|p| {
+                    let entry_count = priority_counts.get(&p.id).copied().unwrap_or(0);
+                    let categories = build_kr_category_json(&priority_categories, p.id);
                     serde_json::json!({
-                        "name": kr.name,
-                        "color": kr.color.as_deref().unwrap_or("#888"),
-                        "progress": kr.progress,
+                        "name": p.title,
+                        "color": p.color.as_deref().unwrap_or("#888"),
+                        "progress": p.progress,
                         "entry_count": entry_count,
                         "categories": categories,
                     })
                 })
                 .collect();
-            // Filter out goals where all KRs have 0% progress AND 0 entries
-            let has_activity = krs.iter().any(|kr| {
-                kr["progress"].as_i64().unwrap_or(0) > 0
-                    || kr["entry_count"].as_u64().unwrap_or(0) > 0
+            // Filter out goals where all priorities have 0% progress AND 0 entries
+            let has_activity = pris.iter().any(|p| {
+                p["progress"].as_i64().unwrap_or(0) > 0
+                    || p["entry_count"].as_u64().unwrap_or(0) > 0
             });
             if !has_activity {
                 return None;
             }
             Some(serde_json::json!({
                 "title": g.title,
-                "krs": krs,
+                "krs": pris,
             }))
         })
         .collect();
 
-    // Include standalone KRs (not linked to any goal) that have activity
-    let standalone_krs: Vec<serde_json::Value> = all_krs
+    // Include standalone priorities (not linked to any dept goal) that have activity
+    let standalone_priorities: Vec<serde_json::Value> = all_priorities
         .iter()
-        .filter(|kr| kr.goal_id.is_none() && !kr.is_archived)
-        .filter_map(|kr| {
-            let entry_count = kr_counts.get(&kr.id).copied().unwrap_or(0);
-            if kr.progress == 0 && entry_count == 0 {
+        .filter(|p| p.department_goal_id.is_none() && p.status != "cancelled")
+        .filter_map(|p| {
+            let entry_count = priority_counts.get(&p.id).copied().unwrap_or(0);
+            if p.progress == 0 && entry_count == 0 {
                 return None;
             }
-            let categories = build_kr_category_json(&kr_categories, kr.id);
+            let categories = build_kr_category_json(&priority_categories, p.id);
             Some(serde_json::json!({
-                "name": kr.name,
-                "color": kr.color.as_deref().unwrap_or("#888"),
-                "progress": kr.progress,
+                "name": p.title,
+                "color": p.color.as_deref().unwrap_or("#888"),
+                "progress": p.progress,
                 "entry_count": entry_count,
                 "categories": categories,
             }))
         })
         .collect();
-    if !standalone_krs.is_empty() {
+    if !standalone_priorities.is_empty() {
         goal_cards.push(serde_json::json!({
-            "title": "Unassigned Key Results",
-            "krs": standalone_krs,
+            "title": "Unassigned Priorities",
+            "krs": standalone_priorities,
         }));
     }
 

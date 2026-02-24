@@ -1,0 +1,129 @@
+<div class="card" id="example-{{ example.id }}" style="margin-bottom:12px;">
+    <div id="example-view-{{ example.id }}">
+        <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-weight:600;">{{ example.title }}</span>
+                <span class="badge badge-status badge-status--{{ example.status }}">{{ example.status }}</span>
+                {% if example.assessment_type %}
+                <span class="badge" style="font-size:0.7rem;">{{ example.assessment_type | replace(from="_", to=" ") }}</span>
+                {% endif %}
+                {% if example.impact_level %}
+                <span class="badge badge-category badge-category--{{ example.impact_level }}">{{ example.impact_level | replace(from="_", to=" ") }}</span>
+                {% endif %}
+            </div>
+            <div style="display:flex;gap:2px;flex-shrink:0;">
+                <button class="btn-icon btn-icon--sm" title="Copy to clipboard"
+                        onclick="copyExampleToClipboard({{ example.id }})">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                </button>
+                <button class="btn-icon btn-icon--sm" title="Edit"
+                        onclick="document.getElementById('example-view-{{ example.id }}').classList.add('hidden'); document.getElementById('example-edit-{{ example.id }}').classList.remove('hidden');">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5z"/></svg>
+                </button>
+                <button class="btn-icon btn-icon--danger btn-icon--sm"
+                        hx-delete="/contribution-examples/{{ example.id }}"
+                        hx-target="#example-{{ example.id }}"
+                        hx-swap="outerHTML"
+                        hx-confirm="Delete this contribution example?"
+                        title="Delete example">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                </button>
+            </div>
+        </div>
+        {% if example.outcome %}
+        <div style="margin-top:8px;">
+            <span class="form-label" style="display:block;">Outcome</span>
+            <p class="text-sm">{{ example.outcome }}</p>
+        </div>
+        {% endif %}
+        {% if example.behaviors %}
+        <div style="margin-top:6px;">
+            <span class="form-label" style="display:block;">Behaviors</span>
+            <p class="text-sm">{{ example.behaviors }}</p>
+        </div>
+        {% endif %}
+        {% if example.learnings %}
+        <div style="margin-top:6px;">
+            <span class="form-label" style="display:block;">Learnings</span>
+            <p class="text-sm">{{ example.learnings }}</p>
+        </div>
+        {% endif %}
+        <!-- Linked entries -->
+        <div style="margin-top:8px;">
+            <span class="form-label" style="display:block;margin-bottom:4px;">Linked Entries</span>
+            <div id="linked-entries-{{ example.id }}" style="display:flex;flex-wrap:wrap;gap:2px;">
+                {% for ee in example_entries %}
+                    {% if ee.example_id == example.id %}
+                        {% for entry in ee.linked_entries %}
+                        <span class="badge" style="display:inline-flex;align-items:center;gap:4px;margin:2px;">{{ entry.title | truncate(length=40) }}<button class="filter-pill-remove" hx-delete="/contribution-examples/{{ example.id }}/entries/{{ entry.id }}" hx-target="#linked-entries-{{ example.id }}" hx-swap="innerHTML">&times;</button></span>
+                        {% endfor %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% if entries is defined %}
+            <div style="margin-top:4px;">
+                <select class="form-select form-select--sm" style="max-width:300px;display:inline-block;" onchange="if(this.value){htmx.ajax('POST','/contribution-examples/{{ example.id }}/entries/'+this.value,{target:'#linked-entries-{{ example.id }}',swap:'innerHTML'});this.value=''}">
+                    <option value="">+ Link entry...</option>
+                    {% for entry in entries %}
+                    <option value="{{ entry.id }}">{{ entry.title | truncate(length=50) }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <form class="hidden" id="example-edit-{{ example.id }}"
+          hx-put="/contribution-examples/{{ example.id }}"
+          hx-target="#example-{{ example.id }}"
+          hx-swap="outerHTML"
+          style="margin-top:8px;">
+        <div class="form-group">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-input" value="{{ example.title }}" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Outcome</label>
+            <textarea name="outcome" class="form-textarea" rows="3">{{ example.outcome | default(value="") }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Behaviors</label>
+            <textarea name="behaviors" class="form-textarea" rows="3">{{ example.behaviors | default(value="") }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Impact Level</label>
+            <select name="impact_level" class="form-select">
+                <option value="">None</option>
+                <option value="team" {% if example.impact_level == "team" %}selected{% endif %}>Team</option>
+                <option value="cross_team" {% if example.impact_level == "cross_team" %}selected{% endif %}>Cross Team</option>
+                <option value="org" {% if example.impact_level == "org" %}selected{% endif %}>Org</option>
+                <option value="company" {% if example.impact_level == "company" %}selected{% endif %}>Company</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Learnings</label>
+            <textarea name="learnings" class="form-textarea" rows="3">{{ example.learnings | default(value="") }}</textarea>
+        </div>
+        <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+            <div class="form-group" style="flex:1;min-width:140px;">
+                <label class="form-label">Assessment Type</label>
+                <select name="assessment_type" class="form-select">
+                    <option value="">None</option>
+                    <option value="mid_year" {% if example.assessment_type == "mid_year" %}selected{% endif %}>Mid Year</option>
+                    <option value="year_end" {% if example.assessment_type == "year_end" %}selected{% endif %}>Year End</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex:1;min-width:140px;">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="draft" {% if example.status == "draft" %}selected{% endif %}>Draft</option>
+                    <option value="final" {% if example.status == "final" %}selected{% endif %}>Final</option>
+                </select>
+            </div>
+        </div>
+        <div style="display:flex;gap:var(--space-1);margin-top:var(--space-1);">
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+            <button type="button" class="btn btn-sm btn-text"
+                    onclick="document.getElementById('example-edit-{{ example.id }}').classList.add('hidden'); document.getElementById('example-view-{{ example.id }}').classList.remove('hidden');">Cancel</button>
+        </div>
+    </form>
+</div>

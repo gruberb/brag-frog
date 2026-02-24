@@ -67,9 +67,14 @@
                         >Logbook</a
                     >
                     <a
-                        href="/goals"
-                        class="{% if current_page == 'goals' %}active{% endif %}"
-                        >Goals</a
+                        href="/priorities"
+                        class="{% if current_page == 'priorities' or current_page == 'goals' %}active{% endif %}"
+                        >Priorities</a
+                    >
+                    <a
+                        href="/checkins"
+                        class="{% if current_page == 'checkins' %}active{% endif %}"
+                        >Check-ins</a
                     >
                     {% if phase %}
                     <a
@@ -155,6 +160,22 @@
                                     <line x1="10" y1="14" x2="21" y2="3" />
                                 </svg>
                                 Integrations
+                            </a>
+                            <a href="/annual-alignment" class="user-dropdown-item">
+                                <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                Annual Alignment
                             </a>
                             <a href="/level-guide" class="user-dropdown-item">
                                 <svg

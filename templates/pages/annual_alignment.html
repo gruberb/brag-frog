@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Annual Alignment — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Annual Alignment</h1>
+    <p class="page-subtitle">{{ phase.name }} &mdash; {{ year }}</p>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+        <a href="/priorities" class="btn btn-text btn-sm">&larr; Priorities</a>
+        <a href="/level-guide" class="btn btn-text btn-sm">Level Guide</a>
+    </div>
+</div>
+
+<form hx-post="/annual-alignment" hx-swap="none">
+    <input type="hidden" name="year" value="{{ year }}">
+
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Top Outcomes</h2>
+        <div class="form-group">
+            <label class="form-label">What are the top outcomes you and your manager have aligned on for this year?</label>
+            <textarea name="top_outcomes" class="form-textarea" rows="5" placeholder="Describe the key outcomes you're expected to deliver...">{% if alignment %}{{ alignment.top_outcomes | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Why It Matters</h2>
+        <div class="form-group">
+            <label class="form-label">Why do these outcomes matter for the team and organization?</label>
+            <textarea name="why_it_matters" class="form-textarea" rows="4" placeholder="Connect your outcomes to team and org goals...">{% if alignment %}{{ alignment.why_it_matters | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Success Criteria</h2>
+        <div class="form-group">
+            <label class="form-label">How will you know you've succeeded? What does "good" look like?</label>
+            <textarea name="success_criteria" class="form-textarea" rows="4" placeholder="Define measurable success criteria...">{% if alignment %}{{ alignment.success_criteria | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Learning Goals</h2>
+        <div class="form-group">
+            <label class="form-label">What skills or areas do you want to develop this year?</label>
+            <textarea name="learning_goals" class="form-textarea" rows="4" placeholder="Identify growth areas and learning objectives...">{% if alignment %}{{ alignment.learning_goals | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Support Needed</h2>
+        <div class="form-group">
+            <label class="form-label">What support, resources, or context do you need from your manager?</label>
+            <textarea name="support_needed" class="form-textarea" rows="4" placeholder="What would help you succeed...">{% if alignment %}{{ alignment.support_needed | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+</form>
+
+<div class="form-actions">
+    <button class="btn btn-primary" hx-post="/annual-alignment" hx-include="previous form" hx-swap="none">Save Alignment</button>
+    <a href="/priorities" class="btn btn-secondary">Cancel</a>
+</div>
+{% endblock %}

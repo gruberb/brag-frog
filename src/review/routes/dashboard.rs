@@ -8,7 +8,7 @@ use crate::AppState;
 use crate::entries::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
-use crate::okr::model::{Goal, KeyResult};
+use crate::goals::model::{DepartmentGoal, Priority};
 use crate::review::model::{BragPhase, MeetingPrepNote, Week};
 use crate::shared::error::AppError;
 use crate::shared::render::hx_redirect;
@@ -279,9 +279,9 @@ pub async fn dashboard(
         })
         .collect();
 
-    // Goals + KRs for OKR snapshot
-    let goals = Goal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
-    let key_results = KeyResult::list_active_for_user(&state.db, auth.user_id).await?;
+    // Department goals + priorities for OKR snapshot
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
 
     // Check-in status for this week
     let checkin = crate::review::model::WeeklyCheckin::find_for_week(
@@ -294,10 +294,6 @@ pub async fn dashboard(
     let checkin_done = checkin.is_some();
     let checkin_energy = checkin.as_ref().and_then(|c| c.energy_level);
     let checkin_productivity = checkin.as_ref().and_then(|c| c.productivity_rating);
-
-    // Initiatives for quick capture selector
-    let initiatives =
-        crate::okr::model::Initiative::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     // Weekly focus items (up to 3)
     let focus_items = crate::review::model::WeeklyFocus::list_for_week(
@@ -351,9 +347,8 @@ pub async fn dashboard(
     ctx.insert("meeting_days", &meeting_days);
     ctx.insert("prep_map", &prep_map);
     ctx.insert("active_work", &active_work);
-    ctx.insert("goals", &goals);
-    ctx.insert("key_results", &key_results);
-    ctx.insert("initiatives", &initiatives);
+    ctx.insert("dept_goals", &dept_goals);
+    ctx.insert("priorities", &priorities);
     ctx.insert("focus_items", &focus_items);
     ctx.insert("focus_entry_ids", &focus_entry_ids);
     ctx.insert("picker_entries", &picker_entries);
@@ -383,7 +378,7 @@ pub struct FocusForm {
     #[serde(default)]
     pub title: String,
     #[serde(default)]
-    pub linked_ref: Option<String>, // "kr:123", "goal:5", "initiative:7", or ""
+    pub linked_ref: Option<String>, // "priority:123", "dept_goal:5", or ""
     /// Comma-separated entry IDs (from hidden input built by JS).
     #[serde(default)]
     pub entry_ids: Option<String>,
@@ -400,7 +395,7 @@ impl FocusForm {
     }
 }
 
-/// Parse "kr:123" or "goal:5" into (type, id).
+/// Parse "priority:123" or "dept_goal:5" into (type, id).
 fn parse_linked_ref(s: Option<&str>) -> (Option<String>, Option<i64>) {
     match s {
         Some(r) if !r.is_empty() => {

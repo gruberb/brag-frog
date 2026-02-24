@@ -76,28 +76,36 @@ async fn test_create_entry_via_quick_add() {
 }
 
 #[tokio::test]
-async fn test_create_entry_with_key_result() {
+async fn test_create_entry_with_priority() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
-    let _phase_id = common::create_test_phase(&app.pool, user_id).await;
+    let phase_id = common::create_test_phase(&app.pool, user_id).await;
     let cookie = app.login(user_id).await;
 
-    let kr = common::create_test_key_result(&app.pool, user_id, "Ship feature", None).await;
+    let user_crypto = app.crypto.for_user(user_id).unwrap();
+    let priority = common::create_test_priority(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Ship feature",
+        None,
+        &user_crypto,
+    )
+    .await;
 
     let body = format!(
-        "title=PR+for+feature&entry_type=pr_authored&occurred_at=2025-03-15&key_result_id={}",
-        kr.id
+        "title=PR+for+feature&entry_type=pr_authored&occurred_at=2025-03-15&priority_id={}",
+        priority.id
     );
     let resp = app.post_form("/entries/quick", &body, Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
 
-    let user_crypto = app.crypto.for_user(user_id).unwrap();
     let entries =
-        brag_frog::entries::model::BragEntry::list_for_phase(&app.pool, _phase_id, &user_crypto)
+        brag_frog::entries::model::BragEntry::list_for_phase(&app.pool, phase_id, &user_crypto)
             .await
             .unwrap();
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].key_result_id, Some(kr.id));
+    assert_eq!(entries[0].priority_id, Some(priority.id));
 }
 
 #[tokio::test]
@@ -237,7 +245,7 @@ async fn test_update_entry_type() {
 }
 
 #[tokio::test]
-async fn test_update_entry_key_result() {
+async fn test_update_entry_priority() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
     let phase_id = common::create_test_phase(&app.pool, user_id).await;
@@ -250,20 +258,28 @@ async fn test_update_entry_key_result() {
         &app.pool,
         user_id,
         week.id,
-        "Assign KR",
+        "Assign Priority",
         "meeting",
         "2025-03-04",
         None,
         &user_crypto,
     )
     .await;
-    assert_eq!(entry.key_result_id, None);
+    assert_eq!(entry.priority_id, None);
 
-    let kr = common::create_test_key_result(&app.pool, user_id, "KR for update", None).await;
+    let priority = common::create_test_priority(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Priority for update",
+        None,
+        &user_crypto,
+    )
+    .await;
 
     let body = format!(
-        "title=Assign+KR&entry_type=meeting&occurred_at=2025-03-04&key_result_id={}",
-        kr.id
+        "title=Assign+Priority&entry_type=meeting&occurred_at=2025-03-04&priority_id={}",
+        priority.id
     );
     let resp = app
         .put_form(&format!("/entries/{}", entry.id), &body, Some(&cookie))
@@ -279,7 +295,7 @@ async fn test_update_entry_key_result() {
     .await
     .unwrap()
     .unwrap();
-    assert_eq!(updated.key_result_id, Some(kr.id));
+    assert_eq!(updated.priority_id, Some(priority.id));
 }
 
 // ── Entry deletion ──
@@ -335,32 +351,40 @@ async fn test_delete_entry_not_found() {
     assert_eq!(resp.status, StatusCode::NOT_FOUND);
 }
 
-// ── Goals/KR integration ──
+// ── Goals/Priority integration ──
 
 #[tokio::test]
-async fn test_logbook_shows_goals_in_dropdown() {
+async fn test_logbook_shows_priorities_in_dropdown() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
     let phase_id = common::create_test_phase(&app.pool, user_id).await;
     let cookie = app.login(user_id).await;
 
     let user_crypto = app.crypto.for_user(user_id).unwrap();
-    let goal =
-        common::create_test_goal(&app.pool, phase_id, user_id, "Ship OHTTP", &user_crypto).await;
-    let _kr =
-        common::create_test_key_result(&app.pool, user_id, "Viaduct component", Some(goal.id))
-            .await;
+    let goal = common::create_test_department_goal(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Ship OHTTP",
+        &user_crypto,
+    )
+    .await;
+    let _priority = common::create_test_priority(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Viaduct component",
+        Some(goal.id),
+        &user_crypto,
+    )
+    .await;
 
     let resp = app.get("/logbook", Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
-    // The logbook page should contain the goal title for optgroup
-    assert!(
-        resp.body.contains("Ship OHTTP"),
-        "Should show goal in dropdown"
-    );
+    // The logbook page should contain the priority title
     assert!(
         resp.body.contains("Viaduct component"),
-        "Should show key result in dropdown"
+        "Should show priority in dropdown"
     );
 }
 
@@ -472,15 +496,15 @@ async fn test_dashboard_no_phase_shows_no_phase_page() {
 // ── Goals page ──
 
 #[tokio::test]
-async fn test_goals_page_loads() {
+async fn test_priorities_page_loads() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
     let _phase_id = common::create_test_phase(&app.pool, user_id).await;
     let cookie = app.login(user_id).await;
 
-    let resp = app.get("/goals", Some(&cookie)).await;
+    let resp = app.get("/priorities", Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
-    assert!(resp.body.contains("Goals"), "Page should contain 'Goals'");
+    assert!(resp.body.contains("Priorities"), "Page should contain 'Priorities'");
 }
 
 // ── Trends page ──
@@ -576,49 +600,48 @@ async fn test_meeting_prep_page_removed() {
     assert_eq!(resp.status, StatusCode::NOT_FOUND);
 }
 
-// ── Goals page with inline editing ──
+// ── Goals page with department goals ──
 
 #[tokio::test]
-async fn test_goals_page_shows_goal_edit_form() {
+async fn test_priorities_page_shows_department_goal() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
     let phase_id = common::create_test_phase(&app.pool, user_id).await;
     let cookie = app.login(user_id).await;
 
     let user_crypto = app.crypto.for_user(user_id).unwrap();
-    let _goal =
-        common::create_test_goal(&app.pool, phase_id, user_id, "Edit Me Goal", &user_crypto).await;
+    let _goal = common::create_test_department_goal(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Edit Me Goal",
+        &user_crypto,
+    )
+    .await;
 
-    let resp = app.get("/goals", Some(&cookie)).await;
+    let resp = app.get("/priorities", Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
     assert!(
         resp.body.contains("Edit Me Goal"),
-        "Goals page should show goal title"
-    );
-    assert!(
-        resp.body.contains("goal-edit-"),
-        "Goals page should have inline edit forms"
+        "Priorities page should show department goal title"
     );
 }
 
-// ── KR redirects to /goals ──
+// ── Priority creation returns HTML fragment ──
 
 #[tokio::test]
-async fn test_kr_create_redirects_to_goals() {
+async fn test_priority_create_returns_html() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
-    let phase_id = common::create_test_phase(&app.pool, user_id).await;
+    let _phase_id = common::create_test_phase(&app.pool, user_id).await;
     let cookie = app.login(user_id).await;
 
-    let user_crypto = app.crypto.for_user(user_id).unwrap();
-    let goal =
-        common::create_test_goal(&app.pool, phase_id, user_id, "Test Goal", &user_crypto).await;
-
-    let body = format!("name=Test+KR&goal_id={}&status=not_started", goal.id);
-    let resp = app.post_form("/key-results", &body, Some(&cookie)).await;
-    // Should redirect to /goals (not /phases)
-    let hx_redirect = resp.headers.get("hx-redirect").unwrap().to_str().unwrap();
-    assert_eq!(hx_redirect, "/goals");
+    let body = "title=Test+Priority&status=not_started";
+    let resp = app
+        .post_form("/priorities/create", body, Some(&cookie))
+        .await;
+    assert_eq!(resp.status, StatusCode::OK);
+    assert!(resp.body.contains("Test Priority"));
 }
 
 // ── Settings save with new profile fields ──
