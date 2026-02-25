@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Review Guide - Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header-inner">
+        <h1>Review Guide</h1>
+        <p class="page-subtitle">Assessment guidelines and rating scale reference</p>
+    </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+    <h3 class="section-title" style="margin-bottom:12px;">Assessment Guidelines</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div>
+            <h4 style="margin:0 0 4px;">{{ assessment_mid_year.title }}</h4>
+            <p class="text-sm text-muted">{{ assessment_mid_year.question }}</p>
+            <p class="text-sm" style="margin-top:4px;">{{ assessment_mid_year.guidance }}</p>
+            <ul class="text-sm" style="margin:4px 0 0 16px;padding:0;">
+                {% for b in assessment_mid_year.bullets %}
+                <li>{{ b }}</li>
+                {% endfor %}
+            </ul>
+            {% if assessment_mid_year.tip %}
+            <p class="text-sm text-muted" style="margin-top:6px;font-style:italic;">{{ assessment_mid_year.tip }}</p>
+            {% endif %}
+        </div>
+        <div>
+            <h4 style="margin:0 0 4px;">{{ assessment_year_end.title }}</h4>
+            <p class="text-sm text-muted">{{ assessment_year_end.question }}</p>
+            <p class="text-sm" style="margin-top:4px;">{{ assessment_year_end.guidance }}</p>
+            <ul class="text-sm" style="margin:4px 0 0 16px;padding:0;">
+                {% for b in assessment_year_end.bullets %}
+                <li>{{ b }}</li>
+                {% endfor %}
+            </ul>
+            {% if assessment_year_end.tip %}
+            <p class="text-sm text-muted" style="margin-top:6px;font-style:italic;">{{ assessment_year_end.tip }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3 class="section-title" style="margin-bottom:12px;">Rating Scale</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);">
+        <thead>
+            <tr style="text-align:left;border-bottom:2px solid var(--color-border);">
+                <th style="padding:4px 8px;">Rating</th>
+                <th style="padding:4px 8px;">Definition</th>
+                <th style="padding:4px 8px;">Anchor</th>
+                <th style="padding:4px 8px;text-align:right;">Bonus %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tier in rating_scale %}
+            <tr style="border-bottom:1px solid var(--color-border);">
+                <td style="padding:4px 8px;font-weight:600;white-space:nowrap;">{{ tier.label }}</td>
+                <td style="padding:4px 8px;">{{ tier.definition }}</td>
+                <td style="padding:4px 8px;color:var(--color-text-secondary);">{{ tier.anchor }}</td>
+                <td style="padding:4px 8px;text-align:right;">{{ tier.percentage }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

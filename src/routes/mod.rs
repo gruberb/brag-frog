@@ -1,3 +1,5 @@
+mod public;
+
 use axum::{
     Router, middleware,
     routing::{delete, get, post, put},
@@ -29,7 +31,7 @@ pub fn create_router() -> Router<AppState> {
         .route("/auth/logout", post(identity_routes::logout));
 
     let public_routes = Router::new()
-        .route("/", get(review_routes::logbook::landing_page))
+        .route("/", get(public::landing_page))
         .route("/privacy", get(static_page_privacy))
         .route("/terms", get(static_page_terms));
 
@@ -84,12 +86,6 @@ pub fn create_router() -> Router<AppState> {
             get(review_routes::checkins::checkin_page)
                 .post(review_routes::checkins::save_checkin)
                 .delete(review_routes::checkins::delete_checkin),
-        )
-        // Annual Alignment
-        .route(
-            "/annual-alignment",
-            get(review_routes::annual_alignment::annual_alignment_page)
-                .post(review_routes::annual_alignment::save_annual_alignment),
         )
         // Contribution Examples
         .route(
@@ -146,6 +142,8 @@ pub fn create_router() -> Router<AppState> {
         .route("/settings", post(identity_routes::save_settings))
         // Level Guide
         .route("/level-guide", get(identity_routes::clg_guide_page))
+        // Review Guide
+        .route("/review-guide", get(review_routes::summaries::review_guide_page))
         // Export
         .route("/export", get(review_routes::export::export_page))
         .route(

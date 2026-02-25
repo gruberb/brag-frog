@@ -28,10 +28,7 @@ fn init_test_configs() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
         brag_frog::identity::clg::load_levels("config/clg_levels.toml");
-        brag_frog::review::model::load_review_config("config/review_sections.toml");
-        brag_frog::review::model::load_checkin_config("config/checkin_sections.toml");
-        brag_frog::review::model::load_assessment_config("config/assessment_templates.toml");
-        brag_frog::review::model::load_rating_scale("config/rating_scale.toml");
+        brag_frog::review::model::initialize_config(|f| format!("config/{}", f));
         brag_frog::sync::services_config::load("config/services.toml");
     });
 }

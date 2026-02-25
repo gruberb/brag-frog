@@ -96,11 +96,6 @@ pub fn section_slugs() -> Vec<&'static str> {
         .collect()
 }
 
-/// Returns `true` if `s` is a recognized section slug.
-pub fn is_valid_section(s: &str) -> bool {
-    review_config().sections.iter().any(|sec| sec.slug == s)
-}
-
 /// Human-readable heading for a section slug.
 pub fn section_title(section: &str) -> &'static str {
     review_config()

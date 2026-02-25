@@ -68,8 +68,6 @@ struct EventDateTime {
 struct Attendee {
     #[serde(rename = "self", default)]
     is_self: bool,
-    #[serde(default)]
-    organizer: bool,
     response_status: Option<String>,
 }
 
@@ -198,15 +196,12 @@ impl SyncService for GoogleCalendarSync {
                     continue;
                 }
 
-                // Skip unless user accepted or is the organizer. Organizers may
-                // have responseStatus "needsAction" if they never explicitly RSVP'd.
-                let user_participating = event.attendees.iter().any(|a| {
-                    a.is_self
-                        && (a.response_status.as_deref() == Some("accepted")
-                            || a.response_status.as_deref() == Some("tentative")
-                            || a.organizer)
+                // Events returned by calendars/primary are already on the user's
+                // calendar. Only skip events the user explicitly declined.
+                let user_declined = event.attendees.iter().any(|a| {
+                    a.is_self && a.response_status.as_deref() == Some("declined")
                 });
-                if !user_participating {
+                if user_declined {
                     continue;
                 }
 

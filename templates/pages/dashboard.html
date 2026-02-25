@@ -13,7 +13,6 @@
     <form
         class="quick-entry-form"
         hx-post="/entries/quick"
-        hx-target="#just-added-list"
         hx-swap="none"
         hx-on::after-request="handleQuickAdd(this, event)"
     >
@@ -126,15 +125,11 @@
             </select>
         </div>
     </form>
-    <!-- Just-added entries appear here after quick capture -->
-    <div id="just-added-list"></div>
 </section>
 
-<!-- Two-column layout below the entry box -->
-<div class="dashboard-layout">
-    <div class="dashboard-main">
-        <!-- Weekly Focus -->
-        <section class="card dashboard-focus">
+<!-- Top row: Weekly Focus + Weekly Check-in at same height -->
+<div class="dashboard-top-row">
+    <section class="card dashboard-focus">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Weekly Focus</h2>
                 <button class="btn btn-text btn-sm" id="focus-add-btn" onclick="handleFocusAddClick()"
@@ -270,6 +265,46 @@
             </form>
         </section>
 
+    <!-- Weekly check-in -->
+    <section class="card">
+        <h2 class="section-title">Weekly Check-in</h2>
+        {% if checkin_done %}
+        <div class="checkin-status">
+            {% if checkin_energy or checkin_productivity %}
+            <div class="checkin-highlights">
+                {% if checkin_energy %}
+                <div class="checkin-highlight">
+                    <span class="checkin-highlight-value">{{ checkin_energy }}/5</span>
+                    <span class="checkin-highlight-label">Energy</span>
+                </div>
+                {% endif %}
+                {% if checkin_productivity %}
+                <div class="checkin-highlight">
+                    <span class="checkin-highlight-value">{{ checkin_productivity }}/5</span>
+                    <span class="checkin-highlight-label">Productivity</span>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="text-sm text-muted" style="padding:4px 0;">Completed</p>
+            {% endif %}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <a href="/checkin/{{ current_week.id }}" class="btn btn-text btn-sm">Edit</a>
+            <a href="/checkins" class="btn btn-text btn-sm">View history</a>
+        </div>
+        {% else %}
+        <div class="checkin-status">
+            <p class="text-sm text-muted">Reflect on your week</p>
+            <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Start Check-in</a>
+        </div>
+        {% endif %}
+    </section>
+</div>
+
+<!-- Two-column layout: Meetings + sidebar -->
+<div class="dashboard-layout">
+    <div class="dashboard-main">
         <!-- Meetings card -->
         <section class="card">
             <h2 class="section-title">Meetings</h2>
@@ -308,43 +343,35 @@
         </section>
     </div>
 
-    <!-- Sidebar -->
+    <!-- Sidebar: Active Work → Priorities → Focus Time -->
     <div class="dashboard-sidebar">
-        <!-- Weekly check-in -->
+        <!-- Active Work (PRs + Revisions + Bugs + Jira) -->
+        {% if active_work | length > 0 %}
         <section class="card">
-            <h2 class="section-title">Weekly Check-in</h2>
-            {% if checkin_done %}
-            <div class="checkin-status">
-                {% if checkin_energy or checkin_productivity %}
-                <div class="checkin-highlights">
-                    {% if checkin_energy %}
-                    <div class="checkin-highlight">
-                        <span class="checkin-highlight-value">{{ checkin_energy }}/5</span>
-                        <span class="checkin-highlight-label">Energy</span>
-                    </div>
-                    {% endif %}
-                    {% if checkin_productivity %}
-                    <div class="checkin-highlight">
-                        <span class="checkin-highlight-value">{{ checkin_productivity }}/5</span>
-                        <span class="checkin-highlight-label">Productivity</span>
-                    </div>
-                    {% endif %}
-                </div>
-                {% else %}
-                <p class="text-sm text-muted" style="padding:4px 0;">Completed</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Active Work</h2>
+                {% if active_work | length > 5 %}
+                <button class="btn btn-text btn-sm" onclick="document.getElementById('active-work-list').classList.remove('active-work--collapsed')">Show all ({{ active_work | length }})</button>
                 {% endif %}
             </div>
-            <div style="display:flex;gap:8px;margin-top:8px;">
-                <a href="/checkin/{{ current_week.id }}" class="btn btn-text btn-sm">Edit</a>
-                <a href="/checkins" class="btn btn-text btn-sm">View history</a>
+            <div id="active-work-list" class="active-work-list {% if active_work | length > 5 %}active-work--collapsed{% endif %}">
+                {% for item in active_work %}
+                <div class="active-work-item" onclick="openPanelFromUrl('{{ item.title | escape }}', '/entries/{{ item.id }}/panel')">
+                    <div class="active-work-tags">
+                        <span class="badge badge-type">{{ item.source | source_label }}</span>
+                        {% if item.status %}<span class="badge badge-type">{{ item.status }}</span>{% endif %}
+                    </div>
+                    <span class="active-work-title">{{ item.title }}</span>
+                </div>
+                {% endfor %}
             </div>
-            {% else %}
-            <div class="checkin-status">
-                <p class="text-sm text-muted">Reflect on your week</p>
-                <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Start Check-in</a>
-            </div>
-            {% endif %}
         </section>
+        {% elif has_code_review or has_tickets %}
+        <section class="card">
+            <h2 class="section-title">Active Work</h2>
+            <p class="text-sm text-muted">No open PRs, revisions, or tickets this week.</p>
+        </section>
+        {% endif %}
 
         <!-- Priorities snapshot -->
         <section class="card">
@@ -379,7 +406,7 @@
                 {% for day in focus_days %}
                 <div class="week-day {% if day.is_best %}week-day--best{% endif %}">
                     <div class="week-day-header">
-                        <span class="week-day-abbr">{{ day.day_name }}</span>
+                        <span class="week-day-abbr">{{ day.day_abbr }}</span>
                         <span class="week-day-date">{{ day.date }}</span>
                     </div>
                     <div class="week-day-meetings">{{ day.meetings }} mtg{{ day.meetings | pluralize }}</div>
@@ -393,45 +420,12 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="week-day-focus text-muted">No 2h+ block</div>
+                    <div class="week-day-focus text-muted">&ndash;</div>
                     {% endif %}
                 </div>
                 {% endfor %}
             </div>
-            <p class="text-sm text-muted" style="margin-top:8px;">Highlighted days have the most uninterrupted focus time (&ge;2h blocks).</p>
         </section>
-
-        <!-- Active Work (PRs + Revisions + Bugs + Jira) -->
-        {% if active_work | length > 0 %}
-        <section class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Active Work</h2>
-                {% if active_work | length > 5 %}
-                <button class="btn btn-text btn-sm" onclick="document.getElementById('active-work-list').classList.remove('active-work--collapsed')">Show all ({{ active_work | length }})</button>
-                {% endif %}
-            </div>
-            <div id="active-work-list" class="dashboard-meetings {% if active_work | length > 5 %}active-work--collapsed{% endif %}">
-                {% for item in active_work %}
-                <div class="dashboard-meeting-item" onclick="openPanelFromUrl('{{ item.title | escape }}', '/entries/{{ item.id }}/panel')" style="cursor:pointer;">
-                    <div class="meeting-info">
-                        <span class="badge badge-type">{{ item.source | source_label }}</span>
-                        <span class="entry-title">{{ item.title }}</span>
-                    </div>
-                    <div class="meeting-meta">
-                        {% if item.status %}
-                        <span class="badge badge-type">{{ item.status }}</span>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </section>
-        {% elif has_code_review or has_tickets %}
-        <section class="card">
-            <h2 class="section-title">Active Work</h2>
-            <p class="text-sm text-muted">No open PRs, revisions, or tickets this week.</p>
-        </section>
-        {% endif %}
     </div>
 </div>
 {% endblock %}

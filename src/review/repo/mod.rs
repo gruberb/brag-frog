@@ -91,21 +91,7 @@ impl BragPhase {
     pub async fn delete(pool: &SqlitePool, id: i64, user_id: i64) -> Result<(), AppError> {
         let mut tx = pool.begin().await?;
 
-        // Delete entry_competencies, story_entries, and contribution_example_entries for entries in this phase
-        sqlx::query(
-            "DELETE FROM entry_competencies WHERE entry_id IN (SELECT e.id FROM brag_entries e JOIN weeks w ON e.week_id = w.id WHERE w.phase_id = ?)",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query(
-            "DELETE FROM story_entries WHERE entry_id IN (SELECT e.id FROM brag_entries e JOIN weeks w ON e.week_id = w.id WHERE w.phase_id = ?)",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-
+        // Delete contribution_example_entries for entries in this phase
         sqlx::query(
             "DELETE FROM contribution_example_entries WHERE entry_id IN (SELECT e.id FROM brag_entries e JOIN weeks w ON e.week_id = w.id WHERE w.phase_id = ?)",
         )
@@ -121,14 +107,7 @@ impl BragPhase {
         .execute(&mut *tx)
         .await?;
 
-        // Delete kr_checkin_snapshots and weekly_checkins for weeks in this phase
-        sqlx::query(
-            "DELETE FROM kr_checkin_snapshots WHERE checkin_id IN (SELECT c.id FROM weekly_checkins c JOIN weeks w ON c.week_id = w.id WHERE w.phase_id = ?)",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-
+        // Delete weekly_checkins for weeks in this phase
         sqlx::query(
             "DELETE FROM weekly_checkins WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
         )
@@ -157,27 +136,8 @@ impl BragPhase {
             .execute(&mut *tx)
             .await?;
 
-        // Delete initiative_key_results and initiatives
-        sqlx::query(
-            "DELETE FROM initiative_key_results WHERE initiative_id IN (SELECT id FROM initiatives WHERE phase_id = ?)",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query("DELETE FROM initiatives WHERE phase_id = ?")
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
-
         // Delete priorities
         sqlx::query("DELETE FROM priorities WHERE phase_id = ?")
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
-
-        // Delete impact stories (story_entries already deleted above)
-        sqlx::query("DELETE FROM impact_stories WHERE phase_id = ?")
             .bind(id)
             .execute(&mut *tx)
             .await?;
@@ -212,12 +172,7 @@ impl BragPhase {
             .execute(&mut *tx)
             .await?;
 
-        // Delete goals and department_goals
-        sqlx::query("DELETE FROM goals WHERE phase_id = ?")
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
-
+        // Delete department_goals
         sqlx::query("DELETE FROM department_goals WHERE phase_id = ?")
             .bind(id)
             .execute(&mut *tx)

@@ -55,7 +55,7 @@ async fn load_summary_data(
     })
 }
 
-/// Renders the self-review summary page for a phase with all four CultureAmp sections.
+/// Renders the self-review summary page with inline contribution examples and narrative sections.
 pub async fn summary_page(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -73,8 +73,18 @@ pub async fn summary_page(
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
     let examples =
         ContributionExample::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
-    let assessment = assessment_config();
-    let rating_scale = rating_scale_config();
+    let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+
+    // Build linked entry IDs per example for the contribution example cards
+    let mut example_entries: Vec<serde_json::Value> = Vec::new();
+    for ex in &examples {
+        let linked_ids = ContributionExample::linked_entry_ids(&state.db, ex.id).await?;
+        let linked: Vec<&BragEntry> = entries.iter().filter(|e| linked_ids.contains(&e.id)).collect();
+        example_entries.push(serde_json::json!({
+            "example_id": ex.id,
+            "linked_entries": linked,
+        }));
+    }
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
@@ -83,11 +93,37 @@ pub async fn summary_page(
     ctx.insert("has_ai", &has_ai);
     ctx.insert("current_page", "summary");
     ctx.insert("examples", &examples);
+    ctx.insert("entries", &entries);
+    ctx.insert("example_entries", &example_entries);
+
+    let html = state.templates.render("pages/summary.html", &ctx)?;
+    Ok(Html(html))
+}
+
+/// Renders the review guide page with assessment guidelines and rating scale.
+pub async fn review_guide_page(
+    auth: AuthUser,
+    State(state): State<AppState>,
+) -> Result<Html<String>, AppError> {
+    let user = User::find_by_id(&state.db, auth.user_id)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+    let phase = BragPhase::get_active(&state.db, auth.user_id).await?;
+    let assessment = assessment_config();
+    let rating_scale = rating_scale_config();
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("user", &user);
+    ctx.insert("current_page", "review");
+    if let Some(ref p) = phase {
+        ctx.insert("phase", p);
+    }
     ctx.insert("assessment_mid_year", &assessment.mid_year);
     ctx.insert("assessment_year_end", &assessment.year_end);
     ctx.insert("rating_scale", &rating_scale.ratings);
 
-    let html = state.templates.render("pages/summary.html", &ctx)?;
+    let html = state.templates.render("pages/review_guide.html", &ctx)?;
     Ok(Html(html))
 }
 
@@ -130,7 +166,7 @@ pub async fn generate_all(
         .await?;
     }
 
-    // Re-render the summary sections
+    // Re-render only the summary sections partial (target is #summary-sections innerHTML)
     let summaries = Summary::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
     let mut ctx = tera::Context::new();
@@ -138,7 +174,9 @@ pub async fn generate_all(
     ctx.insert("phase", &phase);
     ctx.insert("has_ai", &true);
 
-    let html = state.templates.render("pages/summary.html", &ctx)?;
+    let html = state
+        .templates
+        .render("components/summary_sections.html", &ctx)?;
     Ok(Html(html))
 }
 

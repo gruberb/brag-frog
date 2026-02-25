@@ -35,8 +35,6 @@
                 <div class="checkin-card-meta">
                     {% if checkin.highlights_impact %}
                     <span class="text-sm text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ checkin.highlights_impact | truncate(length=60) }}</span>
-                    {% elif checkin.proud_of %}
-                    <span class="text-sm text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ checkin.proud_of | truncate(length=60) }}</span>
                     {% endif %}
                     {% if checkin.energy_level %}
                     <span class="text-sm">Energy: {{ checkin.energy_level }}/5</span>
@@ -76,37 +74,6 @@
                 <div class="checkin-field">
                     <label class="form-label">Looking Ahead</label>
                     <p class="text-sm">{{ checkin.looking_ahead }}</p>
-                </div>
-                {% endif %}
-                {# Legacy fields for older check-ins #}
-                {% if checkin.proud_of and not checkin.highlights_impact %}
-                <div class="checkin-field">
-                    <label class="form-label">What I'm proud of</label>
-                    <p class="text-sm">{{ checkin.proud_of }}</p>
-                </div>
-                {% endif %}
-                {% if checkin.learned %}
-                <div class="checkin-field">
-                    <label class="form-label">What I learned</label>
-                    <p class="text-sm">{{ checkin.learned }}</p>
-                </div>
-                {% endif %}
-                {% if checkin.wants_to_change %}
-                <div class="checkin-field">
-                    <label class="form-label">What I want to change</label>
-                    <p class="text-sm">{{ checkin.wants_to_change }}</p>
-                </div>
-                {% endif %}
-                {% if checkin.frustrations %}
-                <div class="checkin-field">
-                    <label class="form-label">Frustrations</label>
-                    <p class="text-sm">{{ checkin.frustrations }}</p>
-                </div>
-                {% endif %}
-                {% if checkin.notes %}
-                <div class="checkin-field">
-                    <label class="form-label">Notes</label>
-                    <p class="text-sm">{{ checkin.notes }}</p>
                 </div>
                 {% endif %}
                 <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">

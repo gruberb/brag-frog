@@ -122,3 +122,13 @@ pub fn rating_scale_config() -> &'static RatingScaleConfig {
         .get()
         .expect("Rating scale config not loaded. Call load_rating_scale() at startup.")
 }
+
+/// Loads all review-related configs (review sections, check-in sections, assessment
+/// templates, rating scale). `resolve_path` maps a config filename to its full path,
+/// enabling the custom/ overlay logic in prod and direct config/ paths in tests.
+pub fn initialize_config(resolve_path: impl Fn(&str) -> String) {
+    crate::review::model::load_review_config(&resolve_path("review_sections.toml"));
+    load_checkin_config(&resolve_path("checkin_sections.toml"));
+    load_assessment_config(&resolve_path("assessment_templates.toml"));
+    load_rating_scale(&resolve_path("rating_scale.toml"));
+}
