@@ -19,118 +19,73 @@
             </button>
             <span id="generate-all-spinner" class="htmx-indicator spinner">Generating...</span>
             {% endif %}
-            <a href="/level-guide" class="btn btn-text btn-sm">Level Guide</a>
         </div>
     </div>
 </div>
 
-<!-- Assessment Template Guidance -->
-<div class="card" style="margin-bottom:16px;">
-    <details>
-        <summary class="section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
-            <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
-            Assessment Guidelines
-        </summary>
-        <div style="margin-top:12px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                <div>
-                    <h4 style="margin:0 0 4px;">{{ assessment_mid_year.title }}</h4>
-                    <p class="text-sm text-muted">{{ assessment_mid_year.question }}</p>
-                    <p class="text-sm" style="margin-top:4px;">{{ assessment_mid_year.guidance }}</p>
-                    <ul class="text-sm" style="margin:4px 0 0 16px;padding:0;">
-                        {% for b in assessment_mid_year.bullets %}
-                        <li>{{ b }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% if assessment_mid_year.tip %}
-                    <p class="text-sm text-muted" style="margin-top:6px;font-style:italic;">{{ assessment_mid_year.tip }}</p>
-                    {% endif %}
-                </div>
-                <div>
-                    <h4 style="margin:0 0 4px;">{{ assessment_year_end.title }}</h4>
-                    <p class="text-sm text-muted">{{ assessment_year_end.question }}</p>
-                    <p class="text-sm" style="margin-top:4px;">{{ assessment_year_end.guidance }}</p>
-                    <ul class="text-sm" style="margin:4px 0 0 16px;padding:0;">
-                        {% for b in assessment_year_end.bullets %}
-                        <li>{{ b }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% if assessment_year_end.tip %}
-                    <p class="text-sm text-muted" style="margin-top:6px;font-style:italic;">{{ assessment_year_end.tip }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </details>
-</div>
-
 <!-- Contribution Examples -->
-{% if examples | length > 0 %}
 <div class="card" style="margin-bottom:16px;">
-    <details>
-        <summary class="section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
-            <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
-            Contribution Examples ({{ examples | length }})
-        </summary>
-        <div style="margin-top:12px;">
-            {% for example in examples %}
-            <div style="padding:8px 0;{% if not loop.last %}border-bottom:1px solid var(--color-border);{% endif %}">
-                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                    <span style="font-weight:600;">{{ example.title }}</span>
-                    <span class="badge badge-status badge-status--{{ example.status }}">{{ example.status }}</span>
-                    {% if example.assessment_type %}
-                    <span class="badge" style="font-size:0.7rem;">{{ example.assessment_type | replace(from="_", to=" ") }}</span>
-                    {% endif %}
-                    {% if example.impact_level %}
-                    <span class="badge badge-category badge-category--{{ example.impact_level }}">{{ example.impact_level | replace(from="_", to=" ") }}</span>
-                    {% endif %}
-                </div>
-                {% if example.outcome %}
-                <p class="text-sm" style="margin:4px 0 0;">{{ example.outcome | truncate(length=200) }}</p>
-                {% endif %}
-            </div>
-            {% endfor %}
-            <a href="/contribution-examples" class="btn btn-text btn-sm" style="margin-top:8px;">Edit Contribution Examples</a>
-        </div>
-    </details>
-</div>
-{% else %}
-<div class="card" style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
-    <span class="text-sm text-muted">No contribution examples yet.</span>
-    <a href="/contribution-examples" class="btn btn-text btn-sm">Create Examples</a>
-</div>
-{% endif %}
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 class="section-title" style="margin:0;">Contribution Examples ({{ examples | length }})</h3>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-example-form').classList.toggle('hidden')">+ New Example</button>
+    </div>
 
-<!-- Rating Scale Reference -->
-<div class="card" style="margin-bottom:16px;">
-    <details>
-        <summary class="section-title" style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;">
-            <span class="intg-card-chevron" style="transition:transform 0.15s;">&#9656;</span>
-            Rating Scale Reference
-        </summary>
-        <div style="margin-top:12px;">
-            <table style="width:100%;border-collapse:collapse;font-size:var(--text-sm);">
-                <thead>
-                    <tr style="text-align:left;border-bottom:2px solid var(--color-border);">
-                        <th style="padding:4px 8px;">Rating</th>
-                        <th style="padding:4px 8px;">Definition</th>
-                        <th style="padding:4px 8px;">Anchor</th>
-                        <th style="padding:4px 8px;text-align:right;">Bonus %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for tier in rating_scale %}
-                    <tr style="border-bottom:1px solid var(--color-border);">
-                        <td style="padding:4px 8px;font-weight:600;white-space:nowrap;">{{ tier.label }}</td>
-                        <td style="padding:4px 8px;">{{ tier.definition }}</td>
-                        <td style="padding:4px 8px;color:var(--color-text-secondary);">{{ tier.anchor }}</td>
-                        <td style="padding:4px 8px;text-align:right;">{{ tier.percentage }}%</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </details>
+    <!-- New example form (hidden by default) -->
+    <div id="new-example-form" class="hidden" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border);">
+        <form hx-post="/contribution-examples" hx-target="#examples-container" hx-swap="beforeend" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('#new-example-form').classList.add('hidden');}">
+            <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" class="form-input" required placeholder="e.g., Led cross-team debugging effort for production outage">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Outcome</label>
+                <textarea name="outcome" class="form-textarea" rows="3" placeholder="What was the result? What impact did this have?"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Behaviors Demonstrated</label>
+                <textarea name="behaviors" class="form-textarea" rows="3" placeholder="What skills, competencies, or behaviors did you demonstrate?"></textarea>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Impact Level</label>
+                    <select name="impact_level" class="form-select">
+                        <option value="">Select level</option>
+                        <option value="individual">Individual</option>
+                        <option value="team">Team</option>
+                        <option value="org">Organization</option>
+                        <option value="company">Company</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Assessment Type</label>
+                    <select name="assessment_type" class="form-select">
+                        <option value="">Select type</option>
+                        <option value="strength">Strength</option>
+                        <option value="growth_area">Growth Area</option>
+                        <option value="neutral">Neutral</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Learnings</label>
+                <textarea name="learnings" class="form-textarea" rows="2" placeholder="What did you learn from this experience?"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Create Example</button>
+                <button type="button" class="btn btn-text btn-sm" onclick="document.getElementById('new-example-form').classList.add('hidden')">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="examples-container" style="margin-top:12px;">
+        {% for example in examples %}
+        {% include "components/contribution_example_card.html" %}
+        {% endfor %}
+    </div>
+
+    {% if examples | length == 0 %}
+    <p class="text-sm text-muted" style="margin-top:12px;">No contribution examples yet. Click "+ New Example" to add one.</p>
+    {% endif %}
 </div>
 
 <!-- Narrative Sections -->
@@ -139,4 +94,31 @@
     {% include "components/summary_section.html" %}
     {% endfor %}
 </div>
+
+<script>
+function copyExampleToClipboard(exampleId) {
+    var card = document.getElementById('example-' + exampleId);
+    if (!card) return;
+    var view = card.querySelector('[id^="example-view-"]');
+    if (!view) return;
+
+    var title = '';
+    var parts = [];
+    var titleEl = view.querySelector('span[style*="font-weight:600"]');
+    if (titleEl) title = titleEl.textContent.trim();
+
+    view.querySelectorAll('.form-label').forEach(function(label) {
+        var p = label.parentElement.querySelector('p');
+        if (p && p.textContent.trim()) {
+            parts.push(label.textContent.trim() + ': ' + p.textContent.trim());
+        }
+    });
+
+    var text = title + '\n\n' + parts.join('\n\n');
+    navigator.clipboard.writeText(text).then(function() {
+        var btn = card.querySelector('[title="Copy to clipboard"]');
+        if (btn) { btn.title = 'Copied!'; setTimeout(function() { btn.title = 'Copy to clipboard'; }, 2000); }
+    });
+}
+</script>
 {% endblock %}

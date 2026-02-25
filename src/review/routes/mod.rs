@@ -1,6 +1,6 @@
-pub mod annual_alignment;
 pub mod checkins;
 pub mod contribution_examples;
+pub(crate) mod logbook_insights;
 pub mod dashboard;
 pub mod export;
 pub mod logbook;

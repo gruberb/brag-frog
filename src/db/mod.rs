@@ -71,6 +71,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "002_priorities_redesign",
         include_str!("../../migrations/002_priorities_redesign.sql"),
     ),
+    (
+        "003_drop_legacy_tables",
+        include_str!("../../migrations/003_drop_legacy_tables.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.

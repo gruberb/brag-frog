@@ -43,10 +43,7 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
 
     // Config files — check custom/ overlay first, then fall back to config/
     crate::identity::clg::load_levels(&config_path("clg_levels.toml"));
-    crate::review::model::load_review_config(&config_path("review_sections.toml"));
-    crate::review::model::load_checkin_config(&config_path("checkin_sections.toml"));
-    crate::review::model::load_assessment_config(&config_path("assessment_templates.toml"));
-    crate::review::model::load_rating_scale(&config_path("rating_scale.toml"));
+    crate::review::model::initialize_config(config_path);
     crate::sync::services_config::load(&config_path("services.toml"));
 
     // Templates
