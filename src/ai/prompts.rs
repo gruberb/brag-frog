@@ -1,7 +1,7 @@
 use crate::worklog::model::BragEntry;
 use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::identity::clg::ClgLevel;
-use crate::cycle::model::{AiDocument, MeetingPrepNote};
+use crate::cycle::model::{AiDocument, MeetingPrepNote, WeeklyCheckin, WeeklyFocus};
 use crate::cycle::model::get_section;
 
 /// Assembles a complete prompt for one self-review section.
@@ -371,6 +371,9 @@ pub fn build_meeting_prep_prompt(
     linked_dept_goal: Option<&DepartmentGoal>,
     linked_priority: Option<&Priority>,
     recent_entries: &[BragEntry],
+    other_recent_entries: &[BragEntry],
+    checkins: &[&WeeklyCheckin],
+    focus_items: &[WeeklyFocus],
     context_text: &str,
     existing_note: Option<&MeetingPrepNote>,
     meeting_goal: Option<&str>,
@@ -434,6 +437,58 @@ pub fn build_meeting_prep_prompt(
         format!("\n## Prior Meeting Preps\n{}", items)
     };
 
+    // Recent work across all priorities (excluding meetings, capped at 30)
+    let recent_work_section = {
+        let items: Vec<String> = other_recent_entries
+            .iter()
+            .filter(|e| e.entry_type != "meeting")
+            .take(30)
+            .map(|e| format!("- [{}] {}", e.entry_type, e.title))
+            .collect();
+        if items.is_empty() {
+            String::new()
+        } else {
+            format!("\n## Recent Work (Last 3 Weeks)\n{}\n", items.join("\n"))
+        }
+    };
+
+    // Current week's focus items
+    let focus_section = if focus_items.is_empty() {
+        String::new()
+    } else {
+        let items: String = focus_items
+            .iter()
+            .map(|f| format!("- {}", f.title))
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("\n## This Week's Focus\n{}\n", items)
+    };
+
+    // Recent check-in highlights (most recent only, non-empty fields, truncated)
+    let checkin_section = checkins.first().map(|c| {
+        let mut parts = Vec::new();
+        if let Some(h) = c.highlights_impact.as_deref().filter(|s| !s.is_empty()) {
+            let truncated: String = h.chars().take(200).collect();
+            let suffix = if h.len() > 200 { "..." } else { "" };
+            parts.push(format!("**Highlights & Impact:** {}{}", truncated, suffix));
+        }
+        if let Some(s) = c.support_feedback.as_deref().filter(|s| !s.is_empty()) {
+            let truncated: String = s.chars().take(200).collect();
+            let suffix = if s.len() > 200 { "..." } else { "" };
+            parts.push(format!("**Blockers & Support:** {}{}", truncated, suffix));
+        }
+        if let Some(a) = c.looking_ahead.as_deref().filter(|s| !s.is_empty()) {
+            let truncated: String = a.chars().take(200).collect();
+            let suffix = if a.len() > 200 { "..." } else { "" };
+            parts.push(format!("**Looking Ahead:** {}{}", truncated, suffix));
+        }
+        if parts.is_empty() {
+            String::new()
+        } else {
+            format!("\n## Recent Check-in Highlights\n{}\n", parts.join("\n"))
+        }
+    }).unwrap_or_default();
+
     // Existing draft notes
     let existing_text = existing_note
         .and_then(|n| n.notes.as_deref())
@@ -489,13 +544,16 @@ Priority: {} — status: {}
         });
 
     // Thin context: no user context, no goal, no existing notes, no linked priority,
-    // no calendar description, no prior preps
+    // no calendar description, no prior preps, no recent work/checkins/focus
     let has_thin_context = context_text.is_empty()
         && meeting_goal.is_none_or(|g| g.is_empty())
         && existing_text.is_empty()
         && linked_priority.is_none()
         && entry.description.as_ref().is_none_or(|d| d.is_empty())
-        && prior_preps.is_empty();
+        && prior_preps.is_empty()
+        && recent_work_section.is_empty()
+        && focus_section.is_empty()
+        && checkin_section.is_empty();
 
     let link_caveat = if has_only_links {
         "\n## Important: Link-Only Context\n\
@@ -545,7 +603,7 @@ Priority: {} — status: {}
 - Time: {time_range}
 - Role: {role}
 - Series: {recurring}
-{goal_section}{calendar_desc_section}{context_section}{prior_preps_section}{existing_text}{priority_context}{link_caveat}{thin_context_guidance}
+{goal_section}{calendar_desc_section}{context_section}{prior_preps_section}{recent_work_section}{focus_section}{checkin_section}{existing_text}{priority_context}{link_caveat}{thin_context_guidance}
 ## Role Guidance
 {role_hint}
 
@@ -572,6 +630,9 @@ Keep it concise and actionable. Use any provided context, calendar description, 
         calendar_desc_section = calendar_desc_section,
         context_section = context_section,
         prior_preps_section = prior_preps_section,
+        recent_work_section = recent_work_section,
+        focus_section = focus_section,
+        checkin_section = checkin_section,
         existing_text = existing_text,
         priority_context = priority_context,
         link_caveat = link_caveat,

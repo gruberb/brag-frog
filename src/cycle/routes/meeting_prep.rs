@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     response::Html,
 };
-use chrono::Local;
+use chrono::{Duration, Local};
 
 use crate::AppState;
 use crate::ai::prompts::build_meeting_prep_prompt;
@@ -11,7 +11,7 @@ use crate::worklog::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::cycle::model::{AiDocument, BragPhase, MeetingPrepNote, Week};
+use crate::cycle::model::{AiDocument, BragPhase, MeetingPrepNote, Week, WeeklyCheckin, WeeklyFocus};
 use crate::cycle::routes::{get_ai_client, has_ai_for_user};
 use crate::kernel::error::AppError;
 
@@ -197,18 +197,43 @@ pub async fn ai_draft_meeting_prep(
         .and_then(|p| p.department_goal_id)
         .and_then(|gid| dept_goals.iter().find(|g| g.id == gid));
 
-    // Load recent entries linked to the same priority (for work context)
-    let recent_entries = if let Some(pri) = linked_priority {
-        let user_crypto = state.crypto.for_user(auth.user_id)?;
-        let all_entries = BragEntry::list_for_phase(&state.db, phase.id, &user_crypto).await?;
-        all_entries
-            .into_iter()
-            .filter(|e| e.priority_id == Some(pri.id) && e.id != entry_id)
-            .take(10)
-            .collect()
-    } else {
-        Vec::new()
-    };
+    // Load recent entries across all priorities (last 3 weeks)
+    let three_weeks_ago = (now - Duration::days(21)).format("%Y-%m-%d").to_string();
+    let today_str = now.format("%Y-%m-%d").to_string();
+    let user_crypto = state.crypto.for_user(auth.user_id)?;
+    let all_recent = BragEntry::list_for_phase_in_range(
+        &state.db,
+        phase.id,
+        &three_weeks_ago,
+        &today_str,
+        &user_crypto,
+    )
+    .await?;
+
+    // Split into priority-specific entries and broader recent work
+    let (recent_entries, other_recent_entries): (Vec<BragEntry>, Vec<BragEntry>) =
+        if let Some(pri) = linked_priority {
+            let (mut matched, rest): (Vec<_>, Vec<_>) = all_recent
+                .into_iter()
+                .filter(|e| e.id != entry_id)
+                .partition(|e| e.priority_id == Some(pri.id));
+            matched.truncate(10);
+            (matched, rest)
+        } else {
+            (Vec::new(), all_recent.into_iter().filter(|e| e.id != entry_id).collect())
+        };
+
+    // Load check-ins for current and previous week
+    let prev_week = Week::find_or_create_for_date(&state.db, phase.id, now - Duration::days(7)).await?;
+    let current_checkin = WeeklyCheckin::find_for_week(&state.db, current_week.id, auth.user_id, &auth.crypto).await?;
+    let prev_checkin = WeeklyCheckin::find_for_week(&state.db, prev_week.id, auth.user_id, &auth.crypto).await?;
+    let checkins: Vec<&WeeklyCheckin> = [current_checkin.as_ref(), prev_checkin.as_ref()]
+        .into_iter()
+        .flatten()
+        .collect();
+
+    // Load current week's focus items
+    let focus_items = WeeklyFocus::list_for_week(&state.db, current_week.id, auth.user_id, &auth.crypto).await?;
 
     let context_text = input
         .context_snippets
@@ -247,6 +272,9 @@ pub async fn ai_draft_meeting_prep(
         linked_dept_goal,
         linked_priority,
         &recent_entries,
+        &other_recent_entries,
+        &checkins,
+        &focus_items,
         context_text,
         prep_note.as_ref(),
         meeting_goal,
