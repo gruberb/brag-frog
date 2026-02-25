@@ -439,13 +439,57 @@ Priority: {} — status: {}
         .map(|notes| format!("\n## Current Draft Notes\n{}\n", notes))
         .unwrap_or_default();
 
+    // Detect whether the context is link-only (URLs with no substantive text)
+    let has_only_links = !context_snippets.is_empty()
+        && context_snippets.iter().all(|s| {
+            let trimmed = s.trim();
+            trimmed.starts_with("http://") || trimmed.starts_with("https://")
+        });
+
+    // Detect thin context: no snippets, no existing notes, no linked priority
+    let has_thin_context = context_snippets.is_empty()
+        && existing_text.is_empty()
+        && linked_priority.is_none();
+
+    let link_caveat = if has_only_links {
+        "\n## Important: Link-Only Context\n\
+         You cannot access URLs or links. Treat them as reference labels only.\n\
+         The user provided only links with no accompanying text. Before generating prep notes, \
+         include a short section titled \"Context Needed\" explaining that you can't read linked documents \
+         and asking the user to paste the relevant content (agenda, discussion points, key decisions) \
+         from those docs directly into the context field.\n\
+         Do NOT fabricate or infer document content from URL paths.\n"
+            .to_string()
+    } else if !context_snippets.is_empty() {
+        "\nNote: You cannot access URLs or links — treat any URLs in the context as reference labels only. \
+         Never fabricate content based on URL paths.\n"
+            .to_string()
+    } else {
+        String::new()
+    };
+
+    let thin_context_guidance = if has_thin_context {
+        "\n## Limited Context Available\n\
+         Very little context was provided for this meeting. Before the main prep sections, include a \
+         \"What I'd Need to Make This Useful\" section listing:\n\
+         - Who's attending?\n\
+         - What's on the agenda?\n\
+         - Key decisions or topics to cover?\n\
+         - Relevant context from any linked documents?\n\n\
+         Still generate the standard prep sections below, but label them as generic placeholders \
+         that should be refined once more context is available.\n"
+            .to_string()
+    } else {
+        String::new()
+    };
+
     let role_guidance = match role {
-        "manager" => "Focus on: status updates for current work, blockers and asks, growth/career topics, feedback exchange, action items from last meeting.",
-        "skip_level" => "Focus on: visibility items and high-impact work, career goals and progression, org-level impact and cross-team contributions, strategic alignment.",
-        "peer" => "Focus on: collaboration updates, shared work and dependencies, alignment on approach, knowledge sharing, mutual support.",
-        "stakeholder" => "Focus on: project status and milestones, decisions needed, risks and mitigations, timeline updates, resource needs.",
-        "tech_lead" => "Focus on: technical decisions and trade-offs, architecture discussions, code quality and standards, technical debt, mentoring topics.",
-        _ => "Focus on: key discussion points, updates to share, questions to ask, decisions needed, follow-ups from previous meetings.",
+        "manager" => "Given the meeting title and series, infer likely discussion topics. For a manager 1:1, consider: status on current work, blockers you need help with, growth/career topics, feedback to give or request, and follow-ups from previous meetings. Tailor talking points to the specific subject matter implied by the meeting title.",
+        "skip_level" => "Given the meeting title and series, infer likely discussion topics. For a skip-level, consider: high-impact work worth making visible, career goals and progression, org-level impact and cross-team contributions, and strategic alignment. Tailor talking points to the specific subject matter implied by the meeting title.",
+        "peer" => "Given the meeting title and series, infer likely discussion topics. For a peer meeting, consider: collaboration updates, shared work and dependencies, alignment on approach, and knowledge sharing. Tailor talking points to the specific subject matter implied by the meeting title.",
+        "stakeholder" => "Given the meeting title and series, infer likely discussion topics. For a stakeholder meeting, consider: project milestones and status, decisions that need input, risks worth flagging, and timeline or resource updates. Tailor talking points to the specific subject matter implied by the meeting title.",
+        "tech_lead" => "Given the meeting title and series, infer likely discussion topics. For a tech lead meeting, consider: technical decisions and trade-offs, architecture discussions, code quality topics, and technical debt. Tailor talking points to the specific subject matter implied by the meeting title.",
+        _ => "Given the meeting title and series, infer likely discussion topics. Consider: key discussion points, updates to share, questions to ask, decisions needed, and follow-ups from previous meetings. Tailor talking points to the specific subject matter implied by the meeting title.",
     };
 
     format!(
@@ -459,7 +503,7 @@ Priority: {} — status: {}
 - Series: {recurring}
 
 {role_guidance}
-{priority_context}{snippets_text}{existing_text}
+{priority_context}{snippets_text}{link_caveat}{existing_text}{thin_context_guidance}
 ---
 
 Generate structured meeting prep notes in Markdown with these sections:
@@ -473,7 +517,7 @@ Generate structured meeting prep notes in Markdown with these sections:
 ## Updates to Share
 - Status updates and accomplishments to mention
 
-Keep it concise and actionable. Use the linked priority data and recent work entries to make updates specific. If additional context (links, notes) was provided, incorporate that into relevant sections."#,
+Keep it concise and actionable. Use the linked priority data and recent work entries to make updates specific. If additional context was provided as text, incorporate it into relevant sections. Do not infer or fabricate content from URLs."#,
         title = title,
         date = date,
         time_range = time_range,
@@ -482,6 +526,8 @@ Keep it concise and actionable. Use the linked priority data and recent work ent
         role_guidance = role_guidance,
         priority_context = priority_context,
         snippets_text = snippets_text,
+        link_caveat = link_caveat,
         existing_text = existing_text,
+        thin_context_guidance = thin_context_guidance,
     )
 }
