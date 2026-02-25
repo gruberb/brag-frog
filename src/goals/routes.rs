@@ -98,7 +98,6 @@ pub struct CreateDepartmentGoalForm {
     pub phase_id: i64,
     pub title: String,
     pub description: Option<String>,
-    pub category: Option<String>,
     pub status: Option<String>,
 }
 
@@ -114,7 +113,6 @@ pub async fn create_department_goal(
         &CreateDepartmentGoal {
             title: input.title,
             description: input.description,
-            category: input.category,
             status: input.status,
         },
         &auth.crypto,

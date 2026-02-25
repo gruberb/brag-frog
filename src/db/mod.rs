@@ -75,6 +75,14 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "003_drop_legacy_tables",
         include_str!("../../migrations/003_drop_legacy_tables.sql"),
     ),
+    (
+        "004_remove_kr_from_priorities",
+        include_str!("../../migrations/004_remove_kr_from_priorities.sql"),
+    ),
+    (
+        "005_remove_category_from_department_goals",
+        include_str!("../../migrations/005_remove_category_from_department_goals.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.

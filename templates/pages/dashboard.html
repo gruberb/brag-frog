@@ -383,18 +383,11 @@
             </div>
             {% else %}
             {% for p in priorities %}
-            {% if p.progress < 100 %}
-            <div class="dashboard-kr">
-                <div class="kr-label">
-                    <span class="kr-color" style="background:{{ p.color | default(value='#888') }}"></span>
-                    {{ p.title }}
-                </div>
-                <div class="kr-score-bar">
-                    <div class="kr-score-fill" style="width:{{ p.progress }}%;background:{{ p.color | default(value='#888') }}"></div>
-                </div>
-                <span class="text-sm text-muted">{{ p.progress }}%</span>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{{ p.color | default(value='#888') }};flex-shrink:0;"></span>
+                <span class="text-sm">{{ p.title }}</span>
+                <span class="badge badge-status badge-status--{{ p.status }}" style="font-size:0.65rem;">{{ p.status | replace(from="_", to=" ") }}</span>
             </div>
-            {% endif %}
             {% endfor %}
             {% endif %}
         </section>

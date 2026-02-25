@@ -280,7 +280,6 @@ pub async fn create_test_department_goal(
         &CreateDepartmentGoal {
             title: title.to_string(),
             description: None,
-            category: None,
             status: None,
         },
         crypto,
@@ -308,12 +307,6 @@ pub async fn create_test_priority(
             status: Some("active".to_string()),
             scope: None,
             department_goal_id,
-            kr_type: None,
-            direction: None,
-            unit: None,
-            baseline: None,
-            target: None,
-            target_date: None,
         },
         crypto,
     )

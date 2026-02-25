@@ -15,25 +15,12 @@
 </div>
 
 <!-- New department goal form (hidden by default) -->
-<div id="new-dept-goal-form" class="card hidden" style="display:none;margin-bottom:16px;">
-    <form hx-post="/priorities/goals" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');this.closest('.card').style.display='none';window.location.reload();}">
+<div id="new-dept-goal-form" class="card hidden" style="margin-bottom:16px;">
+    <form hx-post="/priorities/goals" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');window.location.reload();}">
         <input type="hidden" name="phase_id" value="{{ phase.id }}">
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Goal Title</label>
-                <input type="text" name="title" class="form-input" required placeholder="e.g., Improve platform reliability to 99.9% uptime">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Category</label>
-                <select name="category" class="form-select">
-                    <option value="">None</option>
-                    <option value="engineering">Engineering</option>
-                    <option value="product">Product</option>
-                    <option value="infrastructure">Infrastructure</option>
-                    <option value="security">Security</option>
-                    <option value="process">Process</option>
-                </select>
-            </div>
+        <div class="form-group">
+            <label class="form-label">Goal Title</label>
+            <input type="text" name="title" class="form-input" required placeholder="e.g., Improve platform reliability to 99.9% uptime">
         </div>
         <div class="form-group">
             <label class="form-label">Description</label>
@@ -52,14 +39,14 @@
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary btn-sm">Create Department Goal</button>
-            <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');this.closest('.card').style.display='none';">Cancel</button>
+            <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');">Cancel</button>
         </div>
     </form>
 </div>
 
 <!-- New priority form (hidden by default) -->
-<div id="new-priority-form" class="card hidden" style="display:none;margin-bottom:16px;">
-    <form hx-post="/priorities" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');this.closest('.card').style.display='none';window.location.reload();}">
+<div id="new-priority-form" class="card hidden" style="margin-bottom:16px;">
+    <form hx-post="/priorities" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');window.location.reload();}">
         <input type="hidden" name="phase_id" value="{{ phase.id }}">
         <div class="form-row">
             <div class="form-group">
@@ -68,7 +55,7 @@
             </div>
             <div class="form-group">
                 <label class="form-label">Department Goal</label>
-                <select name="dept_goal_id" class="form-select">
+                <select name="department_goal_id" class="form-select">
                     <option value="">Unassigned</option>
                     {% for dg in dept_goals %}
                     <option value="{{ dg.id }}">{{ dg.title }}</option>
@@ -102,32 +89,13 @@
             <label class="form-label">Description</label>
             <textarea name="description" class="form-textarea" rows="2" placeholder="Optional details"></textarea>
         </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">KR Type</label>
-                <select name="kr_type" class="form-select">
-                    <option value="">None (no progress bar)</option>
-                    <option value="percent">Percent</option>
-                    <option value="number">Number</option>
-                    <option value="binary">Binary (done/not done)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">KR Target</label>
-                <input type="number" name="kr_target" class="form-input" placeholder="e.g., 100" min="0">
-            </div>
-            <div class="form-group">
-                <label class="form-label">KR Current</label>
-                <input type="number" name="kr_current" class="form-input" placeholder="e.g., 0" min="0">
-            </div>
-        </div>
         <div class="form-group">
             <label class="form-label">Impact Narrative</label>
             <textarea name="impact_narrative" class="form-textarea" rows="2" placeholder="Why does this priority matter? What impact will it have?"></textarea>
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary btn-sm">Create Priority</button>
-            <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');this.closest('.card').style.display='none';">Cancel</button>
+            <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');">Cancel</button>
         </div>
     </form>
 </div>
@@ -152,9 +120,6 @@
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
                 </span>
                 <span class="cycle-item-title" style="font-weight:600;">{{ dg.title }}</span>
-                {% if dg.category %}
-                <span class="badge badge-category badge-category--{{ dg.category }}">{{ dg.category }}</span>
-                {% endif %}
                 {% if dg.status %}
                 <span class="badge badge-status badge-status--{{ dg.status }}">{{ dg.status | replace(from="_", to=" ") }}</span>
                 {% endif %}
@@ -169,7 +134,7 @@
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5z"/></svg>
                         </button>
                         <button class="btn-icon btn-icon--danger btn-icon--sm"
-                                hx-delete="/dept-goals/{{ dg.id }}"
+                                hx-delete="/priorities/goals/{{ dg.id }}"
                                 hx-target="#dept-goal-{{ dg.id }}"
                                 hx-swap="outerHTML"
                                 hx-confirm="Delete this department goal and unassign its priorities?"
@@ -184,19 +149,11 @@
             {% endif %}
             <!-- Inline edit form for department goal -->
             <form class="cycle-item-edit hidden" id="dept-goal-edit-{{ dg.id }}"
-                  hx-put="/dept-goals/{{ dg.id }}"
+                  hx-put="/priorities/goals/{{ dg.id }}"
                   hx-swap="none"
                   hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';"
                   onclick="event.stopPropagation();">
                 <input type="text" name="title" class="form-input form-input--sm" value="{{ dg.title }}" required style="flex:1;">
-                <select name="category" class="form-select form-select--sm" style="width:auto;max-width:160px;">
-                    <option value="">Category</option>
-                    <option value="engineering" {% if dg.category == "engineering" %}selected{% endif %}>Engineering</option>
-                    <option value="product" {% if dg.category == "product" %}selected{% endif %}>Product</option>
-                    <option value="infrastructure" {% if dg.category == "infrastructure" %}selected{% endif %}>Infrastructure</option>
-                    <option value="security" {% if dg.category == "security" %}selected{% endif %}>Security</option>
-                    <option value="process" {% if dg.category == "process" %}selected{% endif %}>Process</option>
-                </select>
                 <select name="status" class="form-select form-select--sm" style="width:auto;max-width:160px;">
                     <option value="not_started" {% if dg.status == "not_started" %}selected{% endif %}>Not Started</option>
                     <option value="in_progress" {% if dg.status == "in_progress" %}selected{% endif %}>In Progress</option>
@@ -224,15 +181,9 @@
                     <span class="badge" style="background:var(--color-tint-purple);color:var(--color-purple-30);font-size:0.7rem;">{{ priority.scope }}</span>
                     {% endif %}
                     <div class="cycle-item-right">
-                        {% if priority.kr_type %}
-                        <span class="kr-progress-value">{{ priority.progress }}%</span>
-                        <span class="kr-progress-track">
-                            <span class="kr-progress-fill" style="width:{{ priority.progress }}%;background:{% if priority.progress >= 100 %}var(--color-success){% elif priority.progress >= 50 %}var(--color-primary){% else %}var(--color-warning){% endif %};"></span>
-                        </span>
-                        {% endif %}
                         {% if priority.impact_narrative %}
                         <button class="btn-icon btn-icon--sm" title="Show impact narrative"
-                                onclick="event.stopPropagation(); document.getElementById('priority-narrative-{{ priority.id }}').classList.toggle('hidden'); document.getElementById('priority-narrative-{{ priority.id }}').style.display = document.getElementById('priority-narrative-{{ priority.id }}').style.display === 'none' ? '' : 'none';">
+                                onclick="event.stopPropagation(); document.getElementById('priority-narrative-{{ priority.id }}').classList.toggle('hidden');">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
                         </button>
                         {% endif %}
@@ -253,84 +204,71 @@
                     </div>
                 </div>
                 {% if priority.impact_narrative %}
-                <div class="cycle-item-desc-block hidden" id="priority-narrative-{{ priority.id }}" style="display:none;font-style:italic;color:var(--color-text-muted);">
+                <div class="cycle-item-desc-block hidden" id="priority-narrative-{{ priority.id }}" style="font-style:italic;color:var(--color-text-muted);">
                     {{ priority.impact_narrative }}
                 </div>
                 {% endif %}
-                <!-- Inline edit form for priority -->
-                <form class="cycle-item-edit hidden" id="priority-edit-{{ priority.id }}"
-                      hx-put="/priorities/{{ priority.id }}"
-                      hx-swap="none"
-                      hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';"
-                      style="flex-wrap:wrap;">
-                    <input type="text" name="title" class="form-input form-input--sm" value="{{ priority.title }}" required style="flex:1;">
-                    <select name="dept_goal_id" class="form-select form-select--sm" style="width:auto;max-width:200px;">
-                        <option value="">No department goal</option>
-                        {% for g in dept_goals %}
-                        <option value="{{ g.id }}" {% if dg.id == g.id %}selected{% endif %}>{{ g.title }}</option>
-                        {% endfor %}
-                    </select>
-                    <select name="status" class="form-select form-select--sm" style="width:auto;max-width:140px;">
-                        <option value="not_started" {% if priority.status == "not_started" %}selected{% endif %}>Not Started</option>
-                        <option value="active" {% if priority.status == "active" %}selected{% endif %}>Active</option>
-                        <option value="on_hold" {% if priority.status == "on_hold" %}selected{% endif %}>On Hold</option>
-                        <option value="completed" {% if priority.status == "completed" %}selected{% endif %}>Completed</option>
-                        <option value="cancelled" {% if priority.status == "cancelled" %}selected{% endif %}>Cancelled</option>
-                    </select>
-                    <select name="scope" class="form-select form-select--sm" style="width:auto;max-width:120px;">
-                        <option value="">Scope</option>
-                        <option value="small" {% if priority.scope == "small" %}selected{% endif %}>Small</option>
-                        <option value="medium" {% if priority.scope == "medium" %}selected{% endif %}>Medium</option>
-                        <option value="large" {% if priority.scope == "large" %}selected{% endif %}>Large</option>
-                        <option value="xlarge" {% if priority.scope == "xlarge" %}selected{% endif %}>XLarge</option>
-                    </select>
-                    <div style="display:flex;align-items:center;gap:var(--space-2);width:100%;margin-top:var(--space-1);flex-wrap:wrap;">
-                        <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">KR Type</label>
-                        <select name="kr_type" class="form-select form-select--sm" style="width:auto;max-width:140px;">
-                            <option value="">None</option>
-                            <option value="percent" {% if priority.kr_type == "percent" %}selected{% endif %}>Percent</option>
-                            <option value="number" {% if priority.kr_type == "number" %}selected{% endif %}>Number</option>
-                            <option value="binary" {% if priority.kr_type == "binary" %}selected{% endif %}>Binary</option>
-                        </select>
-                        <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">Target</label>
-                        <input type="number" name="kr_target" class="form-input form-input--sm" value="{{ priority.kr_target | default(value='') }}" style="width:80px;" min="0">
-                        <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">Current</label>
-                        <input type="number" name="kr_current" class="form-input form-input--sm" value="{{ priority.kr_current | default(value='') }}" style="width:80px;" min="0">
-                    </div>
-                    <div style="display:flex;align-items:center;gap:var(--space-2);width:100%;margin-top:var(--space-1);">
-                        <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">Impact</label>
-                        <textarea name="impact_narrative" class="form-input form-input--sm" rows="2" style="flex:1;min-width:200px;resize:vertical;">{{ priority.impact_narrative | default(value="") }}</textarea>
-                    </div>
-                    <div style="display:flex;gap:var(--space-1);margin-top:var(--space-1);">
-                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                        <button type="button" class="btn btn-sm btn-text"
-                                onclick="document.getElementById('priority-edit-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-view-{{ priority.id }}').classList.remove('hidden');">Cancel</button>
-                    </div>
-                </form>
+                <!-- Edit form for priority -->
+                <div class="hidden" id="priority-edit-{{ priority.id }}" style="margin-top:var(--space-2);">
+                    <form hx-put="/priorities/{{ priority.id }}"
+                          hx-swap="none"
+                          hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Priority Title</label>
+                                <input type="text" name="title" class="form-input" value="{{ priority.title }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Department Goal</label>
+                                <select name="department_goal_id" class="form-select">
+                                    <option value="">Unassigned</option>
+                                    {% for g in dept_goals %}
+                                    <option value="{{ g.id }}" {% if dg.id == g.id %}selected{% endif %}>{{ g.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <select name="status" class="form-select">
+                                    <option value="not_started" {% if priority.status == "not_started" %}selected{% endif %}>Not Started</option>
+                                    <option value="active" {% if priority.status == "active" %}selected{% endif %}>Active</option>
+                                    <option value="on_hold" {% if priority.status == "on_hold" %}selected{% endif %}>On Hold</option>
+                                    <option value="completed" {% if priority.status == "completed" %}selected{% endif %}>Completed</option>
+                                    <option value="cancelled" {% if priority.status == "cancelled" %}selected{% endif %}>Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Scope</label>
+                                <select name="scope" class="form-select">
+                                    <option value="">None</option>
+                                    <option value="small" {% if priority.scope == "small" %}selected{% endif %}>Small</option>
+                                    <option value="medium" {% if priority.scope == "medium" %}selected{% endif %}>Medium</option>
+                                    <option value="large" {% if priority.scope == "large" %}selected{% endif %}>Large</option>
+                                    <option value="xlarge" {% if priority.scope == "xlarge" %}selected{% endif %}>XLarge</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-textarea" rows="2">{{ priority.description | default(value="") }}</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Impact Narrative</label>
+                            <textarea name="impact_narrative" class="form-textarea" rows="2" placeholder="Why does this priority matter? What impact will it have?">{{ priority.impact_narrative | default(value="") }}</textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                            <button type="button" class="btn btn-text btn-sm"
+                                    onclick="document.getElementById('priority-edit-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-view-{{ priority.id }}').classList.remove('hidden');">Cancel</button>
+                        </div>
+                    </form>
+                </div>
             </div>
             {% endfor %}
             {% endif %}
 
-            <!-- Add priority under this department goal -->
-            <form class="cycle-add-form"
-                  hx-post="/priorities"
-                  hx-swap="none"
-                  hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';"
-                  style="margin-top: var(--space-1);">
-                <input type="hidden" name="phase_id" value="{{ phase.id }}">
-                <input type="hidden" name="dept_goal_id" value="{{ dg.id }}">
-                <div class="cycle-add-row">
-                    <input type="text" name="title" class="form-input form-input--sm" placeholder="New priority" required style="width:auto;flex:1;">
-                    <select name="status" class="form-select form-select--sm" style="width:auto;max-width:140px;">
-                        <option value="not_started" selected>Not Started</option>
-                        <option value="active">Active</option>
-                        <option value="on_hold">On Hold</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-add">+ Priority</button>
-                </div>
-            </form>
         </div>
     </div>
     {% endfor %}
@@ -355,15 +293,9 @@
             <span class="badge" style="background:var(--color-tint-purple);color:var(--color-purple-30);font-size:0.7rem;">{{ priority.scope }}</span>
             {% endif %}
             <div class="cycle-item-right">
-                {% if priority.kr_type %}
-                <span class="kr-progress-value">{{ priority.progress }}%</span>
-                <span class="kr-progress-track">
-                    <span class="kr-progress-fill" style="width:{{ priority.progress }}%;background:{% if priority.progress >= 100 %}var(--color-success){% elif priority.progress >= 50 %}var(--color-primary){% else %}var(--color-warning){% endif %};"></span>
-                </span>
-                {% endif %}
                 {% if priority.impact_narrative %}
                 <button class="btn-icon btn-icon--sm" title="Show impact narrative"
-                        onclick="event.stopPropagation(); document.getElementById('priority-narrative-{{ priority.id }}').classList.toggle('hidden'); document.getElementById('priority-narrative-{{ priority.id }}').style.display = document.getElementById('priority-narrative-{{ priority.id }}').style.display === 'none' ? '' : 'none';">
+                        onclick="event.stopPropagation(); document.getElementById('priority-narrative-{{ priority.id }}').classList.toggle('hidden');">
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
                 </button>
                 {% endif %}
@@ -384,59 +316,67 @@
             </div>
         </div>
         {% if priority.impact_narrative %}
-        <div class="cycle-item-desc-block hidden" id="priority-narrative-{{ priority.id }}" style="display:none;font-style:italic;color:var(--color-text-muted);">
+        <div class="cycle-item-desc-block hidden" id="priority-narrative-{{ priority.id }}" style="font-style:italic;color:var(--color-text-muted);">
             {{ priority.impact_narrative }}
         </div>
         {% endif %}
-        <form class="cycle-item-edit hidden" id="priority-edit-{{ priority.id }}"
-              hx-put="/priorities/{{ priority.id }}"
-              hx-swap="none"
-              hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';"
-              style="flex-wrap:wrap;">
-            <input type="text" name="title" class="form-input form-input--sm" value="{{ priority.title }}" required style="flex:1;">
-            <select name="dept_goal_id" class="form-select form-select--sm" style="width:auto;max-width:200px;">
-                <option value="">No department goal</option>
-                {% for g in dept_goals %}
-                <option value="{{ g.id }}">{{ g.title }}</option>
-                {% endfor %}
-            </select>
-            <select name="status" class="form-select form-select--sm" style="width:auto;max-width:140px;">
-                <option value="not_started" {% if priority.status == "not_started" %}selected{% endif %}>Not Started</option>
-                <option value="active" {% if priority.status == "active" %}selected{% endif %}>Active</option>
-                <option value="on_hold" {% if priority.status == "on_hold" %}selected{% endif %}>On Hold</option>
-                <option value="completed" {% if priority.status == "completed" %}selected{% endif %}>Completed</option>
-                <option value="cancelled" {% if priority.status == "cancelled" %}selected{% endif %}>Cancelled</option>
-            </select>
-            <select name="scope" class="form-select form-select--sm" style="width:auto;max-width:120px;">
-                <option value="">Scope</option>
-                <option value="small" {% if priority.scope == "small" %}selected{% endif %}>Small</option>
-                <option value="medium" {% if priority.scope == "medium" %}selected{% endif %}>Medium</option>
-                <option value="large" {% if priority.scope == "large" %}selected{% endif %}>Large</option>
-                <option value="xlarge" {% if priority.scope == "xlarge" %}selected{% endif %}>XLarge</option>
-            </select>
-            <div style="display:flex;align-items:center;gap:var(--space-2);width:100%;margin-top:var(--space-1);flex-wrap:wrap;">
-                <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">KR Type</label>
-                <select name="kr_type" class="form-select form-select--sm" style="width:auto;max-width:140px;">
-                    <option value="">None</option>
-                    <option value="percent" {% if priority.kr_type == "percent" %}selected{% endif %}>Percent</option>
-                    <option value="number" {% if priority.kr_type == "number" %}selected{% endif %}>Number</option>
-                    <option value="binary" {% if priority.kr_type == "binary" %}selected{% endif %}>Binary</option>
-                </select>
-                <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">Target</label>
-                <input type="number" name="kr_target" class="form-input form-input--sm" value="{{ priority.kr_target | default(value='') }}" style="width:80px;" min="0">
-                <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">Current</label>
-                <input type="number" name="kr_current" class="form-input form-input--sm" value="{{ priority.kr_current | default(value='') }}" style="width:80px;" min="0">
-            </div>
-            <div style="display:flex;align-items:center;gap:var(--space-2);width:100%;margin-top:var(--space-1);">
-                <label class="form-label form-label--inline" style="font-size:0.8rem;margin:0;">Impact</label>
-                <textarea name="impact_narrative" class="form-input form-input--sm" rows="2" style="flex:1;min-width:200px;resize:vertical;">{{ priority.impact_narrative | default(value="") }}</textarea>
-            </div>
-            <div style="display:flex;gap:var(--space-1);margin-top:var(--space-1);">
-                <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                <button type="button" class="btn btn-sm btn-text"
-                        onclick="document.getElementById('priority-edit-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-view-{{ priority.id }}').classList.remove('hidden');">Cancel</button>
-            </div>
-        </form>
+        <!-- Edit form for priority -->
+        <div class="hidden" id="priority-edit-{{ priority.id }}" style="margin-top:var(--space-2);">
+            <form hx-put="/priorities/{{ priority.id }}"
+                  hx-swap="none"
+                  hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Priority Title</label>
+                        <input type="text" name="title" class="form-input" value="{{ priority.title }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Department Goal</label>
+                        <select name="department_goal_id" class="form-select">
+                            <option value="">Unassigned</option>
+                            {% for g in dept_goals %}
+                            <option value="{{ g.id }}">{{ g.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="not_started" {% if priority.status == "not_started" %}selected{% endif %}>Not Started</option>
+                            <option value="active" {% if priority.status == "active" %}selected{% endif %}>Active</option>
+                            <option value="on_hold" {% if priority.status == "on_hold" %}selected{% endif %}>On Hold</option>
+                            <option value="completed" {% if priority.status == "completed" %}selected{% endif %}>Completed</option>
+                            <option value="cancelled" {% if priority.status == "cancelled" %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Scope</label>
+                        <select name="scope" class="form-select">
+                            <option value="">None</option>
+                            <option value="small" {% if priority.scope == "small" %}selected{% endif %}>Small</option>
+                            <option value="medium" {% if priority.scope == "medium" %}selected{% endif %}>Medium</option>
+                            <option value="large" {% if priority.scope == "large" %}selected{% endif %}>Large</option>
+                            <option value="xlarge" {% if priority.scope == "xlarge" %}selected{% endif %}>XLarge</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-textarea" rows="2">{{ priority.description | default(value="") }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Impact Narrative</label>
+                    <textarea name="impact_narrative" class="form-textarea" rows="2" placeholder="Why does this priority matter? What impact will it have?">{{ priority.impact_narrative | default(value="") }}</textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                    <button type="button" class="btn btn-text btn-sm"
+                            onclick="document.getElementById('priority-edit-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-view-{{ priority.id }}').classList.remove('hidden');">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
     {% endfor %}
 </div>

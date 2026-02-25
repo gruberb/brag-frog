@@ -1,9 +1,6 @@
 <div class="cycle-item-row" id="dept-goal-{{ goal.id }}">
     <div class="cycle-item-view" id="dept-goal-view-{{ goal.id }}">
         <span class="cycle-item-title">{{ goal.title }}</span>
-        {% if goal.category %}
-        <span class="badge badge-category badge-category--{{ goal.category }}">{{ goal.category }}</span>
-        {% endif %}
         {% if goal.status %}
         <span class="badge badge-status badge-status--{{ goal.status }}">{{ goal.status | replace(from="_", to=" ") }}</span>
         {% endif %}
@@ -34,12 +31,6 @@
           hx-swap="outerHTML"
           style="flex-wrap:wrap;">
         <input type="text" name="title" class="form-input form-input--sm" value="{{ goal.title }}" required style="flex:1;">
-        <select name="category" class="form-select form-select--sm" style="width:auto;max-width:160px;">
-            <option value="">Category</option>
-            <option value="team" {% if goal.category == "team" %}selected{% endif %}>Team</option>
-            <option value="department" {% if goal.category == "department" %}selected{% endif %}>Department</option>
-            <option value="organization" {% if goal.category == "organization" %}selected{% endif %}>Organization</option>
-        </select>
         <select name="status" class="form-select form-select--sm" style="width:auto;max-width:160px;">
             <option value="not_started" {% if goal.status == "not_started" %}selected{% endif %}>Not Started</option>
             <option value="in_progress" {% if goal.status == "in_progress" %}selected{% endif %}>In Progress</option>

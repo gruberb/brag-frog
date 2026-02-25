@@ -195,14 +195,7 @@ fn build_markdown(
         for goal in dept_goals {
             out.push_str(&format!("\n### Department Goal: {}\n", goal.title));
 
-            let mut meta = Vec::new();
-            if let Some(ref cat) = goal.category
-                && !cat.is_empty()
-            {
-                meta.push(format!("Category: {}", cat));
-            }
-            meta.push(format!("Status: {}", format_status(&goal.status)));
-            out.push_str(&format!("*{}*\n", meta.join(" | ")));
+            out.push_str(&format!("*Status: {}*\n", format_status(&goal.status)));
 
             if let Some(ref desc) = goal.description
                 && !desc.is_empty()
@@ -218,8 +211,8 @@ fn build_markdown(
 
             for p in &goal_priorities {
                 out.push_str(&format!(
-                    "\n- **Priority:** {} — {}% complete\n",
-                    p.title, p.progress
+                    "\n- **Priority:** {} — {}\n",
+                    p.title, format_status(&p.status)
                 ));
             }
         }
@@ -234,8 +227,8 @@ fn build_markdown(
             out.push_str("\n### Unassigned Priorities\n");
             for p in &unassigned {
                 out.push_str(&format!(
-                    "\n- **Priority:** {} — {}% complete\n",
-                    p.title, p.progress
+                    "\n- **Priority:** {} — {}\n",
+                    p.title, format_status(&p.status)
                 ));
             }
         }
@@ -328,7 +321,6 @@ fn build_json(
                     "id": g.id,
                     "title": g.title,
                     "description": g.description,
-                    "category": g.category,
                     "status": g.status,
                 })
             })
@@ -344,7 +336,6 @@ fn build_json(
                     "title": p.title,
                     "department_goal_id": p.department_goal_id,
                     "status": p.status,
-                    "progress": p.progress,
                 })
             })
             .collect();

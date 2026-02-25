@@ -45,7 +45,7 @@
             <div class="checkin-priority-header">
                 <span class="kr-inline-dot" style="background:{{ priority.color | default(value='#888') }};"></span>
                 <span class="checkin-priority-name">{{ priority.title }}</span>
-                <span class="text-sm text-muted">{{ priority.progress | default(value=0) }}%</span>
+                <span class="badge badge-status badge-status--{{ priority.status }}" style="font-size:0.7rem;">{{ priority.status | replace(from="_", to=" ") }}</span>
             </div>
         </div>
         {% endfor %}

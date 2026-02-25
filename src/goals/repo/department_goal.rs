@@ -13,7 +13,7 @@ impl DepartmentGoal {
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, DepartmentGoalRow>(
-            "SELECT * FROM department_goals WHERE phase_id = ? ORDER BY sort_order, id",
+            "SELECT id, phase_id, title, description, status, sort_order, source, created_at FROM department_goals WHERE phase_id = ? ORDER BY sort_order, id",
         )
         .bind(phase_id)
         .fetch_all(pool)
@@ -51,15 +51,14 @@ impl DepartmentGoal {
 
         let row = sqlx::query_as::<_, DepartmentGoalRow>(
             r#"
-            INSERT INTO department_goals (phase_id, title, description, category, sort_order, status)
-            VALUES (?, ?, ?, ?, ?, ?)
-            RETURNING *
+            INSERT INTO department_goals (phase_id, title, description, sort_order, status)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id, phase_id, title, description, status, sort_order, source, created_at
             "#,
         )
         .bind(phase_id)
         .bind(&enc_title)
         .bind(&enc_description)
-        .bind(&input.category)
         .bind(max_order.unwrap_or(0) + 1)
         .bind(input.status.as_deref().unwrap_or("in_progress"))
         .fetch_one(pool)
@@ -81,14 +80,13 @@ impl DepartmentGoal {
 
         let row = sqlx::query_as::<_, DepartmentGoalRow>(
             r#"
-            UPDATE department_goals SET title = ?, description = ?, category = ?, status = ?
+            UPDATE department_goals SET title = ?, description = ?, status = ?
             WHERE id = ? AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)
-            RETURNING *
+            RETURNING id, phase_id, title, description, status, sort_order, source, created_at
             "#,
         )
         .bind(&enc_title)
         .bind(&enc_description)
-        .bind(&input.category)
         .bind(input.status.as_deref().unwrap_or("in_progress"))
         .bind(id)
         .bind(user_id)

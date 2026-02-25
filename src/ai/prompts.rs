@@ -214,7 +214,6 @@ fn format_dept_goals_with_priorities(
     dept_goals
         .iter()
         .map(|g| {
-            let category = g.category.as_deref().unwrap_or("general");
             let status = g.status.replace('_', " ").to_uppercase();
             let desc = g.description.as_deref().unwrap_or("");
             let pris: Vec<String> = priorities
@@ -222,10 +221,9 @@ fn format_dept_goals_with_priorities(
                 .filter(|p| p.department_goal_id == Some(g.id))
                 .map(|p| {
                     format!(
-                        "  - [{}] {} (progress: {}%)",
+                        "  - [{}] {}",
                         p.status.replace('_', " "),
                         p.title,
-                        p.progress
                     )
                 })
                 .collect();
@@ -235,8 +233,8 @@ fn format_dept_goals_with_priorities(
                 pris.join("\n")
             };
             format!(
-                "- [{} | {}] {}: {}\n  Priorities:\n{}",
-                category, status, g.title, desc, pri_text
+                "- [{}] {}: {}\n  Priorities:\n{}",
+                status, g.title, desc, pri_text
             )
         })
         .collect::<Vec<_>>()
@@ -400,14 +398,13 @@ pub fn build_meeting_prep_prompt(
                 r#"
 ## Linked Priority
 Department Goal: {} ({})
-Priority: {} — status: {}, progress: {}%
+Priority: {} — status: {}
 {}
 "#,
                 goal.title,
                 goal.status,
                 priority.title,
                 priority.status,
-                priority.progress,
                 if recent_work.is_empty() {
                     String::new()
                 } else {
@@ -417,8 +414,8 @@ Priority: {} — status: {}, progress: {}%
         }
         (None, Some(priority)) => {
             format!(
-                "\n## Linked Priority\n{} — status: {}, progress: {}%\n",
-                priority.title, priority.status, priority.progress
+                "\n## Linked Priority\n{} — status: {}\n",
+                priority.title, priority.status
             )
         }
         _ => String::new(),

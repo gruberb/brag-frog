@@ -25,7 +25,9 @@ impl Priority {
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, PriorityRow>(
-            "SELECT * FROM priorities WHERE phase_id = ? ORDER BY sort_order, id",
+            "SELECT id, phase_id, user_id, title, description, status, color, sort_order,
+                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
+             FROM priorities WHERE phase_id = ? ORDER BY sort_order, id",
         )
         .bind(phase_id)
         .fetch_all(pool)
@@ -40,7 +42,9 @@ impl Priority {
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, PriorityRow>(
-            "SELECT * FROM priorities WHERE department_goal_id = ? ORDER BY sort_order, id",
+            "SELECT id, phase_id, user_id, title, description, status, color, sort_order,
+                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
+             FROM priorities WHERE department_goal_id = ? ORDER BY sort_order, id",
         )
         .bind(department_goal_id)
         .fetch_all(pool)
@@ -56,7 +60,10 @@ impl Priority {
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, PriorityRow>(
             r#"
-            SELECT pr.* FROM priorities pr
+            SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.description, pr.status,
+                pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
+                pr.impact_narrative, pr.department_goal_id, pr.created_at
+            FROM priorities pr
             JOIN brag_phases p ON pr.phase_id = p.id
             WHERE p.user_id = ? AND p.is_active = 1
               AND pr.status NOT IN ('completed', 'cancelled')
@@ -78,7 +85,10 @@ impl Priority {
     ) -> Result<Option<Self>, AppError> {
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
-            SELECT pr.* FROM priorities pr
+            SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.description, pr.status,
+                pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
+                pr.impact_narrative, pr.department_goal_id, pr.created_at
+            FROM priorities pr
             JOIN brag_phases p ON pr.phase_id = p.id
             WHERE pr.id = ? AND p.user_id = ?
             "#,
@@ -122,9 +132,10 @@ impl Priority {
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
             INSERT INTO priorities (phase_id, user_id, title, description, status, color, sort_order,
-                scope, department_goal_id, kr_type, direction, unit, baseline, target, target_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING *
+                scope, department_goal_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id, phase_id, user_id, title, description, status, color, sort_order,
+                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
             "#,
         )
         .bind(phase_id)
@@ -136,19 +147,13 @@ impl Priority {
         .bind(max_order.unwrap_or(0) + 1)
         .bind(&input.scope)
         .bind(input.department_goal_id)
-        .bind(&input.kr_type)
-        .bind(&input.direction)
-        .bind(&input.unit)
-        .bind(input.baseline)
-        .bind(input.target)
-        .bind(&input.target_date)
         .fetch_one(pool)
         .await?;
 
         row.decrypt(crypto)
     }
 
-    /// Updates a priority's fields and optionally recalculates score.
+    /// Updates a priority's fields.
     pub async fn update(
         pool: &SqlitePool,
         id: i64,
@@ -156,12 +161,7 @@ impl Priority {
         input: &UpdatePriority,
         crypto: &UserCrypto,
     ) -> Result<Self, AppError> {
-        let progress = input.progress.unwrap_or(0);
-        let status = if progress >= 100 {
-            "completed"
-        } else {
-            input.status.as_deref().unwrap_or("active")
-        };
+        let status = input.status.as_deref().unwrap_or("active");
 
         let enc_title = crypto.encrypt(&input.title)?;
         let enc_description = crypto.encrypt_opt(&input.description)?;
@@ -170,11 +170,11 @@ impl Priority {
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
             UPDATE priorities SET title = ?, description = ?, status = ?, scope = ?,
-                impact_narrative = ?, department_goal_id = ?, progress = ?,
-                kr_type = ?, direction = ?, unit = ?, baseline = ?, target = ?,
-                current_value = ?, target_date = ?, started_at = ?, completed_at = ?
+                impact_narrative = ?, department_goal_id = ?,
+                started_at = ?, completed_at = ?
             WHERE id = ? AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)
-            RETURNING *
+            RETURNING id, phase_id, user_id, title, description, status, color, sort_order,
+                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
             "#,
         )
         .bind(&enc_title)
@@ -183,14 +183,6 @@ impl Priority {
         .bind(&input.scope)
         .bind(&enc_narrative)
         .bind(input.department_goal_id)
-        .bind(progress)
-        .bind(&input.kr_type)
-        .bind(&input.direction)
-        .bind(&input.unit)
-        .bind(input.baseline)
-        .bind(input.target)
-        .bind(input.current_value)
-        .bind(&input.target_date)
         .bind(&input.started_at)
         .bind(&input.completed_at)
         .bind(id)
@@ -198,29 +190,7 @@ impl Priority {
         .fetch_one(pool)
         .await?;
 
-        let priority = row.decrypt(crypto)?;
-
-        // Recalculate and persist score if measurement fields are set
-        if let Some(score) = priority.recalculate_score() {
-            let synced_progress = (score * 100.0).round() as i64;
-            let final_status = if synced_progress >= 100 {
-                "completed"
-            } else {
-                status
-            };
-            let updated = sqlx::query_as::<_, PriorityRow>(
-                "UPDATE priorities SET score = ?, progress = ?, status = ? WHERE id = ? RETURNING *",
-            )
-            .bind(score)
-            .bind(synced_progress)
-            .bind(final_status)
-            .bind(priority.id)
-            .fetch_one(pool)
-            .await?;
-            return updated.decrypt(crypto);
-        }
-
-        Ok(priority)
+        row.decrypt(crypto)
     }
 
     /// Deletes a priority and nullifies `priority_id` on all linked entries.

@@ -638,7 +638,7 @@ async fn test_priority_create_returns_html() {
 
     let body = "title=Test+Priority&status=not_started";
     let resp = app
-        .post_form("/priorities/create", body, Some(&cookie))
+        .post_form("/priorities", body, Some(&cookie))
         .await;
     assert_eq!(resp.status, StatusCode::OK);
     assert!(resp.body.contains("Test Priority"));

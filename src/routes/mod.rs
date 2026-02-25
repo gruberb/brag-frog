@@ -115,7 +115,7 @@ pub fn create_router() -> Router<AppState> {
             get(review_routes::logbook::logbook_filtered_entries),
         )
         // Priorities
-        .route("/priorities", get(goals_routes::priorities_page))
+        .route("/priorities", get(goals_routes::priorities_page).post(goals_routes::create_priority))
         .route(
             "/priorities/goals",
             post(goals_routes::create_department_goal),
@@ -125,7 +125,6 @@ pub fn create_router() -> Router<AppState> {
             put(goals_routes::update_department_goal)
                 .delete(goals_routes::delete_department_goal),
         )
-        .route("/priorities/create", post(goals_routes::create_priority))
         .route(
             "/priorities/{id}",
             put(goals_routes::update_priority).delete(goals_routes::delete_priority),

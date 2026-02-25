@@ -20,15 +20,6 @@ pub struct PriorityRow {
     pub completed_at: Option<String>,
     pub impact_narrative: Option<Vec<u8>>,
     pub department_goal_id: Option<i64>,
-    pub kr_type: Option<String>,
-    pub direction: Option<String>,
-    pub unit: Option<String>,
-    pub baseline: Option<f64>,
-    pub target: Option<f64>,
-    pub current_value: Option<f64>,
-    pub target_date: Option<String>,
-    pub score: Option<f64>,
-    pub progress: i64,
     pub created_at: String,
 }
 
@@ -48,22 +39,12 @@ impl PriorityRow {
             completed_at: self.completed_at,
             impact_narrative: crypto.decrypt_opt(&self.impact_narrative)?,
             department_goal_id: self.department_goal_id,
-            kr_type: self.kr_type,
-            direction: self.direction,
-            unit: self.unit,
-            baseline: self.baseline,
-            target: self.target,
-            current_value: self.current_value,
-            target_date: self.target_date,
-            score: self.score,
-            progress: self.progress,
             created_at: self.created_at,
         })
     }
 }
 
-/// A user priority — workstream, project, or measurable outcome.
-/// Merges what was previously key_results + initiatives.
+/// A user priority — qualitative focus area for a performance cycle.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Priority {
     pub id: i64,
@@ -83,51 +64,7 @@ pub struct Priority {
     /// Narrative describing the outcome and significance of this body of work.
     pub impact_narrative: Option<String>,
     pub department_goal_id: Option<i64>,
-    // Optional measurement fields (preserved from KRs)
-    pub kr_type: Option<String>,
-    pub direction: Option<String>,
-    pub unit: Option<String>,
-    pub baseline: Option<f64>,
-    pub target: Option<f64>,
-    pub current_value: Option<f64>,
-    pub target_date: Option<String>,
-    pub score: Option<f64>,
-    pub progress: i64,
     pub created_at: String,
-}
-
-impl Priority {
-    /// Calculates the score (0.0-1.0) based on kr_type and measurement fields.
-    pub fn recalculate_score(&self) -> Option<f64> {
-        match self.kr_type.as_deref() {
-            Some("numeric") => {
-                let baseline = self.baseline.unwrap_or(0.0);
-                let target = self.target.unwrap_or(0.0);
-                let current = self.current_value.unwrap_or(baseline);
-                let range = target - baseline;
-                if range.abs() < f64::EPSILON {
-                    return Some(if (current - target).abs() < f64::EPSILON {
-                        1.0
-                    } else {
-                        0.0
-                    });
-                }
-                let raw = match self.direction.as_deref() {
-                    Some("decrease") => (baseline - current) / (baseline - target),
-                    _ => (current - baseline) / (target - baseline),
-                };
-                Some(raw.clamp(0.0, 1.0))
-            }
-            Some("boolean") => Some(if self.current_value.unwrap_or(0.0) >= 1.0 {
-                1.0
-            } else {
-                0.0
-            }),
-            Some("milestone") => Some(if self.status == "completed" { 1.0 } else { 0.0 }),
-            Some("manual") => Some(self.progress as f64 / 100.0),
-            _ => None,
-        }
-    }
 }
 
 /// Form payload for creating a priority.
@@ -141,18 +78,6 @@ pub struct CreatePriority {
     pub scope: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
     pub department_goal_id: Option<i64>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub kr_type: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub direction: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub unit: Option<String>,
-    #[serde(default)]
-    pub baseline: Option<f64>,
-    #[serde(default)]
-    pub target: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub target_date: Option<String>,
 }
 
 /// Form payload for updating a priority.
@@ -168,22 +93,6 @@ pub struct UpdatePriority {
     pub impact_narrative: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
     pub department_goal_id: Option<i64>,
-    #[serde(default)]
-    pub progress: Option<i64>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub kr_type: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub direction: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub unit: Option<String>,
-    #[serde(default)]
-    pub baseline: Option<f64>,
-    #[serde(default)]
-    pub target: Option<f64>,
-    #[serde(default)]
-    pub current_value: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub target_date: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub started_at: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]

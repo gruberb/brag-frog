@@ -11,7 +11,6 @@ pub struct DepartmentGoalRow {
     pub phase_id: i64,
     pub title: Vec<u8>,
     pub description: Option<Vec<u8>>,
-    pub category: Option<String>,
     pub status: String,
     pub sort_order: i64,
     pub source: String,
@@ -25,7 +24,6 @@ impl DepartmentGoalRow {
             phase_id: self.phase_id,
             title: crypto.decrypt(&self.title)?,
             description: crypto.decrypt_opt(&self.description)?,
-            category: self.category,
             status: self.status,
             sort_order: self.sort_order,
             source: self.source,
@@ -41,7 +39,6 @@ pub struct DepartmentGoal {
     pub phase_id: i64,
     pub title: String,
     pub description: Option<String>,
-    pub category: Option<String>,
     pub status: String,
     pub sort_order: i64,
     /// One of: `manual`, `imported`.
@@ -55,8 +52,6 @@ pub struct CreateDepartmentGoal {
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub category: Option<String>,
     pub status: Option<String>,
 }
 
@@ -66,7 +61,5 @@ pub struct UpdateDepartmentGoal {
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub category: Option<String>,
     pub status: Option<String>,
 }
