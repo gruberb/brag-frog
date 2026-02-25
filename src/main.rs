@@ -1,6 +1,6 @@
 //! Binary entry point for Brag Frog. Initializes config and starts the server.
 
-use brag_frog::shared::config::Config;
+use brag_frog::kernel::config::Config;
 
 #[tokio::main]
 async fn main() {

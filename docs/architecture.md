@@ -9,60 +9,51 @@ Brag Frog is a server-side rendered Rust web app. This document covers its inter
 ```
 src/
   lib.rs                # Library crate: module re-exports + AppState struct
-  main.rs               # Binary entry: config loading, Tera init, middleware, server startup
-  config.rs             # Config from BRAGFROG_* env vars (+ .env via dotenvy)
+  main.rs               # Binary entry: config loading, server startup
+  app.rs                # Composition root: state setup, router assembly, static page handlers
   db/
     mod.rs              # SQLite pool setup + migration runner (initial + incremental)
-    queries.rs          # Future home for domain-specific raw SQL query modules
-  crypto.rs             # AES-256-GCM encrypt/decrypt for API tokens; UserCrypto per-user wrapper
-  error.rs              # AppError enum → HTTP status mapping (400/401/404/500)
-  clg.rs                # Career Level Guide levels loaded from config/clg_levels.toml
-  serde_helpers.rs      # deserialize_optional_i64/string — HTML empty string → None
-  services_config.rs    # Org-specific service defaults from config/services.toml
-  auth/
-    mod.rs              # Google OAuth flow (consent URL, token exchange, user upsert)
-    middleware.rs        # require_auth middleware + AuthUser extractor
-  models/
-    mod.rs              # Re-exports all models
-    user.rs             # User (Google OAuth identity, profile fields, settings)
-    phase.rs            # BragPhase (performance review cycle)
-    week.rs             # Week (ISO week within a phase, auto-created)
-    entry.rs            # BragEntry (work item — PR, bug, doc, manual)
-    key_result.rs       # KeyResult (measurable outcome under a goal)
-    goal.rs             # Goal (high-level objective, phase-scoped)
-    initiative.rs       # Initiative (project that drives key results)
-    checkin.rs          # WeeklyCheckin + KrCheckinSnapshot (weekly reflections)
-    impact_story.rs     # ImpactStory (narrative impact documents)
-    ai_document.rs      # AiDocument (AI-generated review drafts)
-    meeting_rule.rs     # MeetingRule (recurring meeting classification rules)
-    weekly_focus.rs     # WeeklyFocus + FocusItem (weekly focus selections)
-    meeting_prep.rs     # MeetingPrepNote (per-meeting prep notes)
-    integration.rs      # IntegrationConfig (per-user service credentials)
-    sync_log.rs         # SyncLog (sync run audit trail)
-    summary.rs          # Summary + ReviewConfig (AI self-review sections from TOML)
-  routes/
-    mod.rs              # Router assembly: public, auth, and protected route groups
-    auth.rs             # Login page render, OAuth callback, logout, Google Drive/Calendar connect
-    dashboard.rs        # Dashboard page + weekly focus save
-    logbook.rs          # Weekly logbook page (main UI) + landing page
-    entries.rs          # Entry CRUD (quick-create, update, delete, view — all return HTML fragments)
-    key_results.rs      # Key result CRUD (API-only, no page)
-    goals.rs            # Goal CRUD (API-only, no page)
-    goals_page.rs       # Goals & OKRs page (consolidated goals, KRs, initiatives, phases)
-    phases.rs           # Phase create, delete, activate (GET redirects to /goals)
-    initiatives.rs      # Initiative CRUD
-    integrations.rs     # Integrations page + save/test/reset integration configs
-    checkins.rs         # Weekly check-in page + check-in history list
-    impact_stories.rs   # Impact stories CRUD
-    meeting_prep.rs     # Meeting prep page + save handler
-    summaries.rs        # Self-review page, AI draft generation, save sections
-    sync.rs             # Trigger sync per-service or all, hard sync, clear logs
-    analyze.rs          # Analyze page with filtering
-    trends.rs           # Trends page (cross-phase analytics, PR/ticket breakdowns)
-    settings.rs         # User settings (profile, calendar prefs) + CLG guide page
-    export.rs           # Markdown/JSON data export
-  sync/
-    mod.rs              # SyncService trait + orchestrator (run_sync) + SSRF validation
+  kernel/               # Shared kernel — cross-cutting concerns
+    config.rs           # Config from BRAGFROG_* env vars (+ .env via dotenvy)
+    crypto.rs           # AES-256-GCM encrypt/decrypt; UserCrypto per-user wrapper
+    error.rs            # AppError enum → HTTP status mapping (400/401/404/500)
+    http.rs             # Shared HTTP client factory (30s timeout)
+    middleware.rs       # security_headers, csrf_protection
+    render.rs           # hx_redirect helper, markdown Tera filter
+    serde_helpers.rs    # deserialize_optional_i64/string — HTML empty string → None
+  identity/             # Authentication & user management
+    auth/
+      mod.rs            # Google OAuth flow (consent URL, token exchange, user upsert)
+      middleware.rs     # require_auth middleware + AuthUser extractor
+    model.rs            # User struct
+    repo.rs             # User CRUD
+    routes.rs           # Login, callback, logout, settings, level-guide
+    clg.rs              # Career Level Guide levels from config/clg_levels.toml
+  worklog/              # Work entry logging
+    model.rs            # BragEntry, EntryType enum, category mapping
+    repo.rs             # Entry CRUD, source lookup, soft-delete, classification
+    routes.rs           # Quick-create, update, delete, view, classify, exclusions
+    service.rs          # Week reassignment, classification result, exclusion logic
+  objectives/           # Priorities & department goals
+    model/              # Priority, DepartmentGoal structs + form types
+    repo/               # Priority, DepartmentGoal persistence
+    routes.rs           # Priorities page, CRUD endpoints
+    service.rs          # Priority sorting, grouping by department goal
+  cycle/                # Performance review cycles
+    model/              # BragPhase, Week, Summary, CheckIn, Focus, Meeting, Stories, AI docs
+    repo/               # Persistence for all cycle entities
+    routes/             # Dashboard, logbook, trends, check-ins, summaries, export, phases
+    service/            # Dashboard computation, insights analytics, phase validation
+  integrations/         # External service sync
+    mod.rs              # SyncService trait, SyncedEntry, ConnectionStatus, re-exports
+    orchestrator.rs     # run_sync orchestration, entry persistence, phase window resolution
+    factory.rs          # get_sync_service — maps service name to implementation
+    validation.rs       # SSRF validation for user-provided base URLs
+    model.rs            # IntegrationConfig, SyncLog
+    repo.rs             # Integration persistence
+    services_config.rs  # Org-specific defaults from config/services.toml
+    sync_routes.rs      # POST /sync/{service} handlers
+    integrations_routes.rs  # Integrations settings page + API
     github.rs           # GitHub PRs (authored + reviewed + merged)
     phabricator.rs      # Phabricator revisions (Conduit API)
     bugzilla.rs         # Bugzilla bugs (REST API, no token required)

@@ -1,9 +1,9 @@
 use super::common;
 
-use brag_frog::entries::model::BragEntry;
-use brag_frog::entries::model::{CreateEntry, UpdateEntry};
-use brag_frog::goals::model::DepartmentGoal;
-use brag_frog::review::model::{BragPhase, Summary, Week};
+use brag_frog::worklog::model::BragEntry;
+use brag_frog::worklog::model::{CreateEntry, UpdateEntry};
+use brag_frog::objectives::model::DepartmentGoal;
+use brag_frog::cycle::model::{BragPhase, Summary, Week};
 
 #[tokio::test]
 async fn test_entry_crud() {
@@ -47,7 +47,7 @@ async fn test_entry_crud() {
     assert_eq!(found.unwrap().title, "Test Entry");
 
     // Update
-    let update_input = brag_frog::entries::model::UpdateEntry {
+    let update_input = brag_frog::worklog::model::UpdateEntry {
         priority_id: None,
         title: "Updated Entry".to_string(),
         description: Some("Updated desc".to_string()),

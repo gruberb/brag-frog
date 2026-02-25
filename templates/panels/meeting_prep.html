@@ -52,6 +52,13 @@
         </div>
 
         <div class="form-group">
+            <label class="form-label">Meeting Goal</label>
+            <input type="text" name="meeting_goal" class="form-input"
+                   placeholder="e.g., Get alignment on the API design, Unblock the migration timeline"
+                   value="{% if prep_note %}{{ prep_note.meeting_goal | default(value='') }}{% endif %}">
+        </div>
+
+        <div class="form-group">
             <label class="form-label">Prep Notes</label>
             <textarea name="notes" class="form-textarea" rows="6"
                       placeholder="Talking points, agenda, questions...">{% if prep_note %}{{ prep_note.notes | default(value='') }}{% endif %}</textarea>
@@ -66,8 +73,8 @@
 
         <div class="form-group">
             <label class="form-label">AI Context <span style="font-weight:normal;color:var(--color-text-secondary);">(optional)</span></label>
-            <textarea id="ai-context-snippets" class="form-textarea" rows="3"
-                      placeholder="Paste meeting context: agenda, prior discussion notes, key points from docs. Links alone won't work — paste the relevant content. One item per line, up to 5."></textarea>
+            <textarea id="ai-context-snippets" class="form-textarea" rows="8"
+                      placeholder="Paste meeting context: agenda, prior discussion notes, key points from docs. Links alone won't work — paste the relevant content."></textarea>
         </div>
 
         <div class="form-actions" style="margin-top:12px;flex-wrap:wrap;gap:8px;">
@@ -102,6 +109,7 @@
     function fetchMeetingPrepAiDraft(entryId) {
         var textarea = document.querySelector('#meeting-prep-panel textarea[name="notes"]');
         var contextArea = document.getElementById('ai-context-snippets');
+        var goalInput = document.querySelector('#meeting-prep-panel input[name="meeting_goal"]');
         var btn = document.getElementById('meeting-prep-ai-btn');
         var loading = document.getElementById('meeting-prep-ai-loading');
 
@@ -110,6 +118,7 @@
 
         var formData = new URLSearchParams();
         formData.append('context_snippets', contextArea ? contextArea.value : '');
+        formData.append('meeting_goal', goalInput ? goalInput.value : '');
 
         fetch('/meeting-prep/panel/' + entryId + '/ai-draft', {
             method: 'POST',
@@ -136,6 +145,13 @@
 
     {% else %}
     <!-- Read mode -->
+    {% if prep_note and prep_note.meeting_goal %}
+    <div class="form-group">
+        <label class="form-label">Meeting Goal</label>
+        <div class="text-sm">{{ prep_note.meeting_goal }}</div>
+    </div>
+    {% endif %}
+
     {% if prep_note and prep_note.notes %}
     <div class="form-group">
         <label class="form-label">Prep Notes</label>

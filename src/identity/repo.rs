@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-use crate::shared::error::AppError;
+use crate::kernel::error::AppError;
 
 use super::model::{ProfileUpdate, User};
 

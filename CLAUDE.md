@@ -17,7 +17,7 @@ cargo clippy           # must pass before committing
 
 ## Project Structure
 
-`src/`: `app.rs` (router + state), `lib.rs` (module declarations), `main.rs` (entrypoint). Modules: `ai/`, `analytics/`, `db/`, `entries/`, `identity/`, `okr/`, `review/`, `routes/`, `shared/`, `sync/`.
+`src/`: `app.rs` (router + state + route assembly), `lib.rs` (module declarations), `main.rs` (entrypoint). Modules: `ai/`, `cycle/` (phases, weeks, dashboard, summaries, check-ins), `db/`, `identity/`, `integrations/` (external service sync), `kernel/` (config, crypto, errors, middleware), `objectives/` (priorities, department goals), `worklog/` (entries, entry types).
 
 ## Key Conventions
 

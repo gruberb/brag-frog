@@ -3,11 +3,11 @@ use super::common;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 
-use brag_frog::entries::model::BragEntry;
-use brag_frog::shared::crypto::Crypto;
-use brag_frog::shared::error::AppError;
-use brag_frog::sync::model::{IntegrationConfig, SyncLog};
-use brag_frog::sync::{ConnectionStatus, SyncService, SyncedEntry};
+use brag_frog::worklog::model::BragEntry;
+use brag_frog::kernel::crypto::Crypto;
+use brag_frog::kernel::error::AppError;
+use brag_frog::integrations::model::{IntegrationConfig, SyncLog};
+use brag_frog::integrations::{ConnectionStatus, SyncService, SyncedEntry};
 
 /// Mock sync service that returns a configurable list of entries.
 struct MockSyncService {
@@ -132,7 +132,7 @@ async fn test_sync_creates_entries() {
         make_entry("gh-3", "Review docs", "pr_reviewed", "2025-03-12"),
     ]);
 
-    let result = brag_frog::sync::run_sync_with_service(
+    let result = brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -161,7 +161,7 @@ async fn test_sync_empty_result() {
     let http_client = reqwest::Client::new();
 
     let mock = MockSyncService::new(vec![]);
-    let result = brag_frog::sync::run_sync_with_service(
+    let result = brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -190,12 +190,12 @@ async fn test_sync_creates_correct_week() {
         "2025-03-12",
     )]);
 
-    brag_frog::sync::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock)
+    brag_frog::integrations::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock)
         .await
         .unwrap();
 
     // Check that a week was created for ISO week 11
-    let weeks = brag_frog::review::model::Week::list_for_phase(&pool, phase_id)
+    let weeks = brag_frog::cycle::model::Week::list_for_phase(&pool, phase_id)
         .await
         .unwrap();
     assert!(!weeks.is_empty());
@@ -217,7 +217,7 @@ async fn test_sync_upserts_on_duplicate_source_id() {
         "pr_authored",
         "2025-03-10",
     )]);
-    brag_frog::sync::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock1)
+    brag_frog::integrations::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock1)
         .await
         .unwrap();
 
@@ -228,7 +228,7 @@ async fn test_sync_upserts_on_duplicate_source_id() {
         "pr_authored",
         "2025-03-10",
     )]);
-    let result2 = brag_frog::sync::run_sync_with_service(
+    let result2 = brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -264,7 +264,7 @@ async fn test_sync_preserves_user_priority() {
         "pr_authored",
         "2025-03-10",
     )]);
-    brag_frog::sync::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock1)
+    brag_frog::integrations::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock1)
         .await
         .unwrap();
 
@@ -297,7 +297,7 @@ async fn test_sync_preserves_user_priority() {
         "pr_authored",
         "2025-03-10",
     )]);
-    brag_frog::sync::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock2)
+    brag_frog::integrations::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock2)
         .await
         .unwrap();
 
@@ -350,7 +350,7 @@ async fn test_sync_meeting_type() {
     .await
     .unwrap();
 
-    brag_frog::sync::run_sync_with_service(
+    brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -419,7 +419,7 @@ async fn test_sync_drive_types() {
         },
     ]);
 
-    brag_frog::sync::run_sync_with_service(
+    brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -451,7 +451,7 @@ async fn test_sync_log_recorded() {
         make_entry("gh-log-2", "Entry 2", "pr_authored", "2025-03-11"),
     ]);
 
-    brag_frog::sync::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock)
+    brag_frog::integrations::run_sync_with_service(&pool, &crypto, &http_client, user_id, "github", mock)
         .await
         .unwrap();
 
@@ -473,7 +473,7 @@ async fn test_sync_log_records_error() {
         error_msg: "API rate limited".to_string(),
     });
 
-    let result = brag_frog::sync::run_sync_with_service(
+    let result = brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -509,7 +509,7 @@ async fn test_sync_requires_enabled_integration() {
 
     // No integration configured at all
     let mock = MockSyncService::new(vec![]);
-    let result = brag_frog::sync::run_sync_with_service(
+    let result = brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -550,7 +550,7 @@ async fn test_sync_rejects_disabled_integration() {
     .unwrap();
 
     let mock = MockSyncService::new(vec![]);
-    let result = brag_frog::sync::run_sync_with_service(
+    let result = brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,
@@ -580,7 +580,7 @@ async fn test_sync_with_configured_integration() {
         "2025-03-10",
     )]);
 
-    let result = brag_frog::sync::run_sync_with_service(
+    let result = brag_frog::integrations::run_sync_with_service(
         &pool,
         &crypto,
         &http_client,

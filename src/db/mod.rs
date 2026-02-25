@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::str::FromStr;
 
-use crate::shared::crypto::Crypto;
+use crate::kernel::crypto::Crypto;
 
 /// Initializes the SQLite connection pool with foreign keys enabled,
 /// create-if-missing, and a max of 5 connections.
@@ -82,6 +82,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
     (
         "005_remove_category_from_department_goals",
         include_str!("../../migrations/005_remove_category_from_department_goals.sql"),
+    ),
+    (
+        "006_add_meeting_goal",
+        include_str!("../../migrations/006_add_meeting_goal.sql"),
     ),
 ];
 

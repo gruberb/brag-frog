@@ -5,8 +5,8 @@ pub mod middleware;
 use serde::{Deserialize, Serialize};
 
 use crate::identity::model::User;
-use crate::shared::config::Config;
-use crate::shared::error::AppError;
+use crate::kernel::config::Config;
+use crate::kernel::error::AppError;
 
 /// Response from Google's `oauth2.googleapis.com/token` endpoint.
 #[derive(Debug, Serialize, Deserialize)]
@@ -49,7 +49,7 @@ pub fn google_auth_url(config: &Config, state_token: &str) -> String {
 
 /// Exchanges an authorization code for Google OAuth tokens.
 pub async fn exchange_code(config: &Config, code: &str) -> Result<GoogleTokenResponse, AppError> {
-    let client = crate::sync::http_client()?;
+    let client = crate::kernel::http::http_client()?;
     let resp = client
         .post("https://oauth2.googleapis.com/token")
         .form(&[
@@ -76,7 +76,7 @@ pub async fn exchange_code(config: &Config, code: &str) -> Result<GoogleTokenRes
 
 /// Fetches the authenticated user's profile from Google using the access token.
 pub async fn get_user_info(access_token: &str) -> Result<GoogleUserInfo, AppError> {
-    let client = crate::sync::http_client()?;
+    let client = crate::kernel::http::http_client()?;
     let resp = client
         .get("https://www.googleapis.com/oauth2/v3/userinfo")
         .bearer_auth(access_token)
@@ -164,7 +164,7 @@ pub async fn refresh_access_token(
     client_secret: &str,
     refresh_token: &str,
 ) -> Result<String, AppError> {
-    let client = crate::sync::http_client()?;
+    let client = crate::kernel::http::http_client()?;
     let resp = client
         .post("https://oauth2.googleapis.com/token")
         .form(&[

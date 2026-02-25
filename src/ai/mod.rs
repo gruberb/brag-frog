@@ -2,7 +2,7 @@ pub mod prompts;
 
 use serde::{Deserialize, Serialize};
 
-use crate::shared::error::AppError;
+use crate::kernel::error::AppError;
 
 // Wire types for the Anthropic Messages API request.
 #[derive(Debug, Serialize)]

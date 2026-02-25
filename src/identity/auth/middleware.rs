@@ -9,8 +9,8 @@ use axum::{
 use tower_sessions::Session;
 
 use crate::AppState;
-use crate::shared::crypto::UserCrypto;
-use crate::shared::error::AppError;
+use crate::kernel::crypto::UserCrypto;
+use crate::kernel::error::AppError;
 
 // Session key for the stored user ID.
 const USER_ID_KEY: &str = "user_id";

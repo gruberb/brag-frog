@@ -12,14 +12,14 @@ use tower_sessions::{MemoryStore, SessionManagerLayer};
 
 use brag_frog::AppState;
 use brag_frog::db;
-use brag_frog::entries::model::BragEntry;
-use brag_frog::entries::model::CreateEntry;
-use brag_frog::goals::model::{
+use brag_frog::worklog::model::BragEntry;
+use brag_frog::worklog::model::CreateEntry;
+use brag_frog::objectives::model::{
     CreateDepartmentGoal, CreatePriority, DepartmentGoal, Priority,
 };
-use brag_frog::review::model::Week;
-use brag_frog::shared::config::Config;
-use brag_frog::shared::crypto::{Crypto, UserCrypto};
+use brag_frog::cycle::model::Week;
+use brag_frog::kernel::config::Config;
+use brag_frog::kernel::crypto::{Crypto, UserCrypto};
 use sqlx::SqlitePool;
 
 /// Initialize OnceLock configs exactly once across all tests.
@@ -28,8 +28,8 @@ fn init_test_configs() {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
         brag_frog::identity::clg::load_levels("config/clg_levels.toml");
-        brag_frog::review::model::initialize_config(|f| format!("config/{}", f));
-        brag_frog::sync::services_config::load("config/services.toml");
+        brag_frog::cycle::model::initialize_config(|f| format!("config/{}", f));
+        brag_frog::integrations::services_config::load("config/services.toml");
     });
 }
 
@@ -102,7 +102,7 @@ impl TestApp {
 
         let app = Router::new()
             .merge(test_routes)
-            .merge(brag_frog::routes::create_router())
+            .merge(brag_frog::app::create_router())
             .layer(session_layer)
             .with_state(state);
 

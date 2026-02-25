@@ -3,21 +3,20 @@
 pub mod ai;
 pub mod app;
 pub mod db;
-pub mod entries;
+pub mod worklog;
 pub mod identity;
-pub mod goals;
-pub mod review;
-pub mod routes;
-pub mod shared;
-pub mod sync;
+pub mod objectives;
+pub mod cycle;
+pub mod kernel;
+pub mod integrations;
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use tera::Tera;
 
-use shared::config::Config;
-use shared::crypto::Crypto;
+use kernel::config::Config;
+use kernel::crypto::Crypto;
 
 /// Registers custom Tera filters used by templates.
 /// Called at startup from `app::build_state()` and in test helpers.
@@ -32,7 +31,7 @@ fn entry_type_label_filter(
 ) -> tera::Result<tera::Value> {
     let slug = tera::try_get_value!("entry_type_label", "value", String, value);
     Ok(tera::Value::String(
-        entries::model::EntryType::display_name(&slug).to_string(),
+        worklog::model::EntryType::display_name(&slug).to_string(),
     ))
 }
 
@@ -42,7 +41,7 @@ fn source_label_filter(
 ) -> tera::Result<tera::Value> {
     let slug = tera::try_get_value!("source_label", "value", String, value);
     Ok(tera::Value::String(
-        entries::model::source_display_name(&slug).to_string(),
+        worklog::model::source_display_name(&slug).to_string(),
     ))
 }
 

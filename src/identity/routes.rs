@@ -9,8 +9,8 @@ use tower_sessions::Session;
 use crate::AppState;
 use crate::identity::auth::{self, middleware as auth_mw};
 use crate::identity::model::{ProfileUpdate, User};
-use crate::review::model::BragPhase;
-use crate::shared::error::AppError;
+use crate::cycle::model::BragPhase;
+use crate::kernel::error::AppError;
 
 // ── Auth routes ──
 
@@ -100,7 +100,7 @@ pub async fn callback(
         let user_crypto = state.crypto.for_user(user_id)?;
         let encrypted = user_crypto.encrypt(&refresh_token)?;
 
-        crate::sync::model::IntegrationConfig::upsert(
+        crate::integrations::model::IntegrationConfig::upsert(
             &state.db,
             user_id,
             service_name,

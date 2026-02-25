@@ -67,7 +67,7 @@ async fn test_create_entry_via_quick_add() {
     // Verify in DB
     let user_crypto = app.crypto.for_user(user_id).unwrap();
     let entries =
-        brag_frog::entries::model::BragEntry::list_for_phase(&app.pool, _phase_id, &user_crypto)
+        brag_frog::worklog::model::BragEntry::list_for_phase(&app.pool, _phase_id, &user_crypto)
             .await
             .unwrap();
     assert_eq!(entries.len(), 1);
@@ -101,7 +101,7 @@ async fn test_create_entry_with_priority() {
     assert_eq!(resp.status, StatusCode::OK);
 
     let entries =
-        brag_frog::entries::model::BragEntry::list_for_phase(&app.pool, phase_id, &user_crypto)
+        brag_frog::worklog::model::BragEntry::list_for_phase(&app.pool, phase_id, &user_crypto)
             .await
             .unwrap();
     assert_eq!(entries.len(), 1);
@@ -121,7 +121,7 @@ async fn test_create_entry_with_teams_and_collaborators() {
 
     let user_crypto = app.crypto.for_user(user_id).unwrap();
     let entries =
-        brag_frog::entries::model::BragEntry::list_for_phase(&app.pool, _phase_id, &user_crypto)
+        brag_frog::worklog::model::BragEntry::list_for_phase(&app.pool, _phase_id, &user_crypto)
             .await
             .unwrap();
     assert_eq!(entries.len(), 1);
@@ -192,7 +192,7 @@ async fn test_update_entry() {
     assert_eq!(resp.status, StatusCode::OK);
 
     // Verify in DB
-    let updated = brag_frog::entries::model::BragEntry::find_by_id(
+    let updated = brag_frog::worklog::model::BragEntry::find_by_id(
         &app.pool,
         entry.id,
         user_id,
@@ -232,7 +232,7 @@ async fn test_update_entry_type() {
         .await;
     assert_eq!(resp.status, StatusCode::OK);
 
-    let updated = brag_frog::entries::model::BragEntry::find_by_id(
+    let updated = brag_frog::worklog::model::BragEntry::find_by_id(
         &app.pool,
         entry.id,
         user_id,
@@ -286,7 +286,7 @@ async fn test_update_entry_priority() {
         .await;
     assert_eq!(resp.status, StatusCode::OK);
 
-    let updated = brag_frog::entries::model::BragEntry::find_by_id(
+    let updated = brag_frog::worklog::model::BragEntry::find_by_id(
         &app.pool,
         entry.id,
         user_id,
@@ -329,7 +329,7 @@ async fn test_delete_entry() {
     assert!(resp.body.is_empty(), "Delete should return empty body");
 
     // Manual entries are hard-deleted
-    let gone = brag_frog::entries::model::BragEntry::find_by_id(
+    let gone = brag_frog::worklog::model::BragEntry::find_by_id(
         &app.pool,
         entry.id,
         user_id,
@@ -531,7 +531,7 @@ async fn test_checkin_page_loads() {
     let cookie = app.login(user_id).await;
 
     // Create a week for the checkin
-    let week = brag_frog::review::model::Week::find_or_create(
+    let week = brag_frog::cycle::model::Week::find_or_create(
         &app.pool,
         phase_id,
         9,

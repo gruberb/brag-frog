@@ -1,8 +1,8 @@
-use crate::entries::model::BragEntry;
-use crate::goals::model::{DepartmentGoal, Priority};
+use crate::worklog::model::BragEntry;
+use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::identity::clg::ClgLevel;
-use crate::review::model::MeetingPrepNote;
-use crate::review::model::get_section;
+use crate::cycle::model::{AiDocument, MeetingPrepNote};
+use crate::cycle::model::get_section;
 
 /// Assembles a complete prompt for one self-review section.
 ///
@@ -101,7 +101,7 @@ One-liner: {}
         String::new()
     };
 
-    let review_platform = &crate::review::model::review_config().review_platform;
+    let review_platform = &crate::cycle::model::review_config().review_platform;
 
     let context = format!(
         r#"You are helping a software engineer write their half-year self-review for a {review_platform} performance review cycle.
@@ -360,18 +360,21 @@ fn group_entries_by_priority(
     (full_grouped, unlinked_text)
 }
 
-/// Assembles a prompt for AI-generated meeting prep notes.
+/// Assembles a context-first prompt for AI-generated meeting prep notes.
 ///
-/// Combines meeting metadata, priority context, recent work entries,
-/// user-provided context snippets, and role-specific guidance.
+/// Prioritizes concrete context (meeting goal, calendar description, user notes,
+/// prior preps) over generic role templates, producing output tailored to the
+/// specific meeting rather than boilerplate.
 #[allow(clippy::too_many_arguments)]
 pub fn build_meeting_prep_prompt(
     entry: &BragEntry,
     linked_dept_goal: Option<&DepartmentGoal>,
     linked_priority: Option<&Priority>,
     recent_entries: &[BragEntry],
-    context_snippets: &[String],
+    context_text: &str,
     existing_note: Option<&MeetingPrepNote>,
+    meeting_goal: Option<&str>,
+    prior_preps: &[AiDocument],
 ) -> String {
     let role = entry.meeting_role.as_deref().unwrap_or("general");
     let title = &entry.title;
@@ -386,6 +389,59 @@ pub fn build_meeting_prep_prompt(
         .as_deref()
         .unwrap_or("one-off meeting");
 
+    // --- Build context sections in priority order ---
+
+    // Meeting goal — highest priority signal
+    let goal_section = match meeting_goal {
+        Some(goal) if !goal.is_empty() => {
+            format!("\n## Meeting Goal\n{}\n", goal)
+        }
+        _ => String::new(),
+    };
+
+    // Calendar description (synced agenda + attendee names)
+    let calendar_desc_section = entry
+        .description
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .map(|desc| format!("\n## Calendar Description\n{}\n", desc))
+        .unwrap_or_default();
+
+    // User-provided context — full text, no line limit
+    let context_section = if context_text.is_empty() {
+        String::new()
+    } else {
+        format!("\n## User-Provided Context\n{}\n", context_text)
+    };
+
+    // Prior meeting preps from the same series (truncated)
+    let prior_preps_section = if prior_preps.is_empty() {
+        String::new()
+    } else {
+        let items: String = prior_preps
+            .iter()
+            .take(2)
+            .map(|doc| {
+                let truncated: String = doc.content.chars().take(500).collect();
+                let suffix = if doc.content.len() > 500 { "..." } else { "" };
+                format!(
+                    "### {} ({})\n{}{}\n",
+                    doc.title, doc.generated_at, truncated, suffix
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("\n## Prior Meeting Preps\n{}", items)
+    };
+
+    // Existing draft notes
+    let existing_text = existing_note
+        .and_then(|n| n.notes.as_deref())
+        .filter(|s| !s.is_empty())
+        .map(|notes| format!("\n## Current Draft Notes\n{}\n", notes))
+        .unwrap_or_default();
+
+    // Linked priority + recent work
     let priority_context = match (linked_dept_goal, linked_priority) {
         (Some(goal), Some(priority)) => {
             let recent_work: String = recent_entries
@@ -421,35 +477,25 @@ Priority: {} — status: {}
         _ => String::new(),
     };
 
-    let snippets_text = if context_snippets.is_empty() {
-        String::new()
-    } else {
-        let items: String = context_snippets
-            .iter()
-            .enumerate()
-            .map(|(i, s)| format!("{}. {}", i + 1, s))
-            .collect::<Vec<_>>()
-            .join("\n");
-        format!("\n## Additional Context\n{}\n", items)
-    };
+    // --- Detect context quality and add caveats ---
 
-    let existing_text = existing_note
-        .and_then(|n| n.notes.as_deref())
-        .filter(|s| !s.is_empty())
-        .map(|notes| format!("\n## Current Draft Notes\n{}\n", notes))
-        .unwrap_or_default();
-
-    // Detect whether the context is link-only (URLs with no substantive text)
-    let has_only_links = !context_snippets.is_empty()
-        && context_snippets.iter().all(|s| {
-            let trimmed = s.trim();
-            trimmed.starts_with("http://") || trimmed.starts_with("https://")
+    // Check if user context is link-only
+    let has_only_links = !context_text.is_empty()
+        && context_text.lines().all(|line| {
+            let trimmed = line.trim();
+            trimmed.is_empty()
+                || trimmed.starts_with("http://")
+                || trimmed.starts_with("https://")
         });
 
-    // Detect thin context: no snippets, no existing notes, no linked priority
-    let has_thin_context = context_snippets.is_empty()
+    // Thin context: no user context, no goal, no existing notes, no linked priority,
+    // no calendar description, no prior preps
+    let has_thin_context = context_text.is_empty()
+        && meeting_goal.is_none_or(|g| g.is_empty())
         && existing_text.is_empty()
-        && linked_priority.is_none();
+        && linked_priority.is_none()
+        && entry.description.as_ref().is_none_or(|d| d.is_empty())
+        && prior_preps.is_empty();
 
     let link_caveat = if has_only_links {
         "\n## Important: Link-Only Context\n\
@@ -459,41 +505,39 @@ Priority: {} — status: {}
          and asking the user to paste the relevant content (agenda, discussion points, key decisions) \
          from those docs directly into the context field.\n\
          Do NOT fabricate or infer document content from URL paths.\n"
-            .to_string()
-    } else if !context_snippets.is_empty() {
+    } else if !context_text.is_empty() {
         "\nNote: You cannot access URLs or links — treat any URLs in the context as reference labels only. \
          Never fabricate content based on URL paths.\n"
-            .to_string()
     } else {
-        String::new()
+        ""
     };
 
     let thin_context_guidance = if has_thin_context {
         "\n## Limited Context Available\n\
          Very little context was provided for this meeting. Before the main prep sections, include a \
          \"What I'd Need to Make This Useful\" section listing:\n\
-         - Who's attending?\n\
+         - What's the goal for this meeting? (use the Meeting Goal field)\n\
          - What's on the agenda?\n\
          - Key decisions or topics to cover?\n\
          - Relevant context from any linked documents?\n\n\
          Still generate the standard prep sections below, but label them as generic placeholders \
          that should be refined once more context is available.\n"
-            .to_string()
     } else {
-        String::new()
+        ""
     };
 
-    let role_guidance = match role {
-        "manager" => "Given the meeting title and series, infer likely discussion topics. For a manager 1:1, consider: status on current work, blockers you need help with, growth/career topics, feedback to give or request, and follow-ups from previous meetings. Tailor talking points to the specific subject matter implied by the meeting title.",
-        "skip_level" => "Given the meeting title and series, infer likely discussion topics. For a skip-level, consider: high-impact work worth making visible, career goals and progression, org-level impact and cross-team contributions, and strategic alignment. Tailor talking points to the specific subject matter implied by the meeting title.",
-        "peer" => "Given the meeting title and series, infer likely discussion topics. For a peer meeting, consider: collaboration updates, shared work and dependencies, alignment on approach, and knowledge sharing. Tailor talking points to the specific subject matter implied by the meeting title.",
-        "stakeholder" => "Given the meeting title and series, infer likely discussion topics. For a stakeholder meeting, consider: project milestones and status, decisions that need input, risks worth flagging, and timeline or resource updates. Tailor talking points to the specific subject matter implied by the meeting title.",
-        "tech_lead" => "Given the meeting title and series, infer likely discussion topics. For a tech lead meeting, consider: technical decisions and trade-offs, architecture discussions, code quality topics, and technical debt. Tailor talking points to the specific subject matter implied by the meeting title.",
-        _ => "Given the meeting title and series, infer likely discussion topics. Consider: key discussion points, updates to share, questions to ask, decisions needed, and follow-ups from previous meetings. Tailor talking points to the specific subject matter implied by the meeting title.",
+    // Role guidance — placed after context so the model grounds on specifics first
+    let role_hint = match role {
+        "manager" => "For this manager 1:1, consider: status on current work, blockers, growth/career topics, feedback, and follow-ups.",
+        "skip_level" => "For this skip-level, consider: high-impact work visibility, career goals, org-level impact, and strategic alignment.",
+        "peer" => "For this peer meeting, consider: collaboration updates, shared work, alignment on approach, and knowledge sharing.",
+        "stakeholder" => "For this stakeholder meeting, consider: project milestones, decisions needing input, risks, and timeline updates.",
+        "tech_lead" => "For this tech lead meeting, consider: technical decisions, architecture discussions, code quality, and tech debt.",
+        _ => "Consider: key discussion points, updates to share, questions to ask, decisions needed, and follow-ups.",
     };
 
     format!(
-        r#"You are helping a software engineer prepare for an upcoming meeting.
+        r#"You are helping a software engineer prepare for an upcoming meeting. Focus on the specific context provided below rather than producing generic templates.
 
 ## Meeting Details
 - Title: {title}
@@ -501,15 +545,16 @@ Priority: {} — status: {}
 - Time: {time_range}
 - Role: {role}
 - Series: {recurring}
+{goal_section}{calendar_desc_section}{context_section}{prior_preps_section}{existing_text}{priority_context}{link_caveat}{thin_context_guidance}
+## Role Guidance
+{role_hint}
 
-{role_guidance}
-{priority_context}{snippets_text}{link_caveat}{existing_text}{thin_context_guidance}
 ---
 
-Generate structured meeting prep notes in Markdown with these sections:
+Generate structured meeting prep notes in Markdown. Choose sections that fit this specific meeting — not every meeting needs the same structure. Common sections include:
 
 ## Talking Points
-- Bullet points of topics to raise
+- Topics to raise, grounded in the context above
 
 ## Questions to Ask
 - Specific questions for this meeting
@@ -517,17 +562,20 @@ Generate structured meeting prep notes in Markdown with these sections:
 ## Updates to Share
 - Status updates and accomplishments to mention
 
-Keep it concise and actionable. Use the linked priority data and recent work entries to make updates specific. If additional context was provided as text, incorporate it into relevant sections. Do not infer or fabricate content from URLs."#,
+Keep it concise and actionable. Use any provided context, calendar description, meeting goal, and prior preps to make the output specific to this meeting. Do not infer or fabricate content from URLs."#,
         title = title,
         date = date,
         time_range = time_range,
         role = role,
         recurring = recurring,
-        role_guidance = role_guidance,
-        priority_context = priority_context,
-        snippets_text = snippets_text,
-        link_caveat = link_caveat,
+        goal_section = goal_section,
+        calendar_desc_section = calendar_desc_section,
+        context_section = context_section,
+        prior_preps_section = prior_preps_section,
         existing_text = existing_text,
+        priority_context = priority_context,
+        link_caveat = link_caveat,
         thin_context_guidance = thin_context_guidance,
+        role_hint = role_hint,
     )
 }
