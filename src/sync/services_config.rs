@@ -60,6 +60,8 @@ pub struct AtlassianDefaults {
     pub allowed_jira_projects: Vec<String>,
     #[serde(default)]
     pub allowed_confluence_spaces: Vec<String>,
+    #[serde(default)]
+    pub excluded_jira_projects: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]

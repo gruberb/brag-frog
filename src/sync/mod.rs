@@ -263,6 +263,11 @@ pub async fn run_sync(
                     serde_json::to_value(&svc_config.atlassian.allowed_confluence_spaces)
                         .unwrap_or_default();
             }
+            if !svc_config.atlassian.excluded_jira_projects.is_empty() {
+                service_config["excluded_jira_projects"] =
+                    serde_json::to_value(&svc_config.atlassian.excluded_jira_projects)
+                        .unwrap_or_default();
+            }
         }
         _ => {}
     }

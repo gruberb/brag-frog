@@ -31,6 +31,7 @@ token_url = "https://id.atlassian.com/manage-profile/security/api-tokens"
 note = "Syncs both Jira issues and Confluence pages"
 allowed_jira_projects = []   # Restrict Jira sync to these project keys (e.g. ["ENG", "INFRA"]). Empty = all.
 allowed_confluence_spaces = [] # Restrict Confluence sync to these space keys (e.g. ["ENG", "TEAM"]). Empty = all.
+excluded_jira_projects = []  # In public-only mode, exclude these project keys from sync. Empty = no exclusions.
 
 [claude]
 token_url = "https://console.anthropic.com/settings/keys"

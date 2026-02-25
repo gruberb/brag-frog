@@ -33,8 +33,6 @@ impl SyncService for JiraSync {
 
         let auth = BASE64.encode(format!("{}:{}", email, token));
 
-        let public_only = config["public_only"].as_bool().unwrap_or(false);
-
         // Escape single quotes in email to prevent JQL injection
         let safe_email = email.replace('\'', "''");
         let mut jql = format!(
@@ -42,9 +40,22 @@ impl SyncService for JiraSync {
             safe_email, safe_email, start_date, end_date
         );
 
-        // In public-only mode, exclude issues with any security level set
+        let public_only = config["public_only"].as_bool().unwrap_or(false);
+
+        // In public-only mode, exclude security-sensitive projects via JQL.
+        // Configured in services.toml as excluded_jira_projects.
         if public_only {
-            jql.push_str(" AND \"Security Level\" is EMPTY");
+            if let Some(excluded) = config["excluded_jira_projects"].as_array() {
+                let projects: Vec<&str> = excluded.iter().filter_map(|v| v.as_str()).collect();
+                if !projects.is_empty() {
+                    let project_list = projects
+                        .iter()
+                        .map(|p| format!("\"{}\"", p.replace('"', "\\\"")))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    jql.push_str(&format!(" AND project not in ({})", project_list));
+                }
+            }
         }
 
         // Operator-configured project filter from services.toml
