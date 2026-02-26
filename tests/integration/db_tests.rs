@@ -642,6 +642,7 @@ async fn test_filter_by_source() {
         None,
         None,
         None,
+        None,
         &user_crypto,
     )
     .await
@@ -909,6 +910,7 @@ async fn test_entry_sync_upsert_preserves_priority() {
         None,
         None,
         None,
+        None,
         &user_crypto,
     )
     .await
@@ -936,6 +938,7 @@ async fn test_entry_sync_upsert_preserves_priority() {
         None,
         None,
         "2025-04-22",
+        None,
         None,
         None,
         None,

@@ -121,6 +121,16 @@ pub async fn save_meeting_prep_panel(
     )
     .await?;
 
+    // Copy prep notes into the entry's description so they appear in the logbook.
+    if let Some(notes) = input.notes.as_deref().filter(|s| !s.is_empty()) {
+        let enc = auth.crypto.encrypt(notes)?;
+        sqlx::query("UPDATE brag_entries SET description = ?, updated_at = datetime('now') WHERE id = ?")
+            .bind(&enc)
+            .bind(entry_id)
+            .execute(&state.db)
+            .await?;
+    }
+
     // Update entry's priority_id if provided (or clear it).
     // Ownership was already verified by find_by_id above; brag_entries has no user_id column.
     if let Some(pri_id) = input.priority_id {

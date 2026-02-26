@@ -368,6 +368,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             recurring_group: None,
                             start_time: None,
                             end_time: None,
+                            collaborators: None,
                         });
 
                         // Generate per-day development entries from commit dates
@@ -400,6 +401,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                                         recurring_group: None,
                                         start_time: None,
                                         end_time: None,
+                                        collaborators: None,
                                     });
                                 }
                             }
@@ -424,6 +426,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             recurring_group: None,
                             start_time: None,
                             end_time: None,
+                            collaborators: None,
                         });
                     }
                     GitHubQueryType::Reviewed => {
@@ -443,6 +446,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             recurring_group: None,
                             start_time: None,
                             end_time: None,
+                            collaborators: None,
                         });
                     }
                 }

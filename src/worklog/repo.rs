@@ -263,23 +263,26 @@ impl BragEntry {
         recurring_group: Option<&str>,
         start_time: Option<&str>,
         end_time: Option<&str>,
+        collaborators: Option<&str>,
         crypto: &UserCrypto,
     ) -> Result<Self, AppError> {
         let enc_title = crypto.encrypt(title)?;
         let enc_description = crypto.encrypt_opt(&description.map(String::from))?;
+        let enc_collaborators = crypto.encrypt_opt(&collaborators.map(String::from))?;
 
         let row = sqlx::query_as::<_, BragEntryRow>(
             r#"
-            INSERT INTO brag_entries (week_id, source, source_id, source_url, title, description, entry_type, status, repository, occurred_at, meeting_role, recurring_group, start_time, end_time)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO brag_entries (week_id, source, source_id, source_url, title, description, entry_type, status, repository, occurred_at, meeting_role, recurring_group, start_time, end_time, collaborators)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(source, source_id) DO UPDATE SET
                 title = excluded.title,
-                description = excluded.description,
+                description = COALESCE(brag_entries.description, excluded.description),
                 entry_type = excluded.entry_type,
                 status = excluded.status,
                 source_url = COALESCE(excluded.source_url, brag_entries.source_url),
                 repository = COALESCE(excluded.repository, brag_entries.repository),
                 recurring_group = COALESCE(excluded.recurring_group, brag_entries.recurring_group),
+                collaborators = COALESCE(excluded.collaborators, brag_entries.collaborators),
                 occurred_at = excluded.occurred_at,
                 week_id = excluded.week_id,
                 start_time = excluded.start_time,
@@ -303,6 +306,7 @@ impl BragEntry {
         .bind(recurring_group)
         .bind(start_time)
         .bind(end_time)
+        .bind(&enc_collaborators)
         .fetch_one(pool)
         .await?;
 

@@ -122,6 +122,7 @@ impl SyncService for BugzillaSync {
                 recurring_group: None,
                 start_time: None,
                 end_time: None,
+                collaborators: None,
             });
         }
 
@@ -174,6 +175,7 @@ impl SyncService for BugzillaSync {
                 recurring_group: None,
                 start_time: None,
                 end_time: None,
+                collaborators: None,
             });
         }
 

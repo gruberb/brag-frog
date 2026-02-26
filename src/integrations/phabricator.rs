@@ -150,6 +150,7 @@ impl SyncService for PhabricatorSync {
                     recurring_group: None,
                     start_time: None,
                     end_time: None,
+                    collaborators: None,
                 });
             }
         }

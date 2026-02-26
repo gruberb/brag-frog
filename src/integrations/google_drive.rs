@@ -308,6 +308,7 @@ impl SyncService for GoogleDriveSync {
                                     recurring_group: None,
                                     start_time: None,
                                     end_time: None,
+                                    collaborators: None,
                                 },
                             );
                         }

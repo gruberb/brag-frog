@@ -296,6 +296,7 @@ async fn persist_synced_entries(
             entry.recurring_group.as_deref(),
             entry.start_time.as_deref(),
             entry.end_time.as_deref(),
+            entry.collaborators.as_deref(),
             user_crypto,
         )
         .await?;

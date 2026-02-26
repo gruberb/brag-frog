@@ -99,6 +99,7 @@ fn make_entry(
         recurring_group: None,
         start_time: None,
         end_time: None,
+        collaborators: None,
     }
 }
 
@@ -334,6 +335,7 @@ async fn test_sync_meeting_type() {
         recurring_group: None,
         start_time: None,
         end_time: None,
+        collaborators: None,
     }]);
 
     // Need google_calendar integration instead
@@ -401,6 +403,7 @@ async fn test_sync_drive_types() {
             recurring_group: None,
             start_time: None,
             end_time: None,
+            collaborators: None,
         },
         SyncedEntry {
             source: "google_drive",
@@ -416,6 +419,7 @@ async fn test_sync_drive_types() {
             recurring_group: None,
             start_time: None,
             end_time: None,
+            collaborators: None,
         },
     ]);
 

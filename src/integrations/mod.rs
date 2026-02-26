@@ -46,6 +46,7 @@ pub struct SyncedEntry {
     pub recurring_group: Option<String>,
     pub start_time: Option<String>,
     pub end_time: Option<String>,
+    pub collaborators: Option<String>,
 }
 
 /// Result of a `test_connection` call -- reports auth success and the authenticated username.

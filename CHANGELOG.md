@@ -2,6 +2,19 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [2.0.1] - 2026-02-26
+
+### Fixed
+- Calendar sync no longer stores event bodies. Invite descriptions (Zoom boilerplate, HTML fragments, attendee lists) were being written into `brag_entries.description`, cluttering the logbook. Sync now sets `description: None` for calendar entries, keeping descriptions exclusively for user-authored content.
+
+### Changed
+- Calendar attendees stored as collaborators. Attendee names and emails extracted during Google Calendar sync are now written to the `collaborators` field instead of being embedded in the description. They render as collaborator chips on entry cards.
+- Sync upsert preserves user-written descriptions. The `ON CONFLICT` clause for `description` changed from unconditional overwrite to `COALESCE(existing, incoming)`, so descriptions set by the user (e.g., meeting prep notes) survive re-syncs.
+- `SyncedEntry` carries a `collaborators` field. All non-calendar sync sources pass `None`; only Google Calendar populates it from attendee data.
+
+### Added
+- Meeting prep notes flow into logbook entries. Saving prep notes via the dashboard meeting panel encrypts and writes them into `brag_entries.description`, so prep content appears as the meeting body in the logbook and feeds into AI draft generation.
+
 ## [2.0.0] - 2026-02-24
 
 ### Changed

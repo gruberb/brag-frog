@@ -26,7 +26,6 @@ struct EventListResponse {
 struct CalendarEvent {
     id: Option<String>,
     summary: Option<String>,
-    description: Option<String>,
     start: Option<EventDateTime>,
     end: Option<EventDateTime>,
     #[serde(default)]
@@ -80,25 +79,7 @@ struct CalendarMetadata {
     summary: Option<String>,
 }
 
-/// Strip HTML tags from a string. Handles common patterns from Google Calendar
-/// event descriptions (e.g., `<br>`, `<a href="...">`, `<b>`, `<p>`).
-fn strip_html_tags(input: &str) -> String {
-    let mut result = String::with_capacity(input.len());
-    let mut in_tag = false;
-    for ch in input.chars() {
-        match ch {
-            '<' => in_tag = true,
-            '>' => in_tag = false,
-            _ if !in_tag => result.push(ch),
-            _ => {}
-        }
-    }
-    // Collapse runs of 3+ newlines into double newlines
-    while result.contains("\n\n\n") {
-        result = result.replace("\n\n\n", "\n\n");
-    }
-    result
-}
+
 
 /// Extract the base recurring event ID from a Google Calendar event.
 /// For recurring instances, `recurring_event_id` is the base ID.
@@ -280,20 +261,9 @@ impl SyncService for GoogleCalendarSync {
                         })
                     });
 
-                // Build combined description from event body + attendee names
-                let combined_description = {
-                    let mut parts = Vec::new();
-
-                    if let Some(ref desc) = event.description {
-                        // Strip HTML tags with a simple approach
-                        let stripped = strip_html_tags(desc);
-                        let trimmed = stripped.trim();
-                        if !trimmed.is_empty() {
-                            parts.push(trimmed.to_string());
-                        }
-                    }
-
-                    let attendee_names: Vec<&str> = event
+                // Extract attendee names/emails as collaborators
+                let collaborators = {
+                    let names: Vec<&str> = event
                         .attendees
                         .iter()
                         .filter(|a| !a.is_self)
@@ -303,14 +273,10 @@ impl SyncService for GoogleCalendarSync {
                                 .or(a.email.as_deref())
                         })
                         .collect();
-                    if !attendee_names.is_empty() {
-                        parts.push(format!("Attendees: {}", attendee_names.join(", ")));
-                    }
-
-                    if parts.is_empty() {
+                    if names.is_empty() {
                         None
                     } else {
-                        Some(parts.join("\n\n"))
+                        Some(names.join(", "))
                     }
                 };
 
@@ -319,7 +285,7 @@ impl SyncService for GoogleCalendarSync {
                     source_id: format!("calendar:{}", event_id),
                     source_url: event.html_link.clone(),
                     title: title.to_string(),
-                    description: combined_description,
+                    description: None,
                     entry_type: "meeting",
                     status: None,
                     repository: video_link,
@@ -328,6 +294,7 @@ impl SyncService for GoogleCalendarSync {
                     recurring_group: event.recurring_event_id.clone(),
                     start_time: start_time_hm,
                     end_time: end_time_hm,
+                    collaborators,
                 });
             }
 

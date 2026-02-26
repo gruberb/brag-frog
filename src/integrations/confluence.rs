@@ -108,6 +108,7 @@ impl SyncService for ConfluenceSync {
                     recurring_group: None,
                     start_time: None,
                     end_time: None,
+                    collaborators: None,
                 });
             }
         }
