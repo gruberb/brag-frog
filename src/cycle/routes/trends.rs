@@ -6,7 +6,7 @@ use crate::AppState;
 use crate::worklog::model::BragEntry;
 use crate::objectives::model::Priority;
 use crate::identity::auth::middleware::AuthUser;
-use crate::identity::model::User;
+use crate::identity::model::{PeopleAlias, User};
 use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
 
@@ -140,6 +140,7 @@ pub async fn trends_page(
     entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
 
     let all_priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let alias_map = PeopleAlias::alias_map(&state.db, auth.user_id).await?;
 
     // Priority activity bars — count entries per priority, plus "Unlinked" bucket
     let mut priority_counts: HashMap<i64, usize> = HashMap::new();
@@ -150,6 +151,18 @@ pub async fn trends_page(
     let mut complexity_counts: HashMap<String, usize> = HashMap::new();
     let mut role_counts: HashMap<String, usize> = HashMap::new();
     let mut person_counts: HashMap<String, usize> = HashMap::new();
+
+    // New metrics: repos, teams, weekday productivity, category overview
+    let mut repo_counts: HashMap<String, usize> = HashMap::new();
+    let mut team_counts: HashMap<String, usize> = HashMap::new();
+    let mut weekday_counts: HashMap<String, usize> = HashMap::new();
+    let mut overview_reviews: usize = 0;
+    let mut overview_code: usize = 0;
+    let mut overview_docs: usize = 0;
+    let mut overview_meetings: usize = 0;
+    let mut overview_collaboration: usize = 0;
+    let mut overview_learning: usize = 0;
+    let mut overview_tickets: usize = 0;
 
     // Category distribution + per-category type breakdown for tooltips
     let mut category_counts: HashMap<&str, usize> = HashMap::new();
@@ -180,18 +193,59 @@ pub async fn trends_page(
             *role_counts.entry(role.clone()).or_insert(0) += 1;
         }
 
-        // Collaborators
+        // Collaborators (apply alias map for display names)
         if let Some(ref collabs) = entry.collaborators {
             for c in collabs.split(',') {
                 let c = c.trim();
                 if !c.is_empty() {
-                    *person_counts.entry(c.to_string()).or_insert(0) += 1;
+                    let display = alias_map
+                        .get(&c.to_lowercase())
+                        .cloned()
+                        .unwrap_or_else(|| c.to_string());
+                    *person_counts.entry(display).or_insert(0) += 1;
                 }
             }
         }
 
-        // Category + type breakdown
+        // Repos
+        if let Some(ref repo) = entry.repository
+            && !repo.is_empty()
+            && !repo.starts_with("http://")
+            && !repo.starts_with("https://")
+        {
+            *repo_counts.entry(repo.clone()).or_insert(0) += 1;
+        }
+
+        // Teams
+        if let Some(ref teams) = entry.teams {
+            for t in teams.split(',') {
+                let t = t.trim();
+                if !t.is_empty() {
+                    *team_counts.entry(t.to_string()).or_insert(0) += 1;
+                }
+            }
+        }
+
+        // Weekday productivity
+        if let Ok(date) = chrono::NaiveDate::parse_from_str(&entry.occurred_at, "%Y-%m-%d") {
+            let weekday = date.format("%A").to_string();
+            *weekday_counts.entry(weekday).or_insert(0) += 1;
+        }
+
+        // Category overview counters
         let cat = entry_category(&entry.entry_type);
+        match cat {
+            "Reviews" => overview_reviews += 1,
+            "Code" => overview_code += 1,
+            "Docs" => overview_docs += 1,
+            "Meetings" => overview_meetings += 1,
+            "Collaboration" => overview_collaboration += 1,
+            "Learning" => overview_learning += 1,
+            "Tickets" => overview_tickets += 1,
+            _ => {}
+        }
+
+        // Category + type breakdown
         *category_counts.entry(cat).or_insert(0) += 1;
         let type_label = entry_type_label(&entry.entry_type);
         *category_type_counts
@@ -278,6 +332,11 @@ pub async fn trends_page(
             .cmp(&a["count"].as_u64().unwrap_or(0))
     });
 
+    // New bar charts
+    let repo_bars = build_bars(&repo_counts, Some(8));
+    let team_bars = build_bars(&team_counts, Some(8));
+    let weekday_bars = build_bars(&weekday_counts, None);
+
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
@@ -289,6 +348,17 @@ pub async fn trends_page(
     ctx.insert("complexity_bars", &complexity_bars);
     ctx.insert("role_bars", &role_bars);
     ctx.insert("collaborator_bars", &collaborator_bars);
+    ctx.insert("repo_bars", &repo_bars);
+    ctx.insert("team_bars", &team_bars);
+    ctx.insert("weekday_bars", &weekday_bars);
+    ctx.insert("overview_total", &entries.len());
+    ctx.insert("overview_reviews", &overview_reviews);
+    ctx.insert("overview_code", &overview_code);
+    ctx.insert("overview_docs", &overview_docs);
+    ctx.insert("overview_meetings", &overview_meetings);
+    ctx.insert("overview_collaboration", &overview_collaboration);
+    ctx.insert("overview_learning", &overview_learning);
+    ctx.insert("overview_tickets", &overview_tickets);
     ctx.insert("current_page", "trends");
 
     let html = state.templates.render("pages/trends.html", &ctx)?;

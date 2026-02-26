@@ -7,8 +7,9 @@ use axum::{
 use chrono::{Local, NaiveDate};
 
 use crate::AppState;
-use crate::worklog::model::{BragEntry, CreateEntry, EntryType};
+use crate::worklog::model::{BragEntry, BulkUpdateEntries, CreateEntry, EntryType};
 use crate::identity::auth::middleware::AuthUser;
+use crate::identity::model::PeopleAlias;
 use crate::objectives::model::Priority;
 use crate::cycle::model::{BragPhase, Week};
 use crate::kernel::error::AppError;
@@ -46,12 +47,17 @@ async fn build_entry_context(
 }
 
 /// Renders a single entry card fragment with key result/goal context for HTMX swap.
+/// Applies people aliases so collaborator chips show display names instead of raw emails.
 async fn render_entry_card(
     state: &AppState,
     user_id: i64,
     entry: &BragEntry,
 ) -> Result<Html<String>, AppError> {
-    let ctx = build_entry_context(state, user_id, entry).await?;
+    let alias_map = PeopleAlias::alias_map(&state.db, user_id).await?;
+    let team_map = PeopleAlias::team_map(&state.db, user_id).await?;
+    let mut aliased = entry.clone();
+    PeopleAlias::apply_to_entries(std::slice::from_mut(&mut aliased), &alias_map, &team_map);
+    let ctx = build_entry_context(state, user_id, &aliased).await?;
     let html = state.templates.render("components/entry_card.html", &ctx)?;
     Ok(Html(html))
 }
@@ -203,9 +209,13 @@ pub async fn entry_panel(
     State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Html<String>, AppError> {
-    let entry = BragEntry::find_by_id(&state.db, id, auth.user_id, &auth.crypto)
+    let mut entry = BragEntry::find_by_id(&state.db, id, auth.user_id, &auth.crypto)
         .await?
         .ok_or(AppError::NotFound("Entry not found".to_string()))?;
+
+    let alias_map = PeopleAlias::alias_map(&state.db, auth.user_id).await?;
+    let team_map = PeopleAlias::team_map(&state.db, auth.user_id).await?;
+    PeopleAlias::apply_to_entries(std::slice::from_mut(&mut entry), &alias_map, &team_map);
 
     let ctx = build_entry_context(&state, auth.user_id, &entry).await?;
     let html = state.templates.render("panels/entry_detail.html", &ctx)?;
@@ -289,4 +299,34 @@ pub async fn exclude_calendar_event(
     let mut headers = HeaderMap::new();
     headers.insert("HX-Redirect", HeaderValue::from_static("/logbook"));
     Ok((headers, Html(String::new())))
+}
+
+/// HTMX handler: bulk-updates metadata on multiple entries at once.
+pub async fn bulk_update_entries(
+    auth: AuthUser,
+    State(state): State<AppState>,
+    Form(input): Form<BulkUpdateEntries>,
+) -> Result<(HeaderMap, Html<String>), AppError> {
+    let count = super::service::bulk_update_entries(
+        &state.db,
+        auth.user_id,
+        &input,
+        &auth.crypto,
+    )
+    .await?;
+
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        "HX-Trigger",
+        HeaderValue::from_static("bulk-update-done"),
+    );
+
+    Ok((
+        headers,
+        Html(format!(
+            r#"<div class="quick-entry-flash" onanimationend="this.remove()">Updated {} {}</div>"#,
+            count,
+            if count == 1 { "entry" } else { "entries" }
+        )),
+    ))
 }

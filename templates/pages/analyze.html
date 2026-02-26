@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1>Logbook</h1>
-    <p class="page-subtitle">{{ phase.name }} &mdash; <span id="filtered-count">{{ filtered_count }}</span> of {{ total_entries }} entries <button type="button" class="report-subtitle-btn" onclick="toggleReportSidebar()">Report <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 010-1.06z"/></svg></button></p>
+    <p class="page-subtitle">{{ phase.name }} &mdash; <span id="filtered-count">{{ filtered_count }}</span> of {{ total_entries }} entries <button type="button" class="bulk-edit-toggle-btn" id="bulk-edit-toggle" onclick="toggleBulkEdit()">Bulk Edit</button></p>
 </div>
 
 <div class="analyze-layout">
@@ -128,17 +128,165 @@
         <div class="filter-pills" id="filter-pills"></div>
     </div>
 
-    <!-- Results (insights + date-grouped entries) -->
+    <!-- Results (date-grouped entries) -->
     <div id="analyze-results">
         {% include "components/analyze_results.html" %}
     </div>
 </div>
 
+<!-- Bulk edit toolbar (sticky bottom bar, hidden by default) -->
+<div class="bulk-edit-toolbar" id="bulk-edit-toolbar" style="display:none">
+    <div class="bulk-edit-toolbar-inner">
+        <span class="bulk-edit-count" id="bulk-edit-count">0 selected</span>
+
+        <button type="button" class="btn btn-sm btn-secondary" onclick="bulkSelectAll()">Select All</button>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="bulkDeselectAll()">Deselect All</button>
+
+        <select id="bulk-priority" class="form-select form-select--sm">
+            <option value="">Priority</option>
+            {% for p in priorities %}
+            <option value="{{ p.id }}">{{ p.title }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="bulk-reach" class="form-select form-select--sm">
+            <option value="">Reach</option>
+            <option value="team">Team</option>
+            <option value="cross_team">Cross-team</option>
+            <option value="org">Org</option>
+            <option value="company">Company</option>
+        </select>
+
+        <select id="bulk-complexity" class="form-select form-select--sm">
+            <option value="">Complexity</option>
+            <option value="routine">Routine</option>
+            <option value="moderate">Moderate</option>
+            <option value="complex">Complex</option>
+            <option value="novel">Novel</option>
+        </select>
+
+        <select id="bulk-role" class="form-select form-select--sm">
+            <option value="">Role</option>
+            <option value="contributor">Contributor</option>
+            <option value="owner">Owner</option>
+            <option value="lead">Lead</option>
+            <option value="architect">Architect</option>
+        </select>
+
+        <input type="text" id="bulk-teams" class="form-input form-input--sm" placeholder="Teams" style="width:120px">
+        <input type="text" id="bulk-collaborators" class="form-input form-input--sm" placeholder="Collaborators" style="width:120px">
+
+        <div class="bulk-edit-merge-toggle">
+            <button type="button" class="bulk-merge-btn active" id="bulk-merge-append" onclick="setBulkMergeMode('append')">Append</button>
+            <button type="button" class="bulk-merge-btn" id="bulk-merge-replace" onclick="setBulkMergeMode('replace')">Replace</button>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-primary" onclick="bulkApply()">Apply</button>
+        <button type="button" class="btn btn-sm btn-text" onclick="toggleBulkEdit()">Cancel</button>
+    </div>
+</div>
+
 <script>
-function toggleReportSidebar() {
-    document.getElementById('report-sidebar').classList.toggle('open');
-    document.getElementById('report-overlay').classList.toggle('open');
+var _bulkEditActive = false;
+var _bulkMergeMode = 'append';
+
+function toggleBulkEdit() {
+    _bulkEditActive = !_bulkEditActive;
+    var toggle = document.getElementById('bulk-edit-toggle');
+    var toolbar = document.getElementById('bulk-edit-toolbar');
+    toggle.classList.toggle('active', _bulkEditActive);
+    toolbar.style.display = _bulkEditActive ? '' : 'none';
+    document.querySelectorAll('.bulk-edit-checkbox').forEach(function(cb) {
+        cb.style.display = _bulkEditActive ? '' : 'none';
+        if (!_bulkEditActive) cb.checked = false;
+    });
+    if (!_bulkEditActive) resetBulkFields();
+    updateBulkCount();
 }
+
+function updateBulkCount() {
+    var checked = document.querySelectorAll('.bulk-edit-checkbox:checked').length;
+    var el = document.getElementById('bulk-edit-count');
+    if (el) el.textContent = checked + ' selected';
+}
+
+function bulkSelectAll() {
+    document.querySelectorAll('.bulk-edit-checkbox').forEach(function(cb) {
+        if (cb.style.display !== 'none') cb.checked = true;
+    });
+    updateBulkCount();
+}
+
+function bulkDeselectAll() {
+    document.querySelectorAll('.bulk-edit-checkbox').forEach(function(cb) {
+        cb.checked = false;
+    });
+    updateBulkCount();
+}
+
+function setBulkMergeMode(mode) {
+    _bulkMergeMode = mode;
+    document.getElementById('bulk-merge-append').classList.toggle('active', mode === 'append');
+    document.getElementById('bulk-merge-replace').classList.toggle('active', mode === 'replace');
+}
+
+function resetBulkFields() {
+    document.getElementById('bulk-priority').value = '';
+    document.getElementById('bulk-reach').value = '';
+    document.getElementById('bulk-complexity').value = '';
+    document.getElementById('bulk-role').value = '';
+    document.getElementById('bulk-teams').value = '';
+    document.getElementById('bulk-collaborators').value = '';
+    setBulkMergeMode('append');
+}
+
+function bulkApply() {
+    var ids = [];
+    document.querySelectorAll('.bulk-edit-checkbox:checked').forEach(function(cb) {
+        ids.push(cb.value);
+    });
+    if (ids.length === 0) return;
+
+    var body = new URLSearchParams();
+    body.set('entry_ids', ids.join(','));
+
+    var priority = document.getElementById('bulk-priority').value;
+    var reach = document.getElementById('bulk-reach').value;
+    var complexity = document.getElementById('bulk-complexity').value;
+    var role = document.getElementById('bulk-role').value;
+    var teams = document.getElementById('bulk-teams').value.trim();
+    var collaborators = document.getElementById('bulk-collaborators').value.trim();
+
+    if (priority) body.set('priority_id', priority);
+    if (reach) body.set('reach', reach);
+    if (complexity) body.set('complexity', complexity);
+    if (role) body.set('role', role);
+    if (teams) body.set('teams', teams);
+    if (collaborators) body.set('collaborators', collaborators);
+    body.set('merge_mode', _bulkMergeMode);
+
+    htmx.ajax('POST', '/entries/bulk-update', {
+        target: '#analyze-results',
+        swap: 'beforeend',
+        values: Object.fromEntries(body)
+    });
+}
+
+// After bulk update completes, refresh entries and reset
+document.body.addEventListener('bulk-update-done', function() {
+    applyFilters();
+    resetBulkFields();
+    bulkDeselectAll();
+});
+
+// After HTMX swaps entry list, re-show checkboxes if bulk mode is active
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (_bulkEditActive && evt.detail.target && evt.detail.target.id === 'analyze-results') {
+        document.querySelectorAll('.bulk-edit-checkbox').forEach(function(cb) {
+            cb.style.display = '';
+        });
+    }
+});
 
 var _debounceTimer = null;
 function debounceApply() {
@@ -296,19 +444,4 @@ function updateClearButton(params) {
 
 })();
 </script>
-{% endblock %}
-
-{% block overlay %}
-<div class="sidebar-overlay" id="report-overlay" onclick="toggleReportSidebar()"></div>
-<div class="sidebar-panel sidebar-panel--report" id="report-sidebar">
-    <div class="sidebar-panel-header">
-        <h3>Report</h3>
-        <button type="button" class="btn-icon" onclick="toggleReportSidebar()">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        </button>
-    </div>
-    <div id="report-content">
-        {% include "components/analyze_report.html" %}
-    </div>
-</div>
 {% endblock %}

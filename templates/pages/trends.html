@@ -6,6 +6,21 @@
     <p class="page-subtitle">{{ phase.name }} · {{ total_entries }} entries</p>
 </div>
 
+<!-- Overview -->
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">Overview</h2>
+    <div class="report-stats-grid">
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_total }}</span><span class="report-stat-card-label">Total</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_code }}</span><span class="report-stat-card-label">Code</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_reviews }}</span><span class="report-stat-card-label">Reviews</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_tickets }}</span><span class="report-stat-card-label">Tickets</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_docs }}</span><span class="report-stat-card-label">Docs</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_meetings }}</span><span class="report-stat-card-label">Meetings</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_collaboration }}</span><span class="report-stat-card-label">Collab</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_learning }}</span><span class="report-stat-card-label">Learning</span></div>
+    </div>
+</section>
+
 <!-- Priority Activity -->
 <section class="card" style="margin-bottom:16px;">
     <h2 class="section-title">Priority Activity</h2>
@@ -118,20 +133,49 @@
 {% if collaborator_bars | length > 0 %}
 <section class="card" style="margin-bottom:16px;">
     <h2 class="section-title">People I Worked With</h2>
-    <div class="trends-h-bars">
+    <div class="report-chip-grid">
         {% for item in collaborator_bars %}
-        <div class="trends-h-bar-item">
-            <span class="trends-h-bar-label">{{ item.name }}</span>
-            <div class="trends-h-bar-track">
-                <div class="trends-h-bar-fill" style="width:{{ item.pct }}%;"></div>
-            </div>
-            <span class="trends-h-bar-value">{{ item.count }}</span>
-        </div>
+        <span class="report-chip"><span class="report-chip-label">{{ item.name }}</span><span class="report-chip-count">{{ item.count }}</span></span>
         {% endfor %}
     </div>
 </section>
 {% endif %}
 
+<!-- Top Repositories -->
+{% if repo_bars | length > 0 %}
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">Top Repositories</h2>
+    <div class="report-chip-grid">
+        {% for item in repo_bars %}
+        <span class="report-chip"><span class="report-chip-label">{{ item.name }}</span><span class="report-chip-count">{{ item.count }}</span></span>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Top Teams -->
+{% if team_bars | length > 0 %}
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">Top Teams</h2>
+    <div class="report-chip-grid">
+        {% for item in team_bars %}
+        <span class="report-chip"><span class="report-chip-label">{{ item.name }}</span><span class="report-chip-count">{{ item.count }}</span></span>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Most Productive Days -->
+{% if weekday_bars | length > 0 %}
+<section class="card" style="margin-bottom:16px;">
+    <h2 class="section-title">Most Productive Days</h2>
+    <div class="report-day-grid">
+        {% for item in weekday_bars %}
+        <div class="report-day-card"><span class="report-day-card-count">{{ item.count }}</span><span class="report-day-card-label">{{ item.name }}</span></div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
 
 <style>
 /* Priority dot */

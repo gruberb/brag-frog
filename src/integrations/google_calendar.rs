@@ -261,16 +261,19 @@ impl SyncService for GoogleCalendarSync {
                         })
                     });
 
-                // Extract attendee names/emails as collaborators
+                // Extract attendee emails as collaborators (prefer email so
+                // the people alias system can map them to display names).
+                // Skip the user themselves and anyone who declined.
                 let collaborators = {
                     let names: Vec<&str> = event
                         .attendees
                         .iter()
                         .filter(|a| !a.is_self)
+                        .filter(|a| a.response_status.as_deref() != Some("declined"))
                         .filter_map(|a| {
-                            a.display_name
+                            a.email
                                 .as_deref()
-                                .or(a.email.as_deref())
+                                .or(a.display_name.as_deref())
                         })
                         .collect();
                     if names.is_empty() {

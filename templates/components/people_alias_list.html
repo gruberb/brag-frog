@@ -1,0 +1,26 @@
+<div id="people-alias-list">
+    {% if people_aliases | length > 0 %}
+    <table class="alias-table">
+        <tbody>
+            {% for alias in people_aliases %}
+            <tr id="alias-row-{{ alias.id }}">
+                <td class="alias-email">{{ alias.email }}</td>
+                <td>{{ alias.display_name }}</td>
+                <td>{{ alias.team | default(value="") }}</td>
+                <td class="alias-actions">
+                    <button class="btn btn-sm btn-secondary"
+                            onclick="editAlias(this, '{{ alias.id }}', '{{ alias.email }}', '{{ alias.display_name }}', '{{ alias.team | default(value='') }}')">Edit</button>
+                    <button class="btn btn-sm btn-danger"
+                            hx-delete="/settings/people-alias/{{ alias.id }}"
+                            hx-target="#people-alias-list"
+                            hx-swap="outerHTML"
+                            hx-confirm="Remove alias for {{ alias.email }}?">Remove</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-sm text-muted">No aliases yet. Add one to map identifiers to names.</p>
+    {% endif %}
+</div>

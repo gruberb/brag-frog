@@ -2,6 +2,7 @@ use chrono::{Datelike, NaiveDate};
 use sqlx::SqlitePool;
 
 use crate::cycle::model::{BragPhase, Week};
+use crate::identity::model::PeopleAlias;
 use crate::kernel::crypto::Crypto;
 use crate::kernel::error::AppError;
 use crate::worklog::model::BragEntry;
@@ -206,6 +207,28 @@ async fn resolve_phase_window(pool: &SqlitePool, user_id: i64) -> Result<PhaseWi
     })
 }
 
+/// Derives a deduped, comma-separated team string from collaborator emails using the team map.
+fn derive_teams(collaborators: Option<&str>, team_map: &std::collections::HashMap<String, String>) -> Option<String> {
+    let collabs = collaborators?;
+    if collabs.is_empty() || team_map.is_empty() {
+        return None;
+    }
+    let mut teams = Vec::new();
+    for c in collabs.split(',') {
+        let email = c.trim().to_lowercase();
+        if let Some(team) = team_map.get(&email)
+            && !teams.contains(team)
+        {
+            teams.push(team.clone());
+        }
+    }
+    if teams.is_empty() {
+        None
+    } else {
+        Some(teams.join(", "))
+    }
+}
+
 async fn persist_synced_entries(
     pool: &SqlitePool,
     user_id: i64,
@@ -215,6 +238,7 @@ async fn persist_synced_entries(
     user_crypto: &crate::kernel::crypto::UserCrypto,
 ) -> Result<EntrySyncStats, AppError> {
     let mut stats = EntrySyncStats::default();
+    let team_map = PeopleAlias::team_map(pool, user_id).await?;
 
     for entry in entries {
         if !entry.source_id.is_empty() {
@@ -280,6 +304,9 @@ async fn persist_synced_entries(
             stats.created += 1;
         }
 
+        // Derive teams from collaborator emails via the team map
+        let derived_teams = derive_teams(entry.collaborators.as_deref(), &team_map);
+
         BragEntry::create_from_sync(
             pool,
             week.id,
@@ -297,6 +324,7 @@ async fn persist_synced_entries(
             entry.start_time.as_deref(),
             entry.end_time.as_deref(),
             entry.collaborators.as_deref(),
+            derived_teams.as_deref(),
             user_crypto,
         )
         .await?;

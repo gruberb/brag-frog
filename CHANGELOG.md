@@ -2,6 +2,26 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [2.1.0] - 2026-02-26
+
+### Added
+- **People aliases with team mapping.** Settings > People now supports mapping emails, GitHub usernames, and Jira accounts to display names and an optional team. Collaborator emails are stored raw and aliased only at display time, so alias changes take effect immediately without re-syncing.
+- **Auto team enrichment from aliases.** When a collaborator matches an alias with a team, that team is automatically added to the entry — both at sync time (persisted) and at display time (for existing entries without re-sync).
+- **Inline editing for people aliases.** Each alias row has an Edit button that turns it into editable input fields with Save/Cancel.
+- **Collaborator extraction for GitHub, Jira, and Bugzilla.** GitHub sync now extracts PR reviewers (for authored/merged PRs) and PR authors (for reviewed PRs). Jira extracts assignee/creator. Bugzilla extracts assigned_to/creator. All stored as collaborators on entries.
+- **Bulk edit for logbook entries.** Select multiple entries and apply priority, reach, complexity, role, teams, or collaborators in one action. Supports append or replace merge modes.
+- **Bulk edit toolbar** with select all/deselect, field dropdowns, and append/replace toggle.
+
+### Changed
+- **Trends page rebuilt with native charts.** Replaced the insights module with inline CSS-only bar charts for categories, priorities, collaborators, repos, teams, weekdays, and impact signals. Removed the separate analytics/insights service.
+- **Logbook report sidebar replaced by bulk edit.** The "Report" button is now "Bulk Edit" with a sticky bottom toolbar.
+- **Entry cards show bulk-edit checkboxes** when bulk edit mode is active.
+- **Entry meta row wraps on narrow screens** (flex-wrap added to `.entry-meta-left`).
+
+### Removed
+- `compute_insights()` function and `insights` service module (replaced by inline Trends page logic).
+- `analyze_report.html` template (report sidebar replaced by bulk edit).
+
 ## [2.0.1] - 2026-02-26
 
 ### Fixed

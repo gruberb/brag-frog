@@ -199,5 +199,121 @@
             <button type="submit" class="btn btn-primary">Save Preferences</button>
         </form>
     </div>
+
+    <!-- People Aliases -->
+    <div class="card">
+        <h2>People</h2>
+        <p class="text-sm text-muted" style="margin-bottom:var(--space-3);">Map email addresses, GitHub usernames, or Jira accounts to display names and teams. Aliases replace raw identifiers in Trends, Logbook filters, and collaborator fields.</p>
+
+        <table class="alias-table alias-add-table">
+            <thead>
+                <tr>
+                    <th>Identifier</th>
+                    <th>Display Name</th>
+                    <th>Team</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <form hx-post="/settings/people-alias" hx-target="#people-alias-list" hx-swap="outerHTML">
+                        <td><input type="text" name="email" class="form-input form-input-sm" placeholder="email, GitHub user, or Jira account" required></td>
+                        <td><input type="text" name="display_name" class="form-input form-input-sm" placeholder="Display Name" required></td>
+                        <td><input type="text" name="team" class="form-input form-input-sm" placeholder="Optional"></td>
+                        <td class="alias-actions"><button type="submit" class="btn btn-primary btn-sm">Add</button></td>
+                    </form>
+                </tr>
+            </tbody>
+        </table>
+
+        {% include "components/people_alias_list.html" %}
+    </div>
 </div>
+
+<style>
+.alias-add-table {
+    margin-bottom: var(--space-2);
+}
+.alias-add-table .form-input-sm {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: var(--text-sm);
+}
+.alias-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+}
+.alias-table th {
+    text-align: left;
+    padding: 6px 8px;
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.alias-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--color-gray-10);
+}
+.alias-email {
+    color: var(--color-text-secondary);
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs);
+}
+.alias-actions {
+    white-space: nowrap;
+    text-align: right;
+}
+.alias-actions .btn {
+    margin-left: 4px;
+}
+.alias-edit-input {
+    width: 100%;
+    padding: 2px 6px;
+    font-size: var(--text-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm, 4px);
+}
+</style>
+
+<script>
+function editAlias(btn, id, email, displayName, team) {
+    var row = btn.closest('tr');
+    var cells = row.querySelectorAll('td');
+    var origHtml = row.innerHTML;
+
+    cells[0].innerHTML = '<input class="alias-edit-input" name="email" value="' + email.replace(/"/g, '&quot;') + '">';
+    cells[1].innerHTML = '<input class="alias-edit-input" name="display_name" value="' + displayName.replace(/"/g, '&quot;') + '">';
+    cells[2].innerHTML = '<input class="alias-edit-input" name="team" value="' + team.replace(/"/g, '&quot;') + '">';
+    cells[3].innerHTML =
+        '<button class="btn btn-sm btn-primary alias-save-btn">Save</button>' +
+        '<button class="btn btn-sm btn-secondary" style="margin-left:4px">Cancel</button>';
+
+    cells[3].querySelector('.alias-save-btn').addEventListener('click', function() {
+        var emailVal = cells[0].querySelector('input').value.trim();
+        var nameVal = cells[1].querySelector('input').value.trim();
+        var teamVal = cells[2].querySelector('input').value.trim();
+        if (!emailVal || !nameVal) return;
+
+        var form = new FormData();
+        form.append('email', emailVal);
+        form.append('display_name', nameVal);
+        form.append('team', teamVal);
+
+        htmx.ajax('POST', '/settings/people-alias', {
+            target: '#people-alias-list',
+            swap: 'outerHTML',
+            values: { email: emailVal, display_name: nameVal, team: teamVal },
+            headers: { 'HX-Request': 'true' }
+        });
+    });
+
+    cells[3].querySelector('.btn-secondary').addEventListener('click', function() {
+        row.innerHTML = origHtml;
+    });
+}
+</script>
 {% endblock %}

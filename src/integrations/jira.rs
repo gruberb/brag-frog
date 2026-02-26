@@ -78,7 +78,7 @@ impl SyncService for JiraSync {
             .json(&serde_json::json!({
                 "jql": jql,
                 "maxResults": 100,
-                "fields": ["summary", "status", "created", "updated", "issuetype", "project"]
+                "fields": ["summary", "status", "created", "updated", "issuetype", "project", "assignee", "creator"]
             }))
             .send()
             .await?;
@@ -153,6 +153,20 @@ impl SyncService for JiraSync {
                     }
                 };
 
+                // Extract collaborator: assignee or creator (whichever isn't the syncing user)
+                let assignee_email = fields["assignee"]["emailAddress"].as_str().unwrap_or("");
+                let assignee_name = fields["assignee"]["displayName"].as_str().unwrap_or("");
+                let creator_email = fields["creator"]["emailAddress"].as_str().unwrap_or("");
+                let creator_name = fields["creator"]["displayName"].as_str().unwrap_or("");
+
+                let collaborator = if !assignee_email.is_empty() && assignee_email != email {
+                    Some(if !assignee_name.is_empty() { assignee_name } else { assignee_email }.to_string())
+                } else if !creator_email.is_empty() && creator_email != email {
+                    Some(if !creator_name.is_empty() { creator_name } else { creator_email }.to_string())
+                } else {
+                    None
+                };
+
                 entries.push(SyncedEntry {
                     source: "jira",
                     source_id: format!("jira-{}", key),
@@ -167,7 +181,7 @@ impl SyncService for JiraSync {
                     recurring_group: None,
                     start_time: None,
                     end_time: None,
-                    collaborators: None,
+                    collaborators: collaborator,
                 });
             }
         }

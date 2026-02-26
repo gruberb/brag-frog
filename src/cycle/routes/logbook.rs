@@ -6,16 +6,16 @@ use axum::{
 use crate::AppState;
 use super::logbook_insights::{
     AnalyzeFilterQuery, AnalyzePageQuery, apply_in_memory_filters, build_date_groups,
-    category_to_entry_types, collect_unique_values, compute_insights,
+    category_to_entry_types, collect_unique_values,
 };
 use crate::worklog::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
-use crate::identity::model::User;
+use crate::identity::model::{PeopleAlias, User};
 use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
 
-/// Renders the logbook page with filter toolbar, date-grouped entries, insights, and report sidebar.
+/// Renders the logbook page with filter toolbar and date-grouped entries.
 pub async fn logbook(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -41,7 +41,6 @@ pub async fn logbook(
 
     let today_str = chrono::Local::now().format("%Y-%m-%d").to_string();
 
-    // Fetch entries WITHOUT category filter (so insights reflect the full base set)
     // Use full phase end date so manual entries with future dates are included.
     let sources: Vec<String> = page_query
         .source
@@ -74,13 +73,16 @@ pub async fn logbook(
     // Hide future synced entries (e.g. upcoming calendar meetings) but keep manual entries
     entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
 
+    // Apply aliases to entry collaborator fields BEFORE filtering, so aliased names
+    // match the dropdown values (e.g. "Anna Sobiepanek" instead of raw email).
+    let alias_map = PeopleAlias::alias_map(&state.db, auth.user_id).await?;
+    let team_map = PeopleAlias::team_map(&state.db, auth.user_id).await?;
+    PeopleAlias::apply_to_entries(&mut entries, &alias_map, &team_map);
+
     // Post-fetch in-memory filters (search, team, collaborator, special flags)
     apply_in_memory_filters(&mut entries, &page_query);
 
-    // Compute insights from the base set (before category filter)
-    let insights = compute_insights(&entries, &priorities);
-
-    // Now apply category filter in-memory
+    // Apply category filter in-memory
     if let Some(ref cat) = page_query.category
         && !cat.is_empty()
     {
@@ -100,11 +102,15 @@ pub async fn logbook(
     .await?;
     all_entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
 
+    // Apply aliases to all_entries too so dropdown values use display names
+    PeopleAlias::apply_to_entries(&mut all_entries, &alias_map, &team_map);
+
     let mut all_teams: Vec<String> = collect_unique_values(&all_entries, |e| e.teams.as_deref());
     all_teams.sort();
     let mut all_collaborators: Vec<String> =
         collect_unique_values(&all_entries, |e| e.collaborators.as_deref());
     all_collaborators.sort();
+    all_collaborators.dedup();
 
     let date_groups = build_date_groups(&entries);
 
@@ -118,7 +124,6 @@ pub async fn logbook(
     ctx.insert("current_page", "logbook");
     ctx.insert("all_teams", &all_teams);
     ctx.insert("all_collaborators", &all_collaborators);
-    ctx.insert("insights", &insights);
     ctx.insert("date_groups", &date_groups);
     ctx.insert(
         "entry_types",
@@ -174,7 +179,7 @@ pub async fn logbook(
     Ok(Html(html))
 }
 
-/// HTMX handler: applies filters and returns the entry list + report + count via OOB swaps.
+/// HTMX handler: applies filters and returns the entry list + count via OOB swap.
 pub async fn logbook_filtered_entries(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -212,6 +217,11 @@ pub async fn logbook_filtered_entries(
     // Hide future synced entries but keep manual entries
     entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
 
+    // Apply aliases BEFORE filtering so aliased names match dropdown values
+    let alias_map = PeopleAlias::alias_map(&state.db, auth.user_id).await?;
+    let team_map = PeopleAlias::team_map(&state.db, auth.user_id).await?;
+    PeopleAlias::apply_to_entries(&mut entries, &alias_map, &team_map);
+
     // Build a page_query-compatible struct for in-memory filters
     let page_query = AnalyzePageQuery {
         department_goal_id: query.department_goal_id.map(|id: i64| id.to_string()),
@@ -231,12 +241,8 @@ pub async fn logbook_filtered_entries(
     apply_in_memory_filters(&mut entries, &page_query);
 
     let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
-    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
-    // Compute insights from base set (before category filter)
-    let insights = compute_insights(&entries, &priorities);
-
-    // Now apply category filter in-memory
+    // Apply category filter in-memory
     if let Some(ref cat) = query.category
         && !cat.is_empty()
     {
@@ -249,8 +255,6 @@ pub async fn logbook_filtered_entries(
     let mut ctx = tera::Context::new();
     ctx.insert("entries", &entries);
     ctx.insert("priorities", &priorities);
-    ctx.insert("dept_goals", &dept_goals);
-    ctx.insert("insights", &insights);
     ctx.insert("date_groups", &date_groups);
     ctx.insert("filtered_count", &entries.len());
     ctx.insert(
@@ -270,18 +274,13 @@ pub async fn logbook_filtered_entries(
         &crate::worklog::model::EntryType::as_manual_grouped_json_options(),
     );
 
-    // Render report partial with OOB swap so sidebar + count update from one response
-    let report_html = state
-        .templates
-        .render("components/analyze_report.html", &ctx)?;
     let entries_html = state
         .templates
         .render("components/analyze_results.html", &ctx)?;
 
     let html = format!(
-        "{}<div id=\"report-content\" hx-swap-oob=\"innerHTML\">{}</div><span id=\"filtered-count\" hx-swap-oob=\"innerHTML\">{}</span>",
+        "{}<span id=\"filtered-count\" hx-swap-oob=\"innerHTML\">{}</span>",
         entries_html,
-        report_html,
         entries.len()
     );
     Ok(Html(html))

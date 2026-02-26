@@ -161,6 +161,7 @@ pub fn create_router() -> Router<AppState> {
         .route("/logbook", get(cycle_routes::logbook::logbook))
         // Entries
         .route("/entries/quick", post(worklog_routes::quick_create_entry))
+        .route("/entries/bulk-update", post(worklog_routes::bulk_update_entries))
         .route("/entries/{id}", put(worklog_routes::update_entry))
         .route("/entries/{id}", delete(worklog_routes::delete_entry))
         .route("/entries/{id}/view", get(worklog_routes::view_entry))
@@ -249,6 +250,8 @@ pub fn create_router() -> Router<AppState> {
         // Settings
         .route("/settings", get(identity_routes::settings_page))
         .route("/settings", post(identity_routes::save_settings))
+        .route("/settings/people-alias", post(identity_routes::upsert_people_alias))
+        .route("/settings/people-alias/{id}", delete(identity_routes::delete_people_alias))
         // Level Guide
         .route("/level-guide", get(identity_routes::clg_guide_page))
         // Review Guide

@@ -1,6 +1,6 @@
 use axum::{
     Form,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::header,
     response::{Html, IntoResponse, Redirect},
 };
@@ -8,7 +8,7 @@ use tower_sessions::Session;
 
 use crate::AppState;
 use crate::identity::auth::{self, middleware as auth_mw};
-use crate::identity::model::{ProfileUpdate, User};
+use crate::identity::model::{PeopleAlias, ProfileUpdate, User};
 use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
 
@@ -203,10 +203,13 @@ pub async fn settings_page(
         })
         .collect();
 
+    let people_aliases = PeopleAlias::list_for_user(&state.db, auth.user_id).await?;
+
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
     ctx.insert("clg_levels", &clg_levels);
+    ctx.insert("people_aliases", &people_aliases);
     ctx.insert("current_page", "settings");
 
     let html = state.templates.render("pages/settings.html", &ctx)?;
@@ -303,4 +306,52 @@ pub async fn clg_guide_page(
 
     let html = state.templates.render("pages/clg_guide.html", &ctx)?;
     Ok(Html(html))
+}
+
+// ── People Alias routes ──
+
+/// Form payload for adding/updating a people alias.
+#[derive(serde::Deserialize)]
+pub struct PeopleAliasForm {
+    pub email: String,
+    pub display_name: String,
+    pub team: Option<String>,
+}
+
+/// Renders the alias list partial after an upsert or delete.
+async fn render_alias_list(
+    state: &AppState,
+    user_id: i64,
+) -> Result<Html<String>, AppError> {
+    let people_aliases = PeopleAlias::list_for_user(&state.db, user_id).await?;
+    let mut ctx = tera::Context::new();
+    ctx.insert("people_aliases", &people_aliases);
+    let html = state.templates.render("components/people_alias_list.html", &ctx)?;
+    Ok(Html(html))
+}
+
+/// HTMX handler: upserts a people alias and returns the updated list partial.
+pub async fn upsert_people_alias(
+    auth: auth_mw::AuthUser,
+    State(state): State<AppState>,
+    Form(input): Form<PeopleAliasForm>,
+) -> Result<Html<String>, AppError> {
+    let email = input.email.trim();
+    let display_name = input.display_name.trim();
+    if email.is_empty() || display_name.is_empty() {
+        return Err(AppError::BadRequest("Email and display name are required".to_string()));
+    }
+    let team = input.team.as_deref().filter(|s| !s.trim().is_empty());
+    PeopleAlias::upsert(&state.db, auth.user_id, email, display_name, team).await?;
+    render_alias_list(&state, auth.user_id).await
+}
+
+/// HTMX handler: deletes a people alias and returns the updated list partial.
+pub async fn delete_people_alias(
+    auth: auth_mw::AuthUser,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<Html<String>, AppError> {
+    PeopleAlias::delete(&state.db, id, auth.user_id).await?;
+    render_alias_list(&state, auth.user_id).await
 }

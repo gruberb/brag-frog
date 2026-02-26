@@ -279,6 +279,18 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
         ""
     };
 
+    // For Authored/Merged PRs, fetch reviewers; for Reviewed PRs, fetch the PR author
+    let collaborator_fragment = match p.query_type {
+        GitHubQueryType::Authored | GitHubQueryType::Merged => {
+            r#"reviews(first: 10) {
+                                nodes { author { login } }
+                            }"#
+        }
+        GitHubQueryType::Reviewed => {
+            r#"author { login }"#
+        }
+    };
+
     let graphql_query = serde_json::json!({
         "query": format!(r#"
             query {{
@@ -297,11 +309,12 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                                 nameWithOwner
                             }}
                             {}
+                            {}
                         }}
                     }}
                 }}
             }}
-        "#, search_query, commits_fragment)
+        "#, search_query, commits_fragment, collaborator_fragment)
     });
 
     let resp = p.client
@@ -350,6 +363,35 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                 let updated_at = node["updatedAt"].as_str().unwrap_or("").to_string();
                 let merged_at = node["mergedAt"].as_str().unwrap_or("").to_string();
 
+                // Extract collaborators based on query type
+                let collaborators = match p.query_type {
+                    GitHubQueryType::Authored | GitHubQueryType::Merged => {
+                        // Collect unique reviewer logins (excluding the PR author)
+                        let mut reviewers = std::collections::BTreeSet::new();
+                        if let Some(review_nodes) = node["reviews"]["nodes"].as_array() {
+                            for review in review_nodes {
+                                if let Some(login) = review["author"]["login"].as_str()
+                                    && login != p.username
+                                {
+                                    reviewers.insert(login.to_string());
+                                }
+                            }
+                        }
+                        if reviewers.is_empty() {
+                            None
+                        } else {
+                            Some(reviewers.into_iter().collect::<Vec<_>>().join(", "))
+                        }
+                    }
+                    GitHubQueryType::Reviewed => {
+                        // The collaborator is the PR author
+                        node["author"]["login"]
+                            .as_str()
+                            .filter(|l| !l.is_empty() && *l != p.username)
+                            .map(|l| l.to_string())
+                    }
+                };
+
                 match p.query_type {
                     GitHubQueryType::Authored => {
                         let occurred_at = parse_date(&created_at, &p.start_date);
@@ -368,7 +410,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             recurring_group: None,
                             start_time: None,
                             end_time: None,
-                            collaborators: None,
+                            collaborators: collaborators.clone(),
                         });
 
                         // Generate per-day development entries from commit dates
@@ -401,7 +443,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                                         recurring_group: None,
                                         start_time: None,
                                         end_time: None,
-                                        collaborators: None,
+                                        collaborators: collaborators.clone(),
                                     });
                                 }
                             }
@@ -426,7 +468,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             recurring_group: None,
                             start_time: None,
                             end_time: None,
-                            collaborators: None,
+                            collaborators,
                         });
                     }
                     GitHubQueryType::Reviewed => {
@@ -446,7 +488,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             recurring_group: None,
                             start_time: None,
                             end_time: None,
-                            collaborators: None,
+                            collaborators,
                         });
                     }
                 }

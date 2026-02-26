@@ -246,6 +246,8 @@ impl BragEntry {
     }
 
     /// Upserts an entry from an external sync source. Deduplicates on `(source, source_id)`.
+    /// When `teams` is provided (e.g. derived from people alias team map), it is persisted
+    /// on INSERT and merged on UPDATE using COALESCE to avoid overwriting user-set teams.
     #[allow(clippy::too_many_arguments)]
     pub async fn create_from_sync(
         pool: &SqlitePool,
@@ -264,16 +266,18 @@ impl BragEntry {
         start_time: Option<&str>,
         end_time: Option<&str>,
         collaborators: Option<&str>,
+        teams: Option<&str>,
         crypto: &UserCrypto,
     ) -> Result<Self, AppError> {
         let enc_title = crypto.encrypt(title)?;
         let enc_description = crypto.encrypt_opt(&description.map(String::from))?;
         let enc_collaborators = crypto.encrypt_opt(&collaborators.map(String::from))?;
+        let enc_teams = crypto.encrypt_opt(&teams.map(String::from))?;
 
         let row = sqlx::query_as::<_, BragEntryRow>(
             r#"
-            INSERT INTO brag_entries (week_id, source, source_id, source_url, title, description, entry_type, status, repository, occurred_at, meeting_role, recurring_group, start_time, end_time, collaborators)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO brag_entries (week_id, source, source_id, source_url, title, description, entry_type, status, repository, occurred_at, meeting_role, recurring_group, start_time, end_time, collaborators, teams)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(source, source_id) DO UPDATE SET
                 title = excluded.title,
                 description = COALESCE(brag_entries.description, excluded.description),
@@ -283,6 +287,7 @@ impl BragEntry {
                 repository = COALESCE(excluded.repository, brag_entries.repository),
                 recurring_group = COALESCE(excluded.recurring_group, brag_entries.recurring_group),
                 collaborators = COALESCE(excluded.collaborators, brag_entries.collaborators),
+                teams = COALESCE(brag_entries.teams, excluded.teams),
                 occurred_at = excluded.occurred_at,
                 week_id = excluded.week_id,
                 start_time = excluded.start_time,
@@ -307,6 +312,7 @@ impl BragEntry {
         .bind(start_time)
         .bind(end_time)
         .bind(&enc_collaborators)
+        .bind(&enc_teams)
         .fetch_one(pool)
         .await?;
 
@@ -703,6 +709,48 @@ impl BragEntry {
 
         let result = query.execute(pool).await?;
         Ok(result.rows_affected())
+    }
+
+    /// Updates metadata fields on a single entry using COALESCE to skip `None` values.
+    /// Used by bulk edit — caller pre-merges and encrypts teams/collaborators.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn bulk_update_fields(
+        pool: &SqlitePool,
+        id: i64,
+        user_id: i64,
+        priority_id: Option<i64>,
+        teams: Option<&[u8]>,
+        collaborators: Option<&[u8]>,
+        reach: Option<&str>,
+        complexity: Option<&str>,
+        role: Option<&str>,
+    ) -> Result<(), AppError> {
+        sqlx::query(
+            r#"
+            UPDATE brag_entries SET
+                priority_id = COALESCE(?, priority_id),
+                teams = COALESCE(?, teams),
+                collaborators = COALESCE(?, collaborators),
+                reach = COALESCE(?, reach),
+                complexity = COALESCE(?, complexity),
+                role = COALESCE(?, role),
+                updated_at = datetime('now')
+            WHERE id = ? AND week_id IN (
+                SELECT w.id FROM weeks w JOIN brag_phases p ON w.phase_id = p.id WHERE p.user_id = ?
+            )
+            "#,
+        )
+        .bind(priority_id)
+        .bind(teams)
+        .bind(collaborators)
+        .bind(reach)
+        .bind(complexity)
+        .bind(role)
+        .bind(id)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+        Ok(())
     }
 
     /// Updates the meeting classification fields (meeting_role and optionally teams).

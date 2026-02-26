@@ -76,7 +76,7 @@ impl SyncService for BugzillaSync {
             ("creation_time_end", end_str.as_str()),
             (
                 "include_fields",
-                "id,summary,status,resolution,creation_time,last_change_time,product,component",
+                "id,summary,status,resolution,creation_time,last_change_time,product,component,assigned_to,creator",
             ),
             ("limit", "200"),
         ];
@@ -108,6 +108,14 @@ impl SyncService for BugzillaSync {
                 "bug_filed"
             };
 
+            // For assigned bugs, the creator (reporter) is the collaborator
+            let creator_email = bug["creator"].as_str().unwrap_or("");
+            let collaborator = if !creator_email.is_empty() && creator_email != email {
+                Some(creator_email.to_string())
+            } else {
+                None
+            };
+
             entries.push(SyncedEntry {
                 source: "bugzilla",
                 source_id: format!("bug-{}", id),
@@ -122,7 +130,7 @@ impl SyncService for BugzillaSync {
                 recurring_group: None,
                 start_time: None,
                 end_time: None,
-                collaborators: None,
+                collaborators: collaborator,
             });
         }
 
@@ -133,7 +141,7 @@ impl SyncService for BugzillaSync {
             ("creation_time_end", end_str.as_str()),
             (
                 "include_fields",
-                "id,summary,status,resolution,creation_time,product,component",
+                "id,summary,status,resolution,creation_time,product,component,assigned_to,creator",
             ),
             ("limit", "200"),
         ];
@@ -161,6 +169,14 @@ impl SyncService for BugzillaSync {
                 .unwrap_or(&start_date.to_string())
                 .to_string();
 
+            // For filed bugs, the assignee is the collaborator
+            let assignee_email = bug["assigned_to"].as_str().unwrap_or("");
+            let collaborator = if !assignee_email.is_empty() && assignee_email != email {
+                Some(assignee_email.to_string())
+            } else {
+                None
+            };
+
             entries.push(SyncedEntry {
                 source: "bugzilla",
                 source_id,
@@ -175,7 +191,7 @@ impl SyncService for BugzillaSync {
                 recurring_group: None,
                 start_time: None,
                 end_time: None,
-                collaborators: None,
+                collaborators: collaborator,
             });
         }
 

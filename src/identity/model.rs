@@ -39,3 +39,16 @@ pub struct User {
     pub work_start_time: Option<String>,
     pub work_end_time: Option<String>,
 }
+
+/// Maps an email address to a human-readable display name. Users configure
+/// these in Settings to replace raw emails (e.g. from calendar attendees)
+/// with recognizable names throughout the UI.
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PeopleAlias {
+    pub id: i64,
+    pub user_id: i64,
+    pub email: String,
+    pub display_name: String,
+    pub team: Option<String>,
+    pub created_at: String,
+}

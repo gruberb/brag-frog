@@ -569,6 +569,29 @@ pub struct UpdateEntry {
     pub role: Option<String>,
 }
 
+/// Form payload for bulk-updating metadata on multiple entries at once.
+#[derive(Debug, Deserialize)]
+pub struct BulkUpdateEntries {
+    /// Comma-separated entry IDs to update.
+    pub entry_ids: String,
+    #[serde(default, deserialize_with = "deserialize_optional_i64")]
+    pub priority_id: Option<i64>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub teams: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub collaborators: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub reach: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub complexity: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub role: Option<String>,
+    /// "append" (default) merges teams/collaborators with existing values;
+    /// "replace" overwrites them entirely.
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub merge_mode: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{EntryType, entry_type_to_source};

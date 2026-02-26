@@ -6,7 +6,7 @@ use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
 use crate::integrations::model::IntegrationConfig;
 
-use super::model::{BragEntry, UpdateEntry};
+use super::model::{BragEntry, BulkUpdateEntries, UpdateEntry};
 
 /// Updates an entry, reassigning it to the correct week if the date changed.
 pub async fn update_with_week_reassignment(
@@ -177,4 +177,104 @@ pub async fn exclude_calendar_event(
 
     BragEntry::soft_delete_by_event_id(pool, user_id, &base_event_id).await?;
     Ok(())
+}
+
+/// Merge two CSV strings by appending new values while deduplicating.
+fn merge_csv(existing: Option<&str>, new: &str) -> String {
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::new();
+
+    // Preserve existing values
+    if let Some(existing) = existing {
+        for item in existing.split(',') {
+            let item = item.trim();
+            if !item.is_empty() && seen.insert(item.to_lowercase()) {
+                result.push(item.to_string());
+            }
+        }
+    }
+
+    // Append new values
+    for item in new.split(',') {
+        let item = item.trim();
+        if !item.is_empty() && seen.insert(item.to_lowercase()) {
+            result.push(item.to_string());
+        }
+    }
+
+    result.join(", ")
+}
+
+/// Bulk-updates metadata fields on multiple entries.
+/// Returns the number of entries successfully updated.
+pub async fn bulk_update_entries(
+    pool: &SqlitePool,
+    user_id: i64,
+    input: &BulkUpdateEntries,
+    crypto: &UserCrypto,
+) -> Result<usize, AppError> {
+    let ids: Vec<i64> = input
+        .entry_ids
+        .split(',')
+        .filter_map(|s| s.trim().parse().ok())
+        .collect();
+
+    if ids.is_empty() {
+        return Err(AppError::BadRequest("No entry IDs provided".to_string()));
+    }
+
+    let is_replace = input
+        .merge_mode
+        .as_deref()
+        .is_some_and(|m| m == "replace");
+
+    let mut updated = 0usize;
+
+    for id in &ids {
+        let entry = match BragEntry::find_by_id(pool, *id, user_id, crypto).await? {
+            Some(e) => e,
+            None => continue,
+        };
+
+        // Merge or replace teams
+        let enc_teams = if let Some(ref new_teams) = input.teams {
+            let final_val = if is_replace {
+                new_teams.clone()
+            } else {
+                merge_csv(entry.teams.as_deref(), new_teams)
+            };
+            Some(crypto.encrypt(&final_val)?)
+        } else {
+            None
+        };
+
+        // Merge or replace collaborators
+        let enc_collabs = if let Some(ref new_collabs) = input.collaborators {
+            let final_val = if is_replace {
+                new_collabs.clone()
+            } else {
+                merge_csv(entry.collaborators.as_deref(), new_collabs)
+            };
+            Some(crypto.encrypt(&final_val)?)
+        } else {
+            None
+        };
+
+        BragEntry::bulk_update_fields(
+            pool,
+            *id,
+            user_id,
+            input.priority_id,
+            enc_teams.as_deref(),
+            enc_collabs.as_deref(),
+            input.reach.as_deref(),
+            input.complexity.as_deref(),
+            input.role.as_deref(),
+        )
+        .await?;
+
+        updated += 1;
+    }
+
+    Ok(updated)
 }
