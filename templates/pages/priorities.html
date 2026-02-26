@@ -85,14 +85,6 @@
                 </select>
             </div>
         </div>
-        <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-textarea" rows="2" placeholder="Optional details"></textarea>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Impact Narrative</label>
-            <textarea name="impact_narrative" class="form-textarea" rows="2" placeholder="Why does this priority matter? What impact will it have?"></textarea>
-        </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary btn-sm">Create Priority</button>
             <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');">Cancel</button>
@@ -249,10 +241,6 @@
                                     <option value="xlarge" {% if priority.scope == "xlarge" %}selected{% endif %}>XLarge</option>
                                 </select>
                             </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Description</label>
-                            <textarea name="description" class="form-textarea" rows="2">{{ priority.description | default(value="") }}</textarea>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Impact Narrative</label>

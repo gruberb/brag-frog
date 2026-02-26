@@ -25,7 +25,7 @@ impl Priority {
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, PriorityRow>(
-            "SELECT id, phase_id, user_id, title, description, status, color, sort_order,
+            "SELECT id, phase_id, user_id, title, status, color, sort_order,
                 scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
              FROM priorities WHERE phase_id = ? ORDER BY sort_order, id",
         )
@@ -42,7 +42,7 @@ impl Priority {
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, PriorityRow>(
-            "SELECT id, phase_id, user_id, title, description, status, color, sort_order,
+            "SELECT id, phase_id, user_id, title, status, color, sort_order,
                 scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
              FROM priorities WHERE department_goal_id = ? ORDER BY sort_order, id",
         )
@@ -60,7 +60,7 @@ impl Priority {
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, PriorityRow>(
             r#"
-            SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.description, pr.status,
+            SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.status,
                 pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
                 pr.impact_narrative, pr.department_goal_id, pr.created_at
             FROM priorities pr
@@ -85,7 +85,7 @@ impl Priority {
     ) -> Result<Option<Self>, AppError> {
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
-            SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.description, pr.status,
+            SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.status,
                 pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
                 pr.impact_narrative, pr.department_goal_id, pr.created_at
             FROM priorities pr
@@ -127,21 +127,19 @@ impl Priority {
 
         let color = random_color();
         let enc_title = crypto.encrypt(&input.title)?;
-        let enc_description = crypto.encrypt_opt(&input.description)?;
 
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
-            INSERT INTO priorities (phase_id, user_id, title, description, status, color, sort_order,
+            INSERT INTO priorities (phase_id, user_id, title, status, color, sort_order,
                 scope, department_goal_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, phase_id, user_id, title, description, status, color, sort_order,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id, phase_id, user_id, title, status, color, sort_order,
                 scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
             "#,
         )
         .bind(phase_id)
         .bind(user_id)
         .bind(&enc_title)
-        .bind(&enc_description)
         .bind(input.status.as_deref().unwrap_or("active"))
         .bind(&color)
         .bind(max_order.unwrap_or(0) + 1)
@@ -164,21 +162,19 @@ impl Priority {
         let status = input.status.as_deref().unwrap_or("active");
 
         let enc_title = crypto.encrypt(&input.title)?;
-        let enc_description = crypto.encrypt_opt(&input.description)?;
         let enc_narrative = crypto.encrypt_opt(&input.impact_narrative)?;
 
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
-            UPDATE priorities SET title = ?, description = ?, status = ?, scope = ?,
+            UPDATE priorities SET title = ?, status = ?, scope = ?,
                 impact_narrative = ?, department_goal_id = ?,
                 started_at = ?, completed_at = ?
             WHERE id = ? AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)
-            RETURNING id, phase_id, user_id, title, description, status, color, sort_order,
+            RETURNING id, phase_id, user_id, title, status, color, sort_order,
                 scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
             "#,
         )
         .bind(&enc_title)
-        .bind(&enc_description)
         .bind(status)
         .bind(&input.scope)
         .bind(&enc_narrative)

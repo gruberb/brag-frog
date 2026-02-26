@@ -303,7 +303,6 @@ pub async fn create_test_priority(
         user_id,
         &CreatePriority {
             title: title.to_string(),
-            description: None,
             status: Some("active".to_string()),
             scope: None,
             department_goal_id,

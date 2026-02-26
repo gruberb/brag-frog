@@ -63,6 +63,7 @@ cargo clippy           # must pass before committing
 
 1. Never mention Co-Authored when committing code for the developer
 2. Always write comments and documentation as a Staff Engineer, intended for other developers
+3. Never just remove UI or just handlers, refactor, delete and add features end-to-end (.env, db, handlers, logic, UI etc.)
 
 ## Further Reading
 

@@ -87,6 +87,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "006_add_meeting_goal",
         include_str!("../../migrations/006_add_meeting_goal.sql"),
     ),
+    (
+        "007_remove_description_from_priorities",
+        include_str!("../../migrations/007_remove_description_from_priorities.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.
