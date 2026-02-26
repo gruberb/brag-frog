@@ -71,6 +71,8 @@ pub struct CreatePriority {
     pub status: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub scope: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub impact_narrative: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
     pub department_goal_id: Option<i64>,
 }

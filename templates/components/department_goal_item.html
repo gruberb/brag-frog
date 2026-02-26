@@ -4,9 +4,6 @@
         {% if goal.status %}
         <span class="badge badge-status badge-status--{{ goal.status }}">{{ goal.status | replace(from="_", to=" ") }}</span>
         {% endif %}
-        {% if goal.description %}
-        <span class="cycle-item-desc">{{ goal.description }}</span>
-        {% endif %}
         {% if goal.source %}
         <span class="badge" style="font-size:0.65rem;opacity:0.7;">{{ goal.source }}</span>
         {% endif %}
@@ -25,6 +22,9 @@
             </button>
         </div>
     </div>
+    {% if goal.description %}
+    <div class="cycle-item-desc-block">{{ goal.description }}</div>
+    {% endif %}
     <form class="cycle-item-edit{% if not show_edit_form %} hidden{% endif %}" id="dept-goal-edit-{{ goal.id }}"
           hx-put="/priorities/goals/{{ goal.id }}"
           hx-target="#dept-goal-{{ goal.id }}"

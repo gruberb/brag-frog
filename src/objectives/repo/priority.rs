@@ -127,12 +127,13 @@ impl Priority {
 
         let color = random_color();
         let enc_title = crypto.encrypt(&input.title)?;
+        let enc_narrative = crypto.encrypt_opt(&input.impact_narrative)?;
 
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
             INSERT INTO priorities (phase_id, user_id, title, status, color, sort_order,
-                scope, department_goal_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                scope, impact_narrative, department_goal_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id, phase_id, user_id, title, status, color, sort_order,
                 scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
             "#,
@@ -144,6 +145,7 @@ impl Priority {
         .bind(&color)
         .bind(max_order.unwrap_or(0) + 1)
         .bind(&input.scope)
+        .bind(&enc_narrative)
         .bind(input.department_goal_id)
         .fetch_one(pool)
         .await?;

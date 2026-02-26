@@ -134,58 +134,6 @@
     </div>
 </div>
 
-<!-- Bulk edit toolbar (sticky bottom bar, hidden by default) -->
-<div class="bulk-edit-toolbar" id="bulk-edit-toolbar" style="display:none">
-    <div class="bulk-edit-toolbar-inner">
-        <span class="bulk-edit-count" id="bulk-edit-count">0 selected</span>
-
-        <button type="button" class="btn btn-sm btn-secondary" onclick="bulkSelectAll()">Select All</button>
-        <button type="button" class="btn btn-sm btn-secondary" onclick="bulkDeselectAll()">Deselect All</button>
-
-        <select id="bulk-priority" class="form-select form-select--sm">
-            <option value="">Priority</option>
-            {% for p in priorities %}
-            <option value="{{ p.id }}">{{ p.title }}</option>
-            {% endfor %}
-        </select>
-
-        <select id="bulk-reach" class="form-select form-select--sm">
-            <option value="">Reach</option>
-            <option value="team">Team</option>
-            <option value="cross_team">Cross-team</option>
-            <option value="org">Org</option>
-            <option value="company">Company</option>
-        </select>
-
-        <select id="bulk-complexity" class="form-select form-select--sm">
-            <option value="">Complexity</option>
-            <option value="routine">Routine</option>
-            <option value="moderate">Moderate</option>
-            <option value="complex">Complex</option>
-            <option value="novel">Novel</option>
-        </select>
-
-        <select id="bulk-role" class="form-select form-select--sm">
-            <option value="">Role</option>
-            <option value="contributor">Contributor</option>
-            <option value="owner">Owner</option>
-            <option value="lead">Lead</option>
-            <option value="architect">Architect</option>
-        </select>
-
-        <input type="text" id="bulk-teams" class="form-input form-input--sm" placeholder="Teams" style="width:120px">
-        <input type="text" id="bulk-collaborators" class="form-input form-input--sm" placeholder="Collaborators" style="width:120px">
-
-        <div class="bulk-edit-merge-toggle">
-            <button type="button" class="bulk-merge-btn active" id="bulk-merge-append" onclick="setBulkMergeMode('append')">Append</button>
-            <button type="button" class="bulk-merge-btn" id="bulk-merge-replace" onclick="setBulkMergeMode('replace')">Replace</button>
-        </div>
-
-        <button type="button" class="btn btn-sm btn-primary" onclick="bulkApply()">Apply</button>
-        <button type="button" class="btn btn-sm btn-text" onclick="toggleBulkEdit()">Cancel</button>
-    </div>
-</div>
-
 <script>
 var _bulkEditActive = false;
 var _bulkMergeMode = 'append';
@@ -196,6 +144,7 @@ function toggleBulkEdit() {
     var toolbar = document.getElementById('bulk-edit-toolbar');
     toggle.classList.toggle('active', _bulkEditActive);
     toolbar.style.display = _bulkEditActive ? '' : 'none';
+    document.body.classList.toggle('bulk-edit-active', _bulkEditActive);
     document.querySelectorAll('.bulk-edit-checkbox').forEach(function(cb) {
         cb.style.display = _bulkEditActive ? '' : 'none';
         if (!_bulkEditActive) cb.checked = false;
@@ -444,4 +393,53 @@ function updateClearButton(params) {
 
 })();
 </script>
+{% endblock %}
+
+{% block overlay %}
+<div class="bulk-edit-toolbar" id="bulk-edit-toolbar" style="display:none">
+    <div class="bulk-edit-toolbar-inner">
+        <div class="bulk-edit-controls">
+            <span class="bulk-edit-count" id="bulk-edit-count">0 selected</span>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="bulkSelectAll()">Select All</button>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="bulkDeselectAll()">Deselect All</button>
+            <div class="bulk-edit-merge-toggle">
+                <button type="button" class="bulk-merge-btn active" id="bulk-merge-append" onclick="setBulkMergeMode('append')">Append</button>
+                <button type="button" class="bulk-merge-btn" id="bulk-merge-replace" onclick="setBulkMergeMode('replace')">Replace</button>
+            </div>
+            <button type="button" class="btn btn-sm btn-primary" onclick="bulkApply()">Apply</button>
+            <button type="button" class="btn btn-sm btn-text" onclick="toggleBulkEdit()">Cancel</button>
+        </div>
+        <div class="bulk-edit-fields">
+            <select id="bulk-priority" class="form-select form-select--sm">
+                <option value="">Priority</option>
+                {% for p in priorities %}
+                <option value="{{ p.id }}">{{ p.title }}</option>
+                {% endfor %}
+            </select>
+            <select id="bulk-reach" class="form-select form-select--sm">
+                <option value="">Reach</option>
+                <option value="team">Team</option>
+                <option value="cross_team">Cross-team</option>
+                <option value="org">Org</option>
+                <option value="company">Company</option>
+            </select>
+            <select id="bulk-complexity" class="form-select form-select--sm">
+                <option value="">Complexity</option>
+                <option value="routine">Routine</option>
+                <option value="moderate">Moderate</option>
+                <option value="complex">Complex</option>
+                <option value="novel">Novel</option>
+            </select>
+            <select id="bulk-role" class="form-select form-select--sm">
+                <option value="">Role</option>
+                <option value="contributor">Contributor</option>
+                <option value="owner">Owner</option>
+                <option value="lead">Lead</option>
+                <option value="architect">Architect</option>
+            </select>
+            <input type="text" id="bulk-teams" class="form-input form-input--sm" placeholder="Teams" style="width:120px">
+            <input type="text" id="bulk-collaborators" class="form-input form-input--sm" placeholder="Collaborators" style="width:120px">
+        </div>
+    </div>
+</div>
 {% endblock %}

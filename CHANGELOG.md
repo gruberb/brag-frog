@@ -2,6 +2,19 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [2.2.0] - 2026-02-26
+
+### Added
+- Impact narrative field on priority create form. Previously only available when editing an existing priority.
+- Info toggle button on department goals and priorities to reveal description/narrative text inline.
+- Description textarea in department goal inline edit form on priorities page.
+### Fixed
+- Department goal edit form on priorities page was missing the description field — only title and status could be edited.
+- Department goal description now displays below the title row with a "Description" label, matching priority narrative layout.
+- Priority impact narrative aligned flush left with an "Impact Narrative" label instead of indented italic text.
+- Integration cards no longer auto-expand when token is missing — all cards start collapsed.
+- Bulk edit toolbar on analyze page moved to overlay block with two-row layout (controls + fields) and body padding to keep footer reachable.
+
 ## [2.1.1] - 2026-02-26
 
 ### Fixed

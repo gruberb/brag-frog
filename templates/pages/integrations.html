@@ -56,7 +56,7 @@
 
         <div class="intg-list">
         {% for service in services %}
-        <details class="intg-card {% if service.has_token %}intg-card--connected{% endif %}" {% if service.is_enabled and not service.has_token %}open{% endif %}>
+        <details class="intg-card {% if service.has_token %}intg-card--connected{% endif %}">
             <summary class="intg-card-summary">
                 <span class="intg-status-dot {% if service.has_token %}intg-status-dot--active{% endif %}"></span>
                 <span class="intg-card-name">{{ service.display_name }}</span>

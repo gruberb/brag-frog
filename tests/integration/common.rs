@@ -305,6 +305,7 @@ pub async fn create_test_priority(
             title: title.to_string(),
             status: Some("active".to_string()),
             scope: None,
+            impact_narrative: None,
             department_goal_id,
         },
         crypto,

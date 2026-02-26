@@ -85,6 +85,11 @@
                 </select>
             </div>
         </div>
+        <div class="form-group" style="margin-top:var(--space-1);">
+            <label class="form-label">Impact Narrative</label>
+            <textarea name="impact_narrative" class="form-input" rows="3"
+                      placeholder="Why does this priority matter? What impact will it have?"></textarea>
+        </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary btn-sm">Create Priority</button>
             <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');">Cancel</button>
@@ -121,8 +126,14 @@
                     <span class="text-muted" style="font-size:0.8rem;">{{ dg_priority_count }} priorit{{ dg_priority_count | pluralize(singular="y", plural="ies") }}</span>
                     {% endif %}
                     <div class="cycle-item-actions">
+                        {% if dg.description %}
+                        <button class="btn-icon btn-icon--sm" title="Show description"
+                                onclick="event.stopPropagation(); document.getElementById('dept-goal-desc-{{ dg.id }}').classList.toggle('hidden');">
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>
+                        </button>
+                        {% endif %}
                         <button class="btn-icon btn-icon--sm" title="Edit"
-                                onclick="document.getElementById('dept-goal-view-{{ dg.id }}').classList.add('hidden'); document.getElementById('dept-goal-edit-{{ dg.id }}').classList.remove('hidden');">
+                                onclick="document.getElementById('dept-goal-view-{{ dg.id }}').classList.add('hidden'); var d=document.getElementById('dept-goal-desc-{{ dg.id }}'); if(d) d.classList.add('hidden'); document.getElementById('dept-goal-edit-{{ dg.id }}').classList.remove('hidden');">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5z"/></svg>
                         </button>
                         <button class="btn-icon btn-icon--danger btn-icon--sm"
@@ -137,7 +148,10 @@
                 </div>
             </div>
             {% if dg.description %}
-            <div class="cycle-item-desc-block">{{ dg.description }}</div>
+            <div class="cycle-item-narrative hidden" id="dept-goal-desc-{{ dg.id }}">
+                <div class="cycle-item-narrative-label">Description</div>
+                {{ dg.description }}
+            </div>
             {% endif %}
             <!-- Inline edit form for department goal -->
             <form class="cycle-item-edit hidden" id="dept-goal-edit-{{ dg.id }}"
@@ -152,9 +166,14 @@
                     <option value="on_hold" {% if dg.status == "on_hold" %}selected{% endif %}>On Hold</option>
                     <option value="completed" {% if dg.status == "completed" %}selected{% endif %}>Completed</option>
                 </select>
-                <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                <button type="button" class="btn btn-sm btn-text"
-                        onclick="document.getElementById('dept-goal-edit-{{ dg.id }}').classList.add('hidden'); document.getElementById('dept-goal-view-{{ dg.id }}').classList.remove('hidden');">Cancel</button>
+                <div style="width:100%;margin-top:var(--space-1);">
+                    <textarea name="description" class="form-input form-input--sm" rows="2" placeholder="Description" style="width:100%;resize:vertical;">{{ dg.description | default(value="") }}</textarea>
+                </div>
+                <div style="display:flex;gap:var(--space-1);margin-top:var(--space-1);">
+                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                    <button type="button" class="btn btn-sm btn-text"
+                            onclick="document.getElementById('dept-goal-edit-{{ dg.id }}').classList.add('hidden'); document.getElementById('dept-goal-view-{{ dg.id }}').classList.remove('hidden');">Cancel</button>
+                </div>
             </form>
         </div>
 
@@ -196,7 +215,8 @@
                     </div>
                 </div>
                 {% if priority.impact_narrative %}
-                <div class="cycle-item-desc-block hidden" id="priority-narrative-{{ priority.id }}" style="font-style:italic;color:var(--color-text-muted);">
+                <div class="cycle-item-narrative hidden" id="priority-narrative-{{ priority.id }}">
+                    <div class="cycle-item-narrative-label">Impact Narrative</div>
                     {{ priority.impact_narrative }}
                 </div>
                 {% endif %}
@@ -304,7 +324,8 @@
             </div>
         </div>
         {% if priority.impact_narrative %}
-        <div class="cycle-item-desc-block hidden" id="priority-narrative-{{ priority.id }}" style="font-style:italic;color:var(--color-text-muted);">
+        <div class="cycle-item-narrative hidden" id="priority-narrative-{{ priority.id }}">
+            <div class="cycle-item-narrative-label">Impact Narrative</div>
             {{ priority.impact_narrative }}
         </div>
         {% endif %}
