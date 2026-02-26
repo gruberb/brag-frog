@@ -205,7 +205,13 @@
         <h2>People</h2>
         <p class="text-sm text-muted" style="margin-bottom:var(--space-3);">Map email addresses, GitHub usernames, or Jira accounts to display names and teams. Aliases replace raw identifiers in Trends, Logbook filters, and collaborator fields.</p>
 
-        <table class="alias-table alias-add-table">
+        <table class="alias-table">
+            <colgroup>
+                <col style="width:35%">
+                <col style="width:22%">
+                <col style="width:18%">
+                <col style="width:25%">
+            </colgroup>
             <thead>
                 <tr>
                     <th>Identifier</th>
@@ -215,34 +221,28 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <form hx-post="/settings/people-alias" hx-target="#people-alias-list" hx-swap="outerHTML">
-                        <td><input type="text" name="email" class="form-input form-input-sm" placeholder="email, GitHub user, or Jira account" required></td>
-                        <td><input type="text" name="display_name" class="form-input form-input-sm" placeholder="Display Name" required></td>
-                        <td><input type="text" name="team" class="form-input form-input-sm" placeholder="Optional"></td>
+                <tr class="alias-add-row">
+                    <form hx-post="/settings/people-alias" hx-target="#people-alias-list" hx-swap="innerHTML">
+                        <td><input type="text" name="email" class="alias-input" placeholder="email, GitHub user, or Jira account" required></td>
+                        <td><input type="text" name="display_name" class="alias-input" placeholder="Display Name" required></td>
+                        <td><input type="text" name="team" class="alias-input" placeholder="Optional"></td>
                         <td class="alias-actions"><button type="submit" class="btn btn-primary btn-sm">Add</button></td>
                     </form>
                 </tr>
             </tbody>
+            <tbody id="people-alias-list">
+                {% include "components/people_alias_list.html" %}
+            </tbody>
         </table>
-
-        {% include "components/people_alias_list.html" %}
     </div>
 </div>
 
 <style>
-.alias-add-table {
-    margin-bottom: var(--space-2);
-}
-.alias-add-table .form-input-sm {
-    width: 100%;
-    padding: 4px 8px;
-    font-size: var(--text-sm);
-}
 .alias-table {
     width: 100%;
     border-collapse: collapse;
     font-size: var(--text-sm);
+    table-layout: fixed;
 }
 .alias-table th {
     text-align: left;
@@ -257,11 +257,26 @@
 .alias-table td {
     padding: 6px 8px;
     border-bottom: 1px solid var(--color-gray-10);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.alias-add-row td {
+    border-bottom: 1px solid var(--color-border);
+}
+.alias-input {
+    width: 100%;
+    padding: 4px 8px;
+    font-size: var(--text-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm, 4px);
+    box-sizing: border-box;
 }
 .alias-email {
     color: var(--color-text-secondary);
     font-family: var(--font-mono, monospace);
     font-size: var(--text-xs);
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .alias-actions {
     white-space: nowrap;
@@ -269,13 +284,6 @@
 }
 .alias-actions .btn {
     margin-left: 4px;
-}
-.alias-edit-input {
-    width: 100%;
-    padding: 2px 6px;
-    font-size: var(--text-sm);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm, 4px);
 }
 </style>
 
@@ -285,9 +293,9 @@ function editAlias(btn, id, email, displayName, team) {
     var cells = row.querySelectorAll('td');
     var origHtml = row.innerHTML;
 
-    cells[0].innerHTML = '<input class="alias-edit-input" name="email" value="' + email.replace(/"/g, '&quot;') + '">';
-    cells[1].innerHTML = '<input class="alias-edit-input" name="display_name" value="' + displayName.replace(/"/g, '&quot;') + '">';
-    cells[2].innerHTML = '<input class="alias-edit-input" name="team" value="' + team.replace(/"/g, '&quot;') + '">';
+    cells[0].innerHTML = '<input class="alias-input" name="email" value="' + email.replace(/"/g, '&quot;') + '">';
+    cells[1].innerHTML = '<input class="alias-input" name="display_name" value="' + displayName.replace(/"/g, '&quot;') + '">';
+    cells[2].innerHTML = '<input class="alias-input" name="team" value="' + team.replace(/"/g, '&quot;') + '">';
     cells[3].innerHTML =
         '<button class="btn btn-sm btn-primary alias-save-btn">Save</button>' +
         '<button class="btn btn-sm btn-secondary" style="margin-left:4px">Cancel</button>';
@@ -298,14 +306,9 @@ function editAlias(btn, id, email, displayName, team) {
         var teamVal = cells[2].querySelector('input').value.trim();
         if (!emailVal || !nameVal) return;
 
-        var form = new FormData();
-        form.append('email', emailVal);
-        form.append('display_name', nameVal);
-        form.append('team', teamVal);
-
         htmx.ajax('POST', '/settings/people-alias', {
             target: '#people-alias-list',
-            swap: 'outerHTML',
+            swap: 'innerHTML',
             values: { email: emailVal, display_name: nameVal, team: teamVal },
             headers: { 'HX-Request': 'true' }
         });

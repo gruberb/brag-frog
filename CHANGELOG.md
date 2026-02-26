@@ -2,6 +2,13 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [2.1.1] - 2026-02-26
+
+### Fixed
+- People alias table now uses a single `<table>` with fixed column widths (`table-layout: fixed` + `<colgroup>`). Add form inputs, data rows, and edit-mode inputs all share the same columns so everything stays aligned.
+- Editing an alias no longer shifts column widths. Edit inputs use the same `alias-input` class as the add row.
+- HTMX swap target changed to `innerHTML` on the `<tbody>` so the partial returns bare `<tr>` rows instead of a wrapping `<div>`.
+
 ## [2.1.0] - 2026-02-26
 
 ### Added
