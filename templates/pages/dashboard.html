@@ -313,7 +313,7 @@
             <h3 class="meeting-day-headline {% if day.is_past %}meeting-day-headline--past{% endif %}">{{ day.label }}{% if day.is_today %} <span class="meeting-day-today-badge">Today</span>{% endif %}</h3>
             <div class="dashboard-meetings">
                 {% for m in meetings %}{% if m.occurred_at == day.date %}
-                <div class="dashboard-meeting-item {% if day.is_past %}meeting-past{% endif %}" onclick="openPanelFromUrl('Meeting Prep', '/meeting-prep/panel/{{ m.id }}')" style="cursor:pointer;">
+                <div class="dashboard-meeting-item {% if day.is_past %}meeting-past{% endif %}"{% if day.is_today and m.end_time %} data-end-time="{{ m.end_time }}"{% endif %} onclick="openPanelFromUrl('Meeting Prep', '/meeting-prep/panel/{{ m.id }}')" style="cursor:pointer;">
                     <div class="meeting-info">
                         <span class="meeting-title">{{ m.title }}</span>
                         <span class="text-sm text-muted">{% if m.start_time %}{{ m.start_time }}{% if m.end_time %}&ndash;{{ m.end_time }}{% endif %}{% endif %}</span>
@@ -351,7 +351,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Active Work</h2>
                 {% if active_work | length > 5 %}
-                <button class="btn btn-text btn-sm" onclick="document.getElementById('active-work-list').classList.remove('active-work--collapsed')">Show all ({{ active_work | length }})</button>
+                <button class="btn btn-text btn-sm" id="active-work-toggle" onclick="toggleActiveWork()">Show all ({{ active_work | length }})</button>
                 {% endif %}
             </div>
             <div id="active-work-list" class="active-work-list {% if active_work | length > 5 %}active-work--collapsed{% endif %}">
@@ -421,4 +421,42 @@
         </section>
     </div>
 </div>
+
+<script>
+function toggleActiveWork() {
+    var list = document.getElementById('active-work-list');
+    var btn = document.getElementById('active-work-toggle');
+    if (!list || !btn) return;
+    if (list.classList.contains('active-work--collapsed')) {
+        list.classList.remove('active-work--collapsed');
+        btn.textContent = 'Show less';
+    } else {
+        list.classList.add('active-work--collapsed');
+        btn.textContent = 'Show all ({{ active_work | length }})';
+    }
+}
+
+// Grey out today's meetings whose end time has passed
+(function() {
+    var now = new Date();
+    var nowMinutes = now.getHours() * 60 + now.getMinutes();
+    document.querySelectorAll('.dashboard-meeting-item[data-end-time]').forEach(function(el) {
+        var parts = el.getAttribute('data-end-time').split(':');
+        if (parts.length === 2) {
+            var endMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+            if (endMinutes <= nowMinutes) {
+                el.classList.add('meeting-past');
+            }
+        }
+    });
+})();
+
+// Auto-refresh at midnight to clear stale meeting days
+(function() {
+    var now = new Date();
+    var midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+    var ms = midnight - now;
+    setTimeout(function() { location.reload(); }, ms);
+})();
+</script>
 {% endblock %}

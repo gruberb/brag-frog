@@ -280,6 +280,8 @@ impl BragEntry {
                 source_url = COALESCE(excluded.source_url, brag_entries.source_url),
                 repository = COALESCE(excluded.repository, brag_entries.repository),
                 recurring_group = COALESCE(excluded.recurring_group, brag_entries.recurring_group),
+                occurred_at = excluded.occurred_at,
+                week_id = excluded.week_id,
                 start_time = excluded.start_time,
                 end_time = excluded.end_time,
                 updated_at = datetime('now'),

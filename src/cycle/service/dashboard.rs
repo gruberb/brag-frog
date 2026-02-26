@@ -172,6 +172,7 @@ pub fn build_meeting_days(meetings: &[&BragEntry], today: &str) -> Vec<MeetingDa
     }
     seen_dates
         .into_iter()
+        .filter(|d| d.as_str() >= today)
         .map(|d| {
             let label = NaiveDate::parse_from_str(&d, "%Y-%m-%d")
                 .map(|nd| nd.format("%A, %b %e").to_string())
@@ -194,7 +195,7 @@ pub fn filter_active_work(entries: &[BragEntry]) -> Vec<&BragEntry> {
         .filter(|e| match e.entry_type.as_str() {
             "pr_authored" | "pr_reviewed" | "revision_authored" => !matches!(
                 e.status.as_deref(),
-                Some("MERGED") | Some("closed") | Some("merged")
+                Some("MERGED") | Some("CLOSED") | Some("closed") | Some("merged")
             ),
             "bug_filed" | "bug_fixed" => true,
             "jira_task" | "jira_story" | "jira_epic" => !matches!(
