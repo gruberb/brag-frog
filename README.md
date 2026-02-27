@@ -19,10 +19,6 @@
   <img alt="Self-hosted" src="https://img.shields.io/badge/self--hosted-Docker%20%7C%20bare%20metal-orange" />
 </p>
 
-<p align="center">
-  <img src="static/img/symbol.svg" alt="Brag Frog" width="120">
-</p>
-
 ## Features
 
 - **Dashboard** — upcoming meetings with join links, weekly check-in prompt, OKR snapshot, focus goals with attached documents, focus time overview
