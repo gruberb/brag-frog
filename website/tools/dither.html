@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brag Frog — Dither Image Generator</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Inter, system-ui, sans-serif;
+            background: #F0EBE3;
+            color: #000;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            color: #5c5c5c;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+
+        .palette {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: #5c5c5c;
+        }
+
+        .swatch {
+            width: 24px;
+            height: 24px;
+            border: 1px solid #d4cec6;
+        }
+
+        .drop-zone {
+            width: 100%;
+            max-width: 800px;
+            min-height: 200px;
+            border: 2px dashed #d4cec6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: border-color 150ms ease, background 150ms ease;
+            padding: 2rem;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: #FF453F;
+            background: rgba(255, 69, 63, 0.04);
+        }
+
+        .drop-zone p {
+            color: #5c5c5c;
+            font-size: 0.95rem;
+        }
+
+        .drop-zone .hint {
+            font-size: 0.8rem;
+            color: #a3a3a3;
+        }
+
+        input[type="file"] { display: none; }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: #5c5c5c;
+        }
+
+        select, input[type="range"] {
+            font-family: inherit;
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border: 1px solid #d4cec6;
+            background: #fff;
+        }
+
+        button {
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 8px 20px;
+            border: none;
+            cursor: pointer;
+            transition: background 150ms ease;
+        }
+
+        .btn-dither {
+            background: #FF453F;
+            color: #000;
+        }
+        .btn-dither:hover { background: #E03E38; }
+        .btn-dither:disabled {
+            background: #d4cec6;
+            cursor: not-allowed;
+        }
+
+        .btn-download {
+            background: #000;
+            color: #fff;
+        }
+        .btn-download:hover { background: #262626; }
+        .btn-download:disabled {
+            background: #d4cec6;
+            color: #a3a3a3;
+            cursor: not-allowed;
+        }
+
+        .canvas-area {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .canvas-area.active { display: block; }
+
+        .canvas-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .canvas-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #5c5c5c;
+            margin-bottom: 0.25rem;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid #d4cec6;
+            background: #fff;
+        }
+
+        .info {
+            font-size: 0.8rem;
+            color: #5c5c5c;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            .canvas-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Dither Image Generator</h1>
+    <p class="subtitle">Floyd-Steinberg dithering in the Brag Frog palette</p>
+
+    <div class="palette">
+        <span>Palette:</span>
+        <div class="swatch" style="background: #FF453F"></div>
+        <span>Coral #FF453F</span>
+        <div class="swatch" style="background: #000"></div>
+        <span>Black #000</span>
+        <div class="swatch" style="background: #fff"></div>
+        <span>White #FFF</span>
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+        <p>Drop an image here or click to browse</p>
+        <p class="hint">PNG, JPG, WebP — any size</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*">
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="mode">Mode:</label>
+            <select id="mode">
+                <option value="3color" selected>3-Color (Coral + Black + White)</option>
+                <option value="2color-coral">2-Color (Coral + White)</option>
+                <option value="2color-bw">2-Color (Black + White)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="scale">Output scale:</label>
+            <select id="scale">
+                <option value="1">1x (original size)</option>
+                <option value="0.75">0.75x</option>
+                <option value="0.5" selected>0.5x</option>
+                <option value="0.25">0.25x</option>
+            </select>
+        </div>
+        <button class="btn-dither" id="btnDither" disabled>Dither</button>
+        <button class="btn-download" id="btnDownload" disabled>Download PNG</button>
+    </div>
+
+    <div class="canvas-area" id="canvasArea">
+        <div class="canvas-row">
+            <div>
+                <div class="canvas-label">Original</div>
+                <canvas id="originalCanvas"></canvas>
+            </div>
+            <div>
+                <div class="canvas-label">Dithered</div>
+                <canvas id="ditherCanvas"></canvas>
+            </div>
+        </div>
+        <div class="info" id="info"></div>
+    </div>
+
+    <script>
+    (function () {
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const btnDither = document.getElementById('btnDither');
+        const btnDownload = document.getElementById('btnDownload');
+        const canvasArea = document.getElementById('canvasArea');
+        const originalCanvas = document.getElementById('originalCanvas');
+        const ditherCanvas = document.getElementById('ditherCanvas');
+        const modeSelect = document.getElementById('mode');
+        const scaleSelect = document.getElementById('scale');
+        const info = document.getElementById('info');
+
+        let sourceImage = null;
+
+        // Palette colors as [R, G, B]
+        const CORAL = [255, 69, 63];
+        const BLACK = [0, 0, 0];
+        const WHITE = [255, 255, 255];
+
+        function getPalette(mode) {
+            switch (mode) {
+                case '2color-coral': return [CORAL, WHITE];
+                case '2color-bw': return [BLACK, WHITE];
+                default: return [CORAL, BLACK, WHITE];
+            }
+        }
+
+        // Euclidean distance in RGB space
+        function colorDist(a, b) {
+            const dr = a[0] - b[0];
+            const dg = a[1] - b[1];
+            const db = a[2] - b[2];
+            return dr * dr + dg * dg + db * db;
+        }
+
+        function nearestColor(r, g, b, palette) {
+            let best = palette[0];
+            let bestDist = Infinity;
+            for (const c of palette) {
+                const d = colorDist([r, g, b], c);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = c;
+                }
+            }
+            return best;
+        }
+
+        // Floyd-Steinberg dithering
+        function floydSteinberg(imageData, palette) {
+            const w = imageData.width;
+            const h = imageData.height;
+            const data = imageData.data;
+
+            // Work with floating-point buffer for error diffusion
+            const buf = new Float32Array(w * h * 3);
+            for (let i = 0; i < w * h; i++) {
+                buf[i * 3] = data[i * 4];
+                buf[i * 3 + 1] = data[i * 4 + 1];
+                buf[i * 3 + 2] = data[i * 4 + 2];
+            }
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 3;
+                    const oldR = buf[idx];
+                    const oldG = buf[idx + 1];
+                    const oldB = buf[idx + 2];
+
+                    const nc = nearestColor(oldR, oldG, oldB, palette);
+
+                    buf[idx] = nc[0];
+                    buf[idx + 1] = nc[1];
+                    buf[idx + 2] = nc[2];
+
+                    const errR = oldR - nc[0];
+                    const errG = oldG - nc[1];
+                    const errB = oldB - nc[2];
+
+                    // Distribute error to neighbors
+                    const diffuse = (dx, dy, factor) => {
+                        const nx = x + dx;
+                        const ny = y + dy;
+                        if (nx >= 0 && nx < w && ny < h) {
+                            const ni = (ny * w + nx) * 3;
+                            buf[ni] += errR * factor;
+                            buf[ni + 1] += errG * factor;
+                            buf[ni + 2] += errB * factor;
+                        }
+                    };
+
+                    diffuse(1, 0, 7 / 16);
+                    diffuse(-1, 1, 3 / 16);
+                    diffuse(0, 1, 5 / 16);
+                    diffuse(1, 1, 1 / 16);
+                }
+            }
+
+            // Write back
+            for (let i = 0; i < w * h; i++) {
+                data[i * 4] = buf[i * 3];
+                data[i * 4 + 1] = buf[i * 3 + 1];
+                data[i * 4 + 2] = buf[i * 3 + 2];
+                data[i * 4 + 3] = 255;
+            }
+
+            return imageData;
+        }
+
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    sourceImage = img;
+                    btnDither.disabled = false;
+                    info.textContent = `Loaded: ${img.width}x${img.height}`;
+                    drawOriginal();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function drawOriginal() {
+            if (!sourceImage) return;
+            const scale = parseFloat(scaleSelect.value);
+            const w = Math.round(sourceImage.width * scale);
+            const h = Math.round(sourceImage.height * scale);
+            originalCanvas.width = w;
+            originalCanvas.height = h;
+            const ctx = originalCanvas.getContext('2d');
+            ctx.drawImage(sourceImage, 0, 0, w, h);
+            canvasArea.classList.add('active');
+        }
+
+        function dither() {
+            if (!sourceImage) return;
+            const scale = parseFloat(scaleSelect.value);
+            const w = Math.round(sourceImage.width * scale);
+            const h = Math.round(sourceImage.height * scale);
+
+            // Draw original at target scale
+            drawOriginal();
+
+            // Get image data
+            ditherCanvas.width = w;
+            ditherCanvas.height = h;
+            const ctx = ditherCanvas.getContext('2d');
+            ctx.drawImage(sourceImage, 0, 0, w, h);
+            const imageData = ctx.getImageData(0, 0, w, h);
+
+            // Dither
+            const palette = getPalette(modeSelect.value);
+            const result = floydSteinberg(imageData, palette);
+            ctx.putImageData(result, 0, 0);
+
+            btnDownload.disabled = false;
+            info.textContent = `Dithered: ${w}x${h} — ${modeSelect.value} mode`;
+        }
+
+        function download() {
+            const link = document.createElement('a');
+            link.download = 'dithered.png';
+            link.href = ditherCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Event listeners
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) loadImage(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) loadImage(fileInput.files[0]);
+        });
+
+        btnDither.addEventListener('click', dither);
+        btnDownload.addEventListener('click', download);
+
+        scaleSelect.addEventListener('change', () => {
+            if (sourceImage) {
+                drawOriginal();
+                btnDownload.disabled = true;
+            }
+        });
+    })();
+    </script>
+</body>
+</html>

@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="static/img/product/dashboard.png" alt="Brag Frog dashboard" width="720">
+  <img src="static/img/symbol.svg" alt="Brag Frog" width="120">
 </p>
 
 ## Features
