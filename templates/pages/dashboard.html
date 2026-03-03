@@ -57,6 +57,7 @@
                 <input type="hidden" name="teams" id="quick-teams-value" />
                 <div class="chip-dropdown-panel hidden">
                     {% if known_teams | length > 0 %}
+                    <input type="text" class="chip-search-input" placeholder="Search teams…" oninput="filterChips(this, 'quick-teams-chips')" />
                     <div class="chip-select" id="quick-teams-chips">
                         {% for team in known_teams %}
                         <label class="chip-option">
@@ -84,6 +85,7 @@
                 <input type="hidden" name="collaborators" id="quick-collabs-value" />
                 <div class="chip-dropdown-panel hidden">
                     {% if known_collaborators | length > 0 %}
+                    <input type="text" class="chip-search-input" placeholder="Search people…" oninput="filterChips(this, 'quick-collabs-chips')" />
                     <div class="chip-select" id="quick-collabs-chips">
                         {% for collab in known_collaborators %}
                         <label class="chip-option">
@@ -383,12 +385,22 @@
             </div>
             {% else %}
             {% for p in priorities %}
+            {% if loop.index == 5 %}
+            <div id="priorities-overflow" style="display:none;">
+            {% endif %}
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                 <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{{ p.color | default(value='#888') }};flex-shrink:0;"></span>
                 <span class="text-sm">{{ p.title }}</span>
                 <span class="badge badge-status badge-status--{{ p.status }}" style="font-size:0.65rem;">{{ p.status | replace(from="_", to=" ") }}</span>
             </div>
             {% endfor %}
+            {% if priorities | length > 4 %}
+            </div>
+            <button type="button" id="priorities-toggle" class="btn btn-text btn-sm"
+                    onclick="var el=document.getElementById('priorities-overflow'),btn=this;if(el.style.display==='none'){el.style.display='block';btn.textContent='Show less';}else{el.style.display='none';btn.textContent='Show {{ priorities | length - 4 }} more';}">
+                Show {{ priorities | length - 4 }} more
+            </button>
+            {% endif %}
             {% endif %}
         </section>
 

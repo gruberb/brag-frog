@@ -226,6 +226,16 @@ function updateChipField(prefix) {
     }
 }
 
+function filterChips(input, containerId) {
+    var query = input.value.toLowerCase();
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.querySelectorAll('.chip-option').forEach(function(label) {
+        var text = label.querySelector('.chip-label').textContent.toLowerCase();
+        label.style.display = text.includes(query) ? '' : 'none';
+    });
+}
+
 function addChip(event, prefix) {
     if (event.key !== 'Enter') return;
     event.preventDefault();

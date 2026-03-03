@@ -28,8 +28,23 @@
 
             <select id="filter-priority" class="form-select analyze-toolbar-select" onchange="applyFilters()">
                 <option value="">All Priorities</option>
+                {% for dg in dept_goals %}
+                {% set_global has_priorities = false %}
+                {% for p in priorities %}{% if p.department_goal_id == dg.id %}{% set_global has_priorities = true %}{% endif %}{% endfor %}
+                {% if has_priorities %}
+                <optgroup label="{{ dg.title }}">
+                    {% for p in priorities %}
+                    {% if p.department_goal_id == dg.id %}
+                    <option value="{{ p.id }}" data-dept-goal-id="{{ dg.id }}" {% if init_priority_id == p.id ~ "" %}selected{% endif %}>{{ p.title }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% endfor %}
                 {% for p in priorities %}
-                <option value="{{ p.id }}" data-dept-goal-id="{{ p.department_goal_id | default(value='') }}" {% if init_priority_id == p.id ~ "" %}selected{% endif %}>{{ p.title }}</option>
+                {% if not p.department_goal_id %}
+                <option value="{{ p.id }}" data-dept-goal-id="" {% if init_priority_id == p.id ~ "" %}selected{% endif %}>{{ p.title }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
         </div>
@@ -412,8 +427,23 @@ function updateClearButton(params) {
         <div class="bulk-edit-fields">
             <select id="bulk-priority" class="form-select form-select--sm">
                 <option value="">Priority</option>
+                {% for dg in dept_goals %}
+                {% set_global has_priorities = false %}
+                {% for p in priorities %}{% if p.department_goal_id == dg.id %}{% set_global has_priorities = true %}{% endif %}{% endfor %}
+                {% if has_priorities %}
+                <optgroup label="{{ dg.title }}">
+                    {% for p in priorities %}
+                    {% if p.department_goal_id == dg.id %}
+                    <option value="{{ p.id }}">{{ p.title }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% endfor %}
                 {% for p in priorities %}
+                {% if not p.department_goal_id %}
                 <option value="{{ p.id }}">{{ p.title }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
             <select id="bulk-reach" class="form-select form-select--sm">
