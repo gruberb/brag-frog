@@ -1,0 +1,104 @@
+<!-- Priority creation panel (loaded into #panel-body via openPanelFromUrl) -->
+<div class="panel-form">
+    <form hx-post="/priorities"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful){ closePanel(); window.location.href='/priorities'; }">
+        <input type="hidden" name="phase_id" value="{{ phase.id }}">
+        <div class="form-group">
+            <label class="form-label">Priority Title</label>
+            <input type="text" name="title" class="form-input" required placeholder="e.g., Ship OHTTP component" autofocus>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Department Goal</label>
+            <select name="department_goal_id" class="form-select">
+                <option value="">Unassigned</option>
+                {% for dg in dept_goals %}
+                <option value="{{ dg.id }}">{{ dg.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="not_started" selected>Not Started</option>
+                    <option value="active">Active</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Priority Level</label>
+                <select name="priority_level" class="form-select">
+                    <option value="">—</option>
+                    <option value="p0">P0</option>
+                    <option value="p1">P1</option>
+                    <option value="p2">P2</option>
+                    <option value="p3">P3</option>
+                    <option value="p4">P4</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-textarea" rows="2"
+                      placeholder="What is this priority about?"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Impact Narrative</label>
+            <textarea name="impact_narrative" class="form-textarea" rows="2"
+                      placeholder="Why does this priority matter? What impact will it have?"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">How will you measure progress?</label>
+            <select name="measure_type" class="form-select" id="create-measure-type"
+                    onchange="toggleMeasureFields(this.value, 'create')">
+                <option value="">None (qualitative)</option>
+                <option value="percent">Percent</option>
+                <option value="binary">Binary (done / not done)</option>
+                <option value="number">Number</option>
+            </select>
+        </div>
+        <div class="form-row" id="create-measure-range" style="display:none;">
+            <div class="form-group">
+                <label class="form-label">Start</label>
+                <input type="number" name="measure_start" id="create-measure-start" class="form-input" step="any" value="">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target</label>
+                <input type="number" name="measure_target" id="create-measure-target" class="form-input" step="any" value="">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Priority</button>
+            <button type="button" class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        </div>
+    </form>
+</div>
+<script>
+function toggleMeasureFields(type, prefix) {
+    var rangeEl = document.getElementById(prefix + '-measure-range');
+    var startEl = document.getElementById(prefix + '-measure-start');
+    var targetEl = document.getElementById(prefix + '-measure-target');
+    var currentEl = document.getElementById(prefix + '-measure-current');
+
+    if (type === 'percent') {
+        rangeEl.style.display = '';
+        startEl.value = startEl.value || '0';
+        targetEl.value = targetEl.value || '100';
+        if (currentEl) currentEl.parentElement.style.display = '';
+    } else if (type === 'number') {
+        rangeEl.style.display = '';
+        if (currentEl) currentEl.parentElement.style.display = '';
+    } else {
+        rangeEl.style.display = 'none';
+        startEl.value = '';
+        targetEl.value = '';
+        if (currentEl) {
+            currentEl.value = '';
+            currentEl.parentElement.style.display = 'none';
+        }
+    }
+}
+</script>

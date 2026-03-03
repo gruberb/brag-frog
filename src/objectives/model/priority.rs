@@ -2,9 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
-use crate::kernel::serde_helpers::{deserialize_optional_i64, deserialize_optional_string};
+use crate::kernel::serde_helpers::{
+    deserialize_optional_f64, deserialize_optional_i64, deserialize_optional_string,
+};
 
-/// Raw database row with encrypted title/impact_narrative.
+/// Raw database row with encrypted title/impact_narrative/description.
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct PriorityRow {
     pub id: i64,
@@ -20,6 +22,12 @@ pub struct PriorityRow {
     pub impact_narrative: Option<Vec<u8>>,
     pub department_goal_id: Option<i64>,
     pub created_at: String,
+    pub priority_level: Option<String>,
+    pub measure_type: Option<String>,
+    pub measure_start: Option<f64>,
+    pub measure_target: Option<f64>,
+    pub measure_current: Option<f64>,
+    pub description: Option<Vec<u8>>,
 }
 
 impl PriorityRow {
@@ -38,6 +46,12 @@ impl PriorityRow {
             impact_narrative: crypto.decrypt_opt(&self.impact_narrative)?,
             department_goal_id: self.department_goal_id,
             created_at: self.created_at,
+            priority_level: self.priority_level,
+            measure_type: self.measure_type,
+            measure_start: self.measure_start,
+            measure_target: self.measure_target,
+            measure_current: self.measure_current,
+            description: crypto.decrypt_opt(&self.description)?,
         })
     }
 }
@@ -62,6 +76,14 @@ pub struct Priority {
     pub impact_narrative: Option<String>,
     pub department_goal_id: Option<i64>,
     pub created_at: String,
+    /// Priority level: `p0`–`p4`.
+    pub priority_level: Option<String>,
+    /// Measurement type: `percent`, `binary`, `number`.
+    pub measure_type: Option<String>,
+    pub measure_start: Option<f64>,
+    pub measure_target: Option<f64>,
+    pub measure_current: Option<f64>,
+    pub description: Option<String>,
 }
 
 /// Form payload for creating a priority.
@@ -75,6 +97,16 @@ pub struct CreatePriority {
     pub impact_narrative: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_i64")]
     pub department_goal_id: Option<i64>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub priority_level: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub measure_type: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub measure_start: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub measure_target: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub description: Option<String>,
 }
 
 /// Form payload for updating a priority.
@@ -92,4 +124,16 @@ pub struct UpdatePriority {
     pub started_at: Option<String>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub completed_at: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub priority_level: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub measure_type: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub measure_start: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub measure_target: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub measure_current: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub description: Option<String>,
 }

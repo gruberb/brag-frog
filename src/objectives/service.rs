@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use crate::objectives::model::{DepartmentGoal, Priority};
+use sqlx::SqlitePool;
+
+use crate::kernel::crypto::UserCrypto;
+use crate::kernel::error::AppError;
+use crate::objectives::{import, model::{CreateDepartmentGoal, CreatePriority, DepartmentGoal, Priority}};
 
 /// Status display ordering for priority sorting: active first, terminal states last.
 fn status_sort_key(status: &str) -> u8 {
@@ -27,10 +31,9 @@ pub fn sort_priorities(priorities: &mut [Priority]) {
 
 /// Groups sorted priorities by their department goal. Returns a map of
 /// `goal_id -> Vec<&Priority>` and a separate vec of unassigned priorities.
-pub fn group_by_department_goal<'a>(
-    priorities: &'a [Priority],
-    _dept_goals: &[DepartmentGoal],
-) -> (HashMap<String, Vec<&'a Priority>>, Vec<&'a Priority>) {
+pub fn group_by_department_goal(
+    priorities: &[Priority],
+) -> (HashMap<String, Vec<&Priority>>, Vec<&Priority>) {
     let mut goal_priorities: HashMap<String, Vec<&Priority>> = HashMap::new();
     let mut unassigned: Vec<&Priority> = Vec::new();
 
@@ -48,14 +51,74 @@ pub fn group_by_department_goal<'a>(
     (goal_priorities, unassigned)
 }
 
-impl Priority {
-    /// Whether this priority is in an active status.
-    pub fn is_active(&self) -> bool {
-        self.status == "active"
+/// Creates department goals and priorities from parsed Lattice CSV rows.
+/// Separates rows into department-level goals and individual priorities,
+/// creates goals first, then resolves parent IDs for priority assignment.
+pub async fn import_lattice_rows(
+    pool: &SqlitePool,
+    phase_id: i64,
+    user_id: i64,
+    rows: &[import::LatticeRow],
+    crypto: &UserCrypto,
+) -> Result<(), AppError> {
+    let mut dept_rows = Vec::new();
+    let mut priority_rows = Vec::new();
+    for row in rows {
+        if import::is_department_goal(&row.goal_type) {
+            dept_rows.push(row);
+        } else {
+            priority_rows.push(row);
+        }
     }
 
-    /// Whether this priority has reached a terminal state.
-    pub fn is_terminal(&self) -> bool {
-        matches!(self.status.as_str(), "completed" | "cancelled")
+    // Create department goals first, building a lattice_id -> brag_frog_id map
+    let mut lattice_to_bf: HashMap<String, i64> = HashMap::new();
+    for row in &dept_rows {
+        let goal = DepartmentGoal::create(
+            pool,
+            phase_id,
+            user_id,
+            &CreateDepartmentGoal {
+                title: row.goal_name.clone(),
+                description: row.description.clone(),
+                status: Some(import::map_status_dept(row.status.as_deref()).to_string()),
+            },
+            Some("lattice"),
+            crypto,
+        )
+        .await?;
+        lattice_to_bf.insert(row.goal_id.clone(), goal.id);
     }
+
+    // Create priorities, resolving parent_id to department_goal_id
+    for row in &priority_rows {
+        let dept_goal_id = row
+            .parent_id
+            .as_ref()
+            .and_then(|pid| lattice_to_bf.get(pid))
+            .copied();
+
+        Priority::create(
+            pool,
+            phase_id,
+            user_id,
+            &CreatePriority {
+                title: row.goal_name.clone(),
+                status: Some(import::map_status_priority(row.status.as_deref()).to_string()),
+                scope: None,
+                impact_narrative: row.description.clone(),
+                department_goal_id: dept_goal_id,
+                priority_level: None,
+                measure_type: None,
+                measure_start: None,
+                measure_target: None,
+                description: None,
+            },
+            crypto,
+        )
+        .await?;
+    }
+
+    Ok(())
 }
+

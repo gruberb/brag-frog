@@ -1,0 +1,28 @@
+<!-- Department goal edit panel (loaded into #panel-body via openPanelFromUrl) -->
+<div class="panel-form">
+    <form hx-put="/priorities/goals/{{ goal.id }}"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful){ closePanel(); window.location.href='/priorities'; }">
+        <div class="form-group">
+            <label class="form-label">Goal Title</label>
+            <input type="text" name="title" class="form-input" value="{{ goal.title }}" required autofocus>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-textarea" rows="3" placeholder="Optional details about the department goal">{{ goal.description | default(value="") }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Status</label>
+            <select name="status" class="form-select">
+                <option value="not_started" {% if goal.status == "not_started" %}selected{% endif %}>Not Started</option>
+                <option value="in_progress" {% if goal.status == "in_progress" %}selected{% endif %}>In Progress</option>
+                <option value="on_hold" {% if goal.status == "on_hold" %}selected{% endif %}>On Hold</option>
+                <option value="completed" {% if goal.status == "completed" %}selected{% endif %}>Completed</option>
+            </select>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Department Goal</button>
+            <button type="button" class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        </div>
+    </form>
+</div>

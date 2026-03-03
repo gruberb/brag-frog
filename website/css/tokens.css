@@ -133,19 +133,19 @@
     --space-12: 3rem;
     --space-16: 4rem;
 
-    /* Border radius — square/sharp per Mozilla New Products style */
-    --radius-sm: 0px;
-    --radius-md: 0px;
-    --radius-lg: 0px;
-    --radius-full: 0px;
+    /* Border radius — Lattice-inspired rounded style */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --radius-full: 9999px;
 
-    /* Shadows — light theme */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    /* Shadows — slightly more prominent for card delineation */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 12px 20px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
 
     /* Halftone texture */
-    --halftone-dot-color: rgba(0, 0, 0, 0.055);
+    --halftone-dot-color: rgba(0, 0, 0, 0.03);
     --halftone-dot-size: 1.2px;
     --halftone-dot-spacing: 14px;
 

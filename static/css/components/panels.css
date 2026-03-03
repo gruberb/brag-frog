@@ -23,6 +23,7 @@
     max-width: 100vw;
     background: var(--panel-bg);
     box-shadow: var(--panel-shadow);
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
     z-index: 210;
     transform: translateX(100%);
     transition: transform 300ms var(--ease-out-expo);

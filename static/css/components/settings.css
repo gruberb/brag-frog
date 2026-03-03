@@ -315,7 +315,7 @@
     width: 36px;
     height: 20px;
     background: var(--color-gray-30);
-    border-radius: 0;
+    border-radius: var(--radius-full);
     flex-shrink: 0;
     transition: background var(--transition-fast);
 }

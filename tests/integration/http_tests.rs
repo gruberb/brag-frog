@@ -627,7 +627,7 @@ async fn test_priorities_page_shows_department_goal() {
     );
 }
 
-// ── Priority creation returns HTML fragment ──
+// ── Priority creation redirects via HX-Redirect ──
 
 #[tokio::test]
 async fn test_priority_create_returns_html() {
@@ -641,7 +641,7 @@ async fn test_priority_create_returns_html() {
         .post_form("/priorities", body, Some(&cookie))
         .await;
     assert_eq!(resp.status, StatusCode::OK);
-    assert!(resp.body.contains("Test Priority"));
+    assert_eq!(resp.headers.get("HX-Redirect").unwrap(), "/priorities");
 }
 
 // ── Settings save with new profile fields ──

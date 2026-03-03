@@ -34,8 +34,24 @@
         <script src="/static/js/htmx.min.js"></script>
     </head>
     <body hx-boost="true">
-        <header class="site-header">
-            <div class="header-inner">
+        <!-- Mobile top bar (hidden on desktop) -->
+        <div class="app-topbar">
+            <button
+                class="hamburger"
+                aria-label="Toggle navigation"
+                onclick="document.querySelector('.app-sidebar').classList.toggle('open'); document.querySelector('.sidebar-overlay').classList.toggle('open');"
+            >
+                <span></span><span></span><span></span>
+            </button>
+            <a href="/" class="topbar-logo">
+                <img src="/static/img/symbol.svg" alt="" class="logo-icon" />
+                Brag Frog
+            </a>
+        </div>
+
+        <!-- Left sidebar -->
+        <aside class="app-sidebar">
+            <div class="sidebar-brand">
                 <a href="/" class="logo">
                     <img
                         src="/static/img/symbol.svg"
@@ -44,222 +60,254 @@
                     />
                     Brag Frog
                 </a>
-                <button
-                    class="hamburger"
-                    aria-label="Toggle navigation"
-                    onclick="
-                        document
-                            .querySelector('.site-header')
-                            .classList.toggle('nav-open')
-                    "
-                >
-                    <span></span><span></span><span></span>
-                </button>
-                <nav class="main-nav">
-                    <a
-                        href="/dashboard"
-                        class="{% if current_page == 'dashboard' %}active{% endif %}"
-                        >Dashboard</a
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/dashboard"
+                   class="sidebar-nav-item {% if current_page == 'dashboard' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="/logbook"
+                   class="sidebar-nav-item {% if current_page == 'logbook' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                    </svg>
+                    Logbook
+                </a>
+                <a href="/priorities"
+                   class="sidebar-nav-item {% if current_page == 'priorities' or current_page == 'goals' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+                    </svg>
+                    Priorities
+                </a>
+                <a href="/checkins"
+                   class="sidebar-nav-item {% if current_page == 'checkins' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                    </svg>
+                    Check-ins
+                </a>
+                {% if phase %}
+                <a href="/review/{{ phase.id }}"
+                   class="sidebar-nav-item {% if current_page == 'review' or current_page == 'summary' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    Review
+                </a>
+                {% else %}
+                <span class="sidebar-nav-item disabled">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    Review
+                </span>
+                {% endif %}
+            </nav>
+
+            <div class="sidebar-spacer"></div>
+
+            <div class="sidebar-bottom">
+                {% if user %}
+                <div class="user-dropdown" id="user-dropdown">
+                    <button
+                        class="user-dropdown-trigger"
+                        onclick="toggleUserDropdown()"
+                        type="button"
                     >
-                    <a
-                        href="/logbook"
-                        class="{% if current_page == 'logbook' %}active{% endif %}"
-                        >Logbook</a
-                    >
-                    <a
-                        href="/priorities"
-                        class="{% if current_page == 'priorities' or current_page == 'goals' %}active{% endif %}"
-                        >Priorities</a
-                    >
-                    <a
-                        href="/checkins"
-                        class="{% if current_page == 'checkins' %}active{% endif %}"
-                        >Check-ins</a
-                    >
-                    {% if phase %}
-                    <a
-                        href="/review/{{ phase.id }}"
-                        class="{% if current_page == 'review' or current_page == 'summary' %}active{% endif %}"
-                        >Review</a
-                    >
-                    {% else %}
-                    <span class="disabled">Review</span>
-                    {% endif %}
-                </nav>
-                <div class="header-right">
-                    <kbd
-                        class="cmd-k-badge"
-                        title="Command Palette"
-                        onclick="openCommandPalette()"
-                        >⌘K</kbd
-                    >
-                    {% if user %}
-                    <div class="user-dropdown" id="user-dropdown">
-                        <button
-                            class="user-dropdown-trigger"
-                            onclick="toggleUserDropdown()"
-                            type="button"
+                        {% if user.avatar_url %}
+                        <img
+                            src="{{ user.avatar_url }}"
+                            alt="{{ user.name }}"
+                            class="avatar"
+                            referrerpolicy="no-referrer"
+                        />
+                        {% endif %}
+                        <span class="user-name"
+                            >{{ user.name | split(pat=" ") | first }}</span
                         >
-                            {% if user.avatar_url %}
-                            <img
-                                src="{{ user.avatar_url }}"
-                                alt="{{ user.name }}"
-                                class="avatar"
-                                referrerpolicy="no-referrer"
+                        <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                            class="dropdown-chevron"
+                        >
+                            <path
+                                d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z"
                             />
-                            {% endif %}
-                            <span class="user-name"
-                                >{{ user.name | split(pat=" ") | first }}</span
-                            >
+                        </svg>
+                    </button>
+                    <div class="user-dropdown-menu" id="user-dropdown-menu">
+                        <a href="/settings" class="user-dropdown-item">
                             <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 16 16"
-                                fill="currentColor"
-                                class="dropdown-chevron"
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
                             >
+                                <circle cx="12" cy="12" r="3" />
                                 <path
-                                    d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z"
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
                                 />
                             </svg>
+                            Settings
+                        </a>
+                        <a href="/integrations" class="user-dropdown-item">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
+                                />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                            </svg>
+                            Integrations
+                        </a>
+                        <a href="/level-guide" class="user-dropdown-item">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
+                                />
+                                <path
+                                    d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
+                                />
+                            </svg>
+                            Level Guide
+                        </a>
+                        <a href="/review-guide" class="user-dropdown-item">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
+                                />
+                                <rect
+                                    x="9"
+                                    y="3"
+                                    width="6"
+                                    height="4"
+                                    rx="1"
+                                />
+                                <path d="M9 12h6" />
+                                <path d="M9 16h6" />
+                            </svg>
+                            Review Guide
+                        </a>
+                        <a href="/trends" class="user-dropdown-item">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <polyline
+                                    points="22 12 18 12 15 21 9 3 6 12 2 12"
+                                />
+                            </svg>
+                            Trends
+                        </a>
+                        <a href="/export" class="user-dropdown-item">
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                                />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            Export
+                        </a>
+                        <button
+                            type="button"
+                            class="user-dropdown-item"
+                            id="nav-sync-btn"
+                            hx-post="/sync/all"
+                            hx-swap="none"
+                            hx-disabled-elt="this"
+                            hx-on::before-request="this.querySelector('.sync-label').textContent='Syncing...'"
+                            hx-on::after-request="this.querySelector('.sync-label').textContent='Sync All'; window.location.reload();"
+                            style="
+                                width: 100%;
+                                text-align: left;
+                                background: none;
+                                border: none;
+                                cursor: pointer;
+                                color: inherit;
+                            "
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <polyline points="23 4 23 10 17 10" />
+                                <polyline points="1 20 1 14 7 14" />
+                                <path
+                                    d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                                />
+                            </svg>
+                            <span class="sync-label">Sync All</span>
                         </button>
-                        <div class="user-dropdown-menu" id="user-dropdown-menu">
-                            <a href="/settings" class="user-dropdown-item">
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <circle cx="12" cy="12" r="3" />
-                                    <path
-                                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-                                    />
-                                </svg>
-                                Settings
-                            </a>
-                            <a href="/integrations" class="user-dropdown-item">
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path
-                                        d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
-                                    />
-                                    <polyline points="15 3 21 3 21 9" />
-                                    <line x1="10" y1="14" x2="21" y2="3" />
-                                </svg>
-                                Integrations
-                            </a>
-                            <a href="/level-guide" class="user-dropdown-item">
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path
-                                        d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
-                                    />
-                                    <path
-                                        d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
-                                    />
-                                </svg>
-                                Level Guide
-                            </a>
-                            <a href="/review-guide" class="user-dropdown-item">
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path
-                                        d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"
-                                    />
-                                    <rect
-                                        x="9"
-                                        y="3"
-                                        width="6"
-                                        height="4"
-                                        rx="1"
-                                    />
-                                    <path d="M9 12h6" />
-                                    <path d="M9 16h6" />
-                                </svg>
-                                Review Guide
-                            </a>
-                            <a href="/trends" class="user-dropdown-item">
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <polyline
-                                        points="22 12 18 12 15 21 9 3 6 12 2 12"
-                                    />
-                                </svg>
-                                Trends
-                            </a>
-                            <a href="/export" class="user-dropdown-item">
-                                <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                >
-                                    <path
-                                        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
-                                    />
-                                    <polyline points="7 10 12 15 17 10" />
-                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                </svg>
-                                Export
-                            </a>
+                        <div class="user-dropdown-divider"></div>
+                        <form
+                            method="post"
+                            action="/auth/logout"
+                            hx-boost="false"
+                            class="user-dropdown-item user-dropdown-item--logout"
+                        >
                             <button
-                                type="button"
-                                class="user-dropdown-item"
-                                id="nav-sync-btn"
-                                hx-post="/sync/all"
-                                hx-swap="none"
-                                hx-disabled-elt="this"
-                                hx-on::before-request="this.querySelector('.sync-label').textContent='Syncing...'"
-                                hx-on::after-request="this.querySelector('.sync-label').textContent='Sync All'; window.location.reload();"
-                                style="
-                                    width: 100%;
-                                    text-align: left;
-                                    background: none;
-                                    border: none;
-                                    cursor: pointer;
-                                    color: inherit;
-                                "
+                                type="submit"
+                                class="user-dropdown-logout-btn"
                             >
                                 <svg
                                     width="16"
@@ -271,73 +319,26 @@
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                 >
-                                    <polyline points="23 4 23 10 17 10" />
-                                    <polyline points="1 20 1 14 7 14" />
                                     <path
-                                        d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                                        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
                                     />
+                                    <polyline points="16 17 21 12 16 7" />
+                                    <line x1="21" y1="12" x2="9" y2="12" />
                                 </svg>
-                                <span class="sync-label">Sync All</span>
+                                Sign Out
                             </button>
-                            <div class="user-dropdown-divider"></div>
-                            <form
-                                method="post"
-                                action="/auth/logout"
-                                hx-boost="false"
-                                class="user-dropdown-item user-dropdown-item--logout"
-                            >
-                                <button
-                                    type="submit"
-                                    class="user-dropdown-logout-btn"
-                                >
-                                    <svg
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path
-                                            d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
-                                        />
-                                        <polyline points="16 17 21 12 16 7" />
-                                        <line x1="21" y1="12" x2="9" y2="12" />
-                                    </svg>
-                                    Sign Out
-                                </button>
-                            </form>
-                        </div>
+                        </form>
                     </div>
-                    {% endif %}
                 </div>
+                {% endif %}
             </div>
-        </header>
+        </aside>
+
+        <!-- Mobile overlay -->
+        <div class="sidebar-overlay"
+             onclick="document.querySelector('.app-sidebar').classList.remove('open'); this.classList.remove('open');"></div>
 
         <main class="content">{% block content %}{% endblock %}</main>
-
-        <footer class="site-footer">
-            <div class="footer-inner">
-                <a href="/" class="footer-brand">
-                    <img
-                        src="/static/img/symbol.svg"
-                        alt=""
-                        class="footer-logo"
-                    />
-                    <span>Brag Frog</span>
-                </a>
-                <nav class="footer-nav">
-                    <a
-                        href="https://github.com/gruberb/brag-frog"
-                        target="_blank"
-                        rel="noopener"
-                        >GitHub</a
-                    >
-                </nav>
-            </div>
-        </footer>
 
         {% block overlay %}{% endblock %} {% include
         "components/command_palette.html" %}

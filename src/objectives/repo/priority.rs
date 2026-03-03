@@ -17,6 +17,10 @@ fn random_color() -> String {
     PRIORITY_COLORS[idx].to_string()
 }
 
+const SELECT_COLS: &str = "id, phase_id, user_id, title, status, color, sort_order,
+    scope, started_at, completed_at, impact_narrative, department_goal_id, created_at,
+    priority_level, measure_type, measure_start, measure_target, measure_current, description";
+
 impl Priority {
     /// All priorities for a phase, ordered by sort_order.
     pub async fn list_for_phase(
@@ -24,14 +28,14 @@ impl Priority {
         phase_id: i64,
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
-        let rows = sqlx::query_as::<_, PriorityRow>(
-            "SELECT id, phase_id, user_id, title, status, color, sort_order,
-                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
-             FROM priorities WHERE phase_id = ? ORDER BY sort_order, id",
-        )
-        .bind(phase_id)
-        .fetch_all(pool)
-        .await?;
+        let q = format!(
+            "SELECT {} FROM priorities WHERE phase_id = ? ORDER BY sort_order, id",
+            SELECT_COLS
+        );
+        let rows = sqlx::query_as::<_, PriorityRow>(&q)
+            .bind(phase_id)
+            .fetch_all(pool)
+            .await?;
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
@@ -41,14 +45,14 @@ impl Priority {
         department_goal_id: i64,
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
-        let rows = sqlx::query_as::<_, PriorityRow>(
-            "SELECT id, phase_id, user_id, title, status, color, sort_order,
-                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
-             FROM priorities WHERE department_goal_id = ? ORDER BY sort_order, id",
-        )
-        .bind(department_goal_id)
-        .fetch_all(pool)
-        .await?;
+        let q = format!(
+            "SELECT {} FROM priorities WHERE department_goal_id = ? ORDER BY sort_order, id",
+            SELECT_COLS
+        );
+        let rows = sqlx::query_as::<_, PriorityRow>(&q)
+            .bind(department_goal_id)
+            .fetch_all(pool)
+            .await?;
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
@@ -62,7 +66,9 @@ impl Priority {
             r#"
             SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.status,
                 pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
-                pr.impact_narrative, pr.department_goal_id, pr.created_at
+                pr.impact_narrative, pr.department_goal_id, pr.created_at,
+                pr.priority_level, pr.measure_type, pr.measure_start, pr.measure_target,
+                pr.measure_current, pr.description
             FROM priorities pr
             JOIN brag_phases p ON pr.phase_id = p.id
             WHERE p.user_id = ? AND p.is_active = 1
@@ -87,7 +93,9 @@ impl Priority {
             r#"
             SELECT pr.id, pr.phase_id, pr.user_id, pr.title, pr.status,
                 pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
-                pr.impact_narrative, pr.department_goal_id, pr.created_at
+                pr.impact_narrative, pr.department_goal_id, pr.created_at,
+                pr.priority_level, pr.measure_type, pr.measure_start, pr.measure_target,
+                pr.measure_current, pr.description
             FROM priorities pr
             JOIN brag_phases p ON pr.phase_id = p.id
             WHERE pr.id = ? AND p.user_id = ?
@@ -128,14 +136,22 @@ impl Priority {
         let color = random_color();
         let enc_title = crypto.encrypt(&input.title)?;
         let enc_narrative = crypto.encrypt_opt(&input.impact_narrative)?;
+        let enc_description = crypto.encrypt_opt(&input.description)?;
+
+        // measure_current defaults to measure_start on create
+        let measure_current = input.measure_start;
 
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
             INSERT INTO priorities (phase_id, user_id, title, status, color, sort_order,
-                scope, impact_narrative, department_goal_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                scope, impact_narrative, department_goal_id,
+                priority_level, measure_type, measure_start, measure_target, measure_current,
+                description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id, phase_id, user_id, title, status, color, sort_order,
-                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
+                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at,
+                priority_level, measure_type, measure_start, measure_target, measure_current,
+                description
             "#,
         )
         .bind(phase_id)
@@ -147,6 +163,12 @@ impl Priority {
         .bind(&input.scope)
         .bind(&enc_narrative)
         .bind(input.department_goal_id)
+        .bind(&input.priority_level)
+        .bind(&input.measure_type)
+        .bind(input.measure_start)
+        .bind(input.measure_target)
+        .bind(measure_current)
+        .bind(&enc_description)
         .fetch_one(pool)
         .await?;
 
@@ -165,15 +187,21 @@ impl Priority {
 
         let enc_title = crypto.encrypt(&input.title)?;
         let enc_narrative = crypto.encrypt_opt(&input.impact_narrative)?;
+        let enc_description = crypto.encrypt_opt(&input.description)?;
 
         let row = sqlx::query_as::<_, PriorityRow>(
             r#"
             UPDATE priorities SET title = ?, status = ?, scope = ?,
                 impact_narrative = ?, department_goal_id = ?,
-                started_at = ?, completed_at = ?
+                started_at = ?, completed_at = ?,
+                priority_level = ?, measure_type = ?,
+                measure_start = ?, measure_target = ?, measure_current = ?,
+                description = ?
             WHERE id = ? AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)
             RETURNING id, phase_id, user_id, title, status, color, sort_order,
-                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at
+                scope, started_at, completed_at, impact_narrative, department_goal_id, created_at,
+                priority_level, measure_type, measure_start, measure_target, measure_current,
+                description
             "#,
         )
         .bind(&enc_title)
@@ -183,6 +211,12 @@ impl Priority {
         .bind(input.department_goal_id)
         .bind(&input.started_at)
         .bind(&input.completed_at)
+        .bind(&input.priority_level)
+        .bind(&input.measure_type)
+        .bind(input.measure_start)
+        .bind(input.measure_target)
+        .bind(input.measure_current)
+        .bind(&enc_description)
         .bind(id)
         .bind(user_id)
         .fetch_one(pool)

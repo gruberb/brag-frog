@@ -8,90 +8,41 @@
             <p class="page-subtitle">{{ phase.name }} · {{ phase.start_date }} to {{ phase.end_date }}</p>
         </div>
         <div style="display:flex;gap:8px;">
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('new-dept-goal-form').classList.toggle('hidden')">+ Department Goal</button>
-            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('new-priority-form').classList.toggle('hidden')">+ Priority</button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('lattice-import-form').classList.toggle('hidden')">Import from Lattice</button>
+            <div class="create-dropdown" id="priorities-create-dropdown">
+                <button class="btn btn-primary btn-sm" type="button" onclick="this.parentElement.classList.toggle('open')">
+                    Create &#9662;
+                </button>
+                <div class="create-dropdown-menu">
+                    <button class="create-dropdown-item" type="button" onclick="openPanelFromUrl('New Department Goal', '/priorities/goals/new-panel'); this.closest('.create-dropdown').classList.remove('open');">
+                        Department Goal
+                    </button>
+                    <button class="create-dropdown-item" type="button" onclick="openPanelFromUrl('New Priority', '/priorities/new-panel'); this.closest('.create-dropdown').classList.remove('open');">
+                        Priority
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- New department goal form (hidden by default) -->
-<div id="new-dept-goal-form" class="card hidden" style="margin-bottom:16px;">
-    <form hx-post="/priorities/goals" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');window.location.reload();}">
-        <input type="hidden" name="phase_id" value="{{ phase.id }}">
+<!-- Lattice CSV import form (hidden by default) -->
+<div id="lattice-import-form" class="card hidden" style="margin-bottom:16px;">
+    <h3 style="margin-bottom:var(--space-2);font-size:1rem;">Import from Lattice</h3>
+    <p class="text-muted text-sm" style="margin-bottom:var(--space-3);">Upload a CSV export from Lattice. Department goals and individual goals will be imported as department goals and priorities respectively.</p>
+    <form hx-post="/priorities/import"
+          hx-encoding="multipart/form-data"
+          hx-swap="none"
+          hx-indicator=".lattice-import-spinner">
         <div class="form-group">
-            <label class="form-label">Goal Title</label>
-            <input type="text" name="title" class="form-input" required placeholder="e.g., Improve platform reliability to 99.9% uptime">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-textarea" rows="2" placeholder="Optional details about the department goal"></textarea>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Status</label>
-                <select name="status" class="form-select">
-                    <option value="not_started" selected>Not Started</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="on_hold">On Hold</option>
-                    <option value="completed">Completed</option>
-                </select>
-            </div>
+            <label class="form-label">CSV File</label>
+            <input type="file" name="csv_file" accept=".csv" class="form-input" required>
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-sm">Create Department Goal</button>
-            <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');">Cancel</button>
-        </div>
-    </form>
-</div>
-
-<!-- New priority form (hidden by default) -->
-<div id="new-priority-form" class="card hidden" style="margin-bottom:16px;">
-    <form hx-post="/priorities" hx-swap="none" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('.card').classList.add('hidden');window.location.reload();}">
-        <input type="hidden" name="phase_id" value="{{ phase.id }}">
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Priority Title</label>
-                <input type="text" name="title" class="form-input" required placeholder="e.g., Ship OHTTP component">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Department Goal</label>
-                <select name="department_goal_id" class="form-select">
-                    <option value="">Unassigned</option>
-                    {% for dg in dept_goals %}
-                    <option value="{{ dg.id }}">{{ dg.title }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Status</label>
-                <select name="status" class="form-select">
-                    <option value="not_started" selected>Not Started</option>
-                    <option value="active">Active</option>
-                    <option value="on_hold">On Hold</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Scope</label>
-                <select name="scope" class="form-select">
-                    <option value="">None</option>
-                    <option value="small">Small</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="large">Large</option>
-                    <option value="xlarge">X-Large</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-group" style="margin-top:var(--space-1);">
-            <label class="form-label">Impact Narrative</label>
-            <textarea name="impact_narrative" class="form-input" rows="3"
-                      placeholder="Why does this priority matter? What impact will it have?"></textarea>
-        </div>
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-sm">Create Priority</button>
+            <button type="submit" class="btn btn-primary btn-sm">
+                Import
+                <span class="lattice-import-spinner htmx-indicator" style="display:none;">...</span>
+            </button>
             <button type="button" class="btn btn-text btn-sm" onclick="this.closest('.card').classList.add('hidden');">Cancel</button>
         </div>
     </form>
@@ -133,7 +84,7 @@
                         </button>
                         {% endif %}
                         <button class="btn-icon btn-icon--sm" title="Edit"
-                                onclick="document.getElementById('dept-goal-view-{{ dg.id }}').classList.add('hidden'); var d=document.getElementById('dept-goal-desc-{{ dg.id }}'); if(d) d.classList.add('hidden'); document.getElementById('dept-goal-edit-{{ dg.id }}').classList.remove('hidden');">
+                                onclick="event.stopPropagation(); openPanelFromUrl('Edit Department Goal', '/priorities/goals/{{ dg.id }}/edit-panel');">
                             <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5z"/></svg>
                         </button>
                         <button class="btn-icon btn-icon--danger btn-icon--sm"
@@ -153,28 +104,6 @@
                 {{ dg.description }}
             </div>
             {% endif %}
-            <!-- Inline edit form for department goal -->
-            <form class="cycle-item-edit hidden" id="dept-goal-edit-{{ dg.id }}"
-                  hx-put="/priorities/goals/{{ dg.id }}"
-                  hx-swap="none"
-                  hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';"
-                  onclick="event.stopPropagation();">
-                <input type="text" name="title" class="form-input form-input--sm" value="{{ dg.title }}" required style="flex:1;">
-                <select name="status" class="form-select form-select--sm" style="width:auto;max-width:160px;">
-                    <option value="not_started" {% if dg.status == "not_started" %}selected{% endif %}>Not Started</option>
-                    <option value="in_progress" {% if dg.status == "in_progress" %}selected{% endif %}>In Progress</option>
-                    <option value="on_hold" {% if dg.status == "on_hold" %}selected{% endif %}>On Hold</option>
-                    <option value="completed" {% if dg.status == "completed" %}selected{% endif %}>Completed</option>
-                </select>
-                <div style="width:100%;margin-top:var(--space-1);">
-                    <textarea name="description" class="form-input form-input--sm" rows="2" placeholder="Description" style="width:100%;resize:vertical;">{{ dg.description | default(value="") }}</textarea>
-                </div>
-                <div style="display:flex;gap:var(--space-1);margin-top:var(--space-1);">
-                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                    <button type="button" class="btn btn-sm btn-text"
-                            onclick="document.getElementById('dept-goal-edit-{{ dg.id }}').classList.add('hidden'); document.getElementById('dept-goal-view-{{ dg.id }}').classList.remove('hidden');">Cancel</button>
-                </div>
-            </form>
         </div>
 
         <!-- Priorities nested under this department goal (collapsible) -->
@@ -188,8 +117,21 @@
                     {% if priority.status %}
                     <span class="badge badge-status badge-status--{{ priority.status }}">{{ priority.status | replace(from="_", to=" ") }}</span>
                     {% endif %}
-                    {% if priority.scope %}
-                    <span class="badge" style="background:var(--color-tint-purple);color:var(--color-purple-30);font-size:0.7rem;">{{ priority.scope }}</span>
+                    {% if priority.priority_level %}
+                    <span class="badge badge-priority-level badge-priority-level--{{ priority.priority_level }}">{{ priority.priority_level | upper }}</span>
+                    {% endif %}
+                    {% if priority.measure_type == "percent" and priority.measure_current is defined and priority.measure_target %}
+                    <span class="priority-progress" title="{{ priority.measure_current | default(value=0) }}% of {{ priority.measure_target }}%">
+                        <span class="priority-progress-bar" style="width:{{ priority.measure_current | default(value=0) / priority.measure_target * 100 }}%;"></span>
+                    </span>
+                    {% elif priority.measure_type == "number" and priority.measure_target %}
+                    <span class="text-muted" style="font-size:0.75rem;">{{ priority.measure_current | default(value=0) }}/{{ priority.measure_target }}</span>
+                    {% elif priority.measure_type == "binary" %}
+                    {% if priority.measure_current == 1.0 %}
+                    <span style="color:var(--color-green);font-size:0.8rem;" title="Done">&#10003;</span>
+                    {% else %}
+                    <span style="color:var(--color-muted);font-size:0.8rem;" title="Not done">&#9675;</span>
+                    {% endif %}
                     {% endif %}
                     <div class="cycle-item-right">
                         {% if priority.impact_narrative %}
@@ -200,7 +142,7 @@
                         {% endif %}
                         <div class="cycle-item-actions">
                             <button class="btn-icon btn-icon--sm" title="Edit"
-                                    onclick="document.getElementById('priority-view-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-edit-{{ priority.id }}').classList.remove('hidden');">
+                                    onclick="openPanelFromUrl('Edit Priority', '/priorities/{{ priority.id }}/edit-panel');">
                                 <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5z"/></svg>
                             </button>
                             <button class="btn-icon btn-icon--danger btn-icon--sm"
@@ -220,59 +162,6 @@
                     {{ priority.impact_narrative }}
                 </div>
                 {% endif %}
-                <!-- Edit form for priority -->
-                <div class="hidden" id="priority-edit-{{ priority.id }}" style="margin-top:var(--space-2);">
-                    <form hx-put="/priorities/{{ priority.id }}"
-                          hx-swap="none"
-                          hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Priority Title</label>
-                                <input type="text" name="title" class="form-input" value="{{ priority.title }}" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Department Goal</label>
-                                <select name="department_goal_id" class="form-select">
-                                    <option value="">Unassigned</option>
-                                    {% for g in dept_goals %}
-                                    <option value="{{ g.id }}" {% if dg.id == g.id %}selected{% endif %}>{{ g.title }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Status</label>
-                                <select name="status" class="form-select">
-                                    <option value="not_started" {% if priority.status == "not_started" %}selected{% endif %}>Not Started</option>
-                                    <option value="active" {% if priority.status == "active" %}selected{% endif %}>Active</option>
-                                    <option value="on_hold" {% if priority.status == "on_hold" %}selected{% endif %}>On Hold</option>
-                                    <option value="completed" {% if priority.status == "completed" %}selected{% endif %}>Completed</option>
-                                    <option value="cancelled" {% if priority.status == "cancelled" %}selected{% endif %}>Cancelled</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Scope</label>
-                                <select name="scope" class="form-select">
-                                    <option value="">None</option>
-                                    <option value="small" {% if priority.scope == "small" %}selected{% endif %}>Small</option>
-                                    <option value="medium" {% if priority.scope == "medium" %}selected{% endif %}>Medium</option>
-                                    <option value="large" {% if priority.scope == "large" %}selected{% endif %}>Large</option>
-                                    <option value="xlarge" {% if priority.scope == "xlarge" %}selected{% endif %}>XLarge</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Impact Narrative</label>
-                            <textarea name="impact_narrative" class="form-textarea" rows="2" placeholder="Why does this priority matter? What impact will it have?">{{ priority.impact_narrative | default(value="") }}</textarea>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                            <button type="button" class="btn btn-text btn-sm"
-                                    onclick="document.getElementById('priority-edit-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-view-{{ priority.id }}').classList.remove('hidden');">Cancel</button>
-                        </div>
-                    </form>
-                </div>
             </div>
             {% endfor %}
             {% endif %}
@@ -297,8 +186,21 @@
             {% if priority.status %}
             <span class="badge badge-status badge-status--{{ priority.status }}">{{ priority.status | replace(from="_", to=" ") }}</span>
             {% endif %}
-            {% if priority.scope %}
-            <span class="badge" style="background:var(--color-tint-purple);color:var(--color-purple-30);font-size:0.7rem;">{{ priority.scope }}</span>
+            {% if priority.priority_level %}
+            <span class="badge badge-priority-level badge-priority-level--{{ priority.priority_level }}">{{ priority.priority_level | upper }}</span>
+            {% endif %}
+            {% if priority.measure_type == "percent" and priority.measure_current is defined and priority.measure_target %}
+            <span class="priority-progress" title="{{ priority.measure_current | default(value=0) }}% of {{ priority.measure_target }}%">
+                <span class="priority-progress-bar" style="width:{{ priority.measure_current | default(value=0) / priority.measure_target * 100 }}%;"></span>
+            </span>
+            {% elif priority.measure_type == "number" and priority.measure_target %}
+            <span class="text-muted" style="font-size:0.75rem;">{{ priority.measure_current | default(value=0) }}/{{ priority.measure_target }}</span>
+            {% elif priority.measure_type == "binary" %}
+            {% if priority.measure_current == 1.0 %}
+            <span style="color:var(--color-green);font-size:0.8rem;" title="Done">&#10003;</span>
+            {% else %}
+            <span style="color:var(--color-muted);font-size:0.8rem;" title="Not done">&#9675;</span>
+            {% endif %}
             {% endif %}
             <div class="cycle-item-right">
                 {% if priority.impact_narrative %}
@@ -309,7 +211,7 @@
                 {% endif %}
                 <div class="cycle-item-actions">
                     <button class="btn-icon btn-icon--sm" title="Edit"
-                            onclick="document.getElementById('priority-view-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-edit-{{ priority.id }}').classList.remove('hidden');">
+                            onclick="openPanelFromUrl('Edit Priority', '/priorities/{{ priority.id }}/edit-panel');">
                         <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5L13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5z"/></svg>
                     </button>
                     <button class="btn-icon btn-icon--danger btn-icon--sm"
@@ -329,63 +231,6 @@
             {{ priority.impact_narrative }}
         </div>
         {% endif %}
-        <!-- Edit form for priority -->
-        <div class="hidden" id="priority-edit-{{ priority.id }}" style="margin-top:var(--space-2);">
-            <form hx-put="/priorities/{{ priority.id }}"
-                  hx-swap="none"
-                  hx-on::after-request="if(event.detail.successful) window.location.href='/priorities';">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Priority Title</label>
-                        <input type="text" name="title" class="form-input" value="{{ priority.title }}" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Department Goal</label>
-                        <select name="department_goal_id" class="form-select">
-                            <option value="">Unassigned</option>
-                            {% for g in dept_goals %}
-                            <option value="{{ g.id }}">{{ g.title }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Status</label>
-                        <select name="status" class="form-select">
-                            <option value="not_started" {% if priority.status == "not_started" %}selected{% endif %}>Not Started</option>
-                            <option value="active" {% if priority.status == "active" %}selected{% endif %}>Active</option>
-                            <option value="on_hold" {% if priority.status == "on_hold" %}selected{% endif %}>On Hold</option>
-                            <option value="completed" {% if priority.status == "completed" %}selected{% endif %}>Completed</option>
-                            <option value="cancelled" {% if priority.status == "cancelled" %}selected{% endif %}>Cancelled</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Scope</label>
-                        <select name="scope" class="form-select">
-                            <option value="">None</option>
-                            <option value="small" {% if priority.scope == "small" %}selected{% endif %}>Small</option>
-                            <option value="medium" {% if priority.scope == "medium" %}selected{% endif %}>Medium</option>
-                            <option value="large" {% if priority.scope == "large" %}selected{% endif %}>Large</option>
-                            <option value="xlarge" {% if priority.scope == "xlarge" %}selected{% endif %}>XLarge</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Description</label>
-                    <textarea name="description" class="form-textarea" rows="2">{{ priority.description | default(value="") }}</textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Impact Narrative</label>
-                    <textarea name="impact_narrative" class="form-textarea" rows="2" placeholder="Why does this priority matter? What impact will it have?">{{ priority.impact_narrative | default(value="") }}</textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                    <button type="button" class="btn btn-text btn-sm"
-                            onclick="document.getElementById('priority-edit-{{ priority.id }}').classList.add('hidden'); document.getElementById('priority-view-{{ priority.id }}').classList.remove('hidden');">Cancel</button>
-                </div>
-            </form>
-        </div>
     </div>
     {% endfor %}
 </div>
@@ -490,6 +335,14 @@ document.querySelectorAll('.cycle-goal-group').forEach(function(group) {
     } else {
         if (krsEl) krsEl.style.display = '';
         if (chevron) chevron.style.transform = 'rotate(90deg)';
+    }
+});
+
+// Close create dropdown on click outside
+document.addEventListener('click', function(e) {
+    var dd = document.getElementById('priorities-create-dropdown');
+    if (dd && !dd.contains(e.target)) {
+        dd.classList.remove('open');
     }
 });
 

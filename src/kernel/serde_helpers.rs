@@ -13,6 +13,19 @@ where
     }
 }
 
+/// Deserializes an HTML form field to `Option<f64>`: empty string becomes `None`.
+pub fn deserialize_optional_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    if s.is_empty() {
+        Ok(None)
+    } else {
+        s.parse::<f64>().map(Some).map_err(serde::de::Error::custom)
+    }
+}
+
 /// Deserializes an HTML form field to `Option<String>`: blank/whitespace becomes `None`.
 pub fn deserialize_optional_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where

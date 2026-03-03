@@ -99,6 +99,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "009_add_team_to_people_aliases",
         include_str!("../../migrations/009_add_team_to_people_aliases.sql"),
     ),
+    (
+        "010_priority_level_and_measurement",
+        include_str!("../../migrations/010_priority_level_and_measurement.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.

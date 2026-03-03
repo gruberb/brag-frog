@@ -46,18 +46,22 @@ pub struct DepartmentGoal {
     pub created_at: String,
 }
 
-/// Form payload for creating a department goal.
+/// Shared input fields for creating or updating a department goal.
 #[derive(Debug, Deserialize)]
-pub struct CreateDepartmentGoal {
+pub struct DepartmentGoalInput {
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
     pub status: Option<String>,
 }
 
-/// Form payload for updating a department goal.
+pub type CreateDepartmentGoal = DepartmentGoalInput;
+pub type UpdateDepartmentGoal = DepartmentGoalInput;
+
+/// Form payload for creating a department goal via HTMX panel (includes phase_id).
 #[derive(Debug, Deserialize)]
-pub struct UpdateDepartmentGoal {
+pub struct CreateDepartmentGoalForm {
+    pub phase_id: i64,
     pub title: String,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,

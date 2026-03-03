@@ -227,6 +227,11 @@ pub fn create_router() -> Router<AppState> {
         )
         // Priorities
         .route("/priorities", get(objectives_routes::priorities_page).post(objectives_routes::create_priority))
+        .route("/priorities/new-panel", get(objectives_routes::priority_form_panel))
+        .route("/priorities/{id}/edit-panel", get(objectives_routes::priority_edit_panel))
+        .route("/priorities/goals/new-panel", get(objectives_routes::department_goal_form_panel))
+        .route("/priorities/goals/{id}/edit-panel", get(objectives_routes::department_goal_edit_panel))
+        .route("/priorities/import", post(objectives_routes::import_lattice_csv))
         .route(
             "/priorities/goals",
             post(objectives_routes::create_department_goal),

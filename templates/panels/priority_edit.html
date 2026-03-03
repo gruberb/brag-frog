@@ -1,0 +1,139 @@
+<!-- Priority edit panel (loaded into #panel-body via openPanelFromUrl) -->
+<div class="panel-form">
+    <form hx-put="/priorities/{{ priority.id }}"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful){ closePanel(); window.location.href='/priorities'; }">
+        <div class="form-group">
+            <label class="form-label">Priority Title</label>
+            <input type="text" name="title" class="form-input" value="{{ priority.title }}" required autofocus>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Department Goal</label>
+            <select name="department_goal_id" class="form-select">
+                <option value="">Unassigned</option>
+                {% for dg in dept_goals %}
+                <option value="{{ dg.id }}" {% if priority.department_goal_id == dg.id %}selected{% endif %}>{{ dg.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="not_started" {% if priority.status == "not_started" %}selected{% endif %}>Not Started</option>
+                    <option value="active" {% if priority.status == "active" %}selected{% endif %}>Active</option>
+                    <option value="on_hold" {% if priority.status == "on_hold" %}selected{% endif %}>On Hold</option>
+                    <option value="completed" {% if priority.status == "completed" %}selected{% endif %}>Completed</option>
+                    <option value="cancelled" {% if priority.status == "cancelled" %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Priority Level</label>
+                <select name="priority_level" class="form-select">
+                    <option value="">—</option>
+                    <option value="p0" {% if priority.priority_level == "p0" %}selected{% endif %}>P0</option>
+                    <option value="p1" {% if priority.priority_level == "p1" %}selected{% endif %}>P1</option>
+                    <option value="p2" {% if priority.priority_level == "p2" %}selected{% endif %}>P2</option>
+                    <option value="p3" {% if priority.priority_level == "p3" %}selected{% endif %}>P3</option>
+                    <option value="p4" {% if priority.priority_level == "p4" %}selected{% endif %}>P4</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-textarea" rows="2"
+                      placeholder="What is this priority about?">{{ priority.description | default(value="") }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Impact Narrative</label>
+            <textarea name="impact_narrative" class="form-textarea" rows="2"
+                      placeholder="Why does this priority matter? What impact will it have?">{{ priority.impact_narrative | default(value="") }}</textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label">How will you measure progress?</label>
+            <select name="measure_type" class="form-select" id="edit-measure-type"
+                    onchange="toggleMeasureFields(this.value, 'edit')">
+                <option value="">None (qualitative)</option>
+                <option value="percent" {% if priority.measure_type == "percent" %}selected{% endif %}>Percent</option>
+                <option value="binary" {% if priority.measure_type == "binary" %}selected{% endif %}>Binary (done / not done)</option>
+                <option value="number" {% if priority.measure_type == "number" %}selected{% endif %}>Number</option>
+            </select>
+        </div>
+        <div class="form-row" id="edit-measure-range" style="{% if priority.measure_type == "percent" or priority.measure_type == "number" %}{% else %}display:none;{% endif %}">
+            <div class="form-group">
+                <label class="form-label">Start</label>
+                <input type="number" name="measure_start" id="edit-measure-start" class="form-input" step="any" value="{{ priority.measure_start | default(value='') }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Target</label>
+                <input type="number" name="measure_target" id="edit-measure-target" class="form-input" step="any" value="{{ priority.measure_target | default(value='') }}">
+            </div>
+            <div class="form-group" style="{% if priority.measure_type == "percent" or priority.measure_type == "number" %}{% else %}display:none;{% endif %}">
+                <label class="form-label">Current</label>
+                <input type="number" name="measure_current" id="edit-measure-current" class="form-input" step="any" value="{{ priority.measure_current | default(value='') }}">
+            </div>
+        </div>
+        {% if priority.measure_type == "binary" %}
+        <div class="form-group" id="edit-binary-toggle">
+            <label class="form-label">Done?</label>
+            <select name="measure_current" class="form-select">
+                <option value="0" {% if not priority.measure_current or priority.measure_current == 0.0 %}selected{% endif %}>Not done</option>
+                <option value="1" {% if priority.measure_current == 1.0 %}selected{% endif %}>Done</option>
+            </select>
+        </div>
+        {% endif %}
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Started At</label>
+                <input type="date" name="started_at" class="form-input" value="{{ priority.started_at | default(value='') }}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Completed At</label>
+                <input type="date" name="completed_at" class="form-input" value="{{ priority.completed_at | default(value='') }}">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Priority</button>
+            <button type="button" class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        </div>
+    </form>
+</div>
+<script>
+function toggleMeasureFields(type, prefix) {
+    var rangeEl = document.getElementById(prefix + '-measure-range');
+    var startEl = document.getElementById(prefix + '-measure-start');
+    var targetEl = document.getElementById(prefix + '-measure-target');
+    var currentEl = document.getElementById(prefix + '-measure-current');
+    var binaryEl = document.getElementById(prefix + '-binary-toggle');
+
+    if (type === 'percent') {
+        rangeEl.style.display = '';
+        startEl.value = startEl.value || '0';
+        targetEl.value = targetEl.value || '100';
+        if (currentEl) currentEl.parentElement.style.display = '';
+        if (binaryEl) binaryEl.style.display = 'none';
+    } else if (type === 'number') {
+        rangeEl.style.display = '';
+        if (currentEl) currentEl.parentElement.style.display = '';
+        if (binaryEl) binaryEl.style.display = 'none';
+    } else if (type === 'binary') {
+        rangeEl.style.display = 'none';
+        startEl.value = '';
+        targetEl.value = '';
+        if (currentEl) {
+            currentEl.value = '';
+            currentEl.parentElement.style.display = 'none';
+        }
+        if (binaryEl) binaryEl.style.display = '';
+    } else {
+        rangeEl.style.display = 'none';
+        startEl.value = '';
+        targetEl.value = '';
+        if (currentEl) {
+            currentEl.value = '';
+            currentEl.parentElement.style.display = 'none';
+        }
+        if (binaryEl) binaryEl.style.display = 'none';
+    }
+}
+</script>

@@ -21,12 +21,31 @@ impl DepartmentGoal {
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
+    /// Find by ID, scoped to user.
+    pub async fn find_by_id(
+        pool: &SqlitePool,
+        id: i64,
+        user_id: i64,
+        crypto: &UserCrypto,
+    ) -> Result<Option<Self>, AppError> {
+        let row = sqlx::query_as::<_, DepartmentGoalRow>(
+            "SELECT id, phase_id, title, description, status, sort_order, source, created_at FROM department_goals WHERE id = ? AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)",
+        )
+        .bind(id)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await?;
+        row.map(|r| r.decrypt(crypto)).transpose()
+    }
+
     /// Creates a department goal at the end of the sort order. Verifies phase ownership.
+    /// Pass `source` to set an explicit origin (e.g. `Some("lattice")`); `None` defaults to `"manual"`.
     pub async fn create(
         pool: &SqlitePool,
         phase_id: i64,
         user_id: i64,
         input: &CreateDepartmentGoal,
+        source: Option<&str>,
         crypto: &UserCrypto,
     ) -> Result<Self, AppError> {
         let owns: Option<i64> =
@@ -48,11 +67,12 @@ impl DepartmentGoal {
 
         let enc_title = crypto.encrypt(&input.title)?;
         let enc_description = crypto.encrypt_opt(&input.description)?;
+        let source = source.unwrap_or("manual");
 
         let row = sqlx::query_as::<_, DepartmentGoalRow>(
             r#"
-            INSERT INTO department_goals (phase_id, title, description, sort_order, status)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO department_goals (phase_id, title, description, sort_order, status, source)
+            VALUES (?, ?, ?, ?, ?, ?)
             RETURNING id, phase_id, title, description, status, sort_order, source, created_at
             "#,
         )
@@ -61,6 +81,7 @@ impl DepartmentGoal {
         .bind(&enc_description)
         .bind(max_order.unwrap_or(0) + 1)
         .bind(input.status.as_deref().unwrap_or("in_progress"))
+        .bind(source)
         .fetch_one(pool)
         .await?;
 

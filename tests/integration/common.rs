@@ -282,6 +282,7 @@ pub async fn create_test_department_goal(
             description: None,
             status: None,
         },
+        None,
         crypto,
     )
     .await
@@ -307,6 +308,11 @@ pub async fn create_test_priority(
             scope: None,
             impact_narrative: None,
             department_goal_id,
+            priority_level: None,
+            measure_type: None,
+            measure_start: None,
+            measure_target: None,
+            description: None,
         },
         crypto,
     )

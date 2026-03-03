@@ -88,7 +88,7 @@
 .quick-entry-form {
     background: var(--color-surface);
     border: 2.5px solid var(--color-primary);
-    border-radius: 0;
+    border-radius: var(--radius-lg);
     padding: var(--space-5, 32px) var(--space-6, 40px);
     margin-bottom: var(--space-6);
     box-shadow: var(--shadow-md);
@@ -193,7 +193,7 @@
     display: inline-block;
     padding: 2px 10px;
     font-size: 0.75rem;
-    border-radius: 0;
+    border-radius: var(--radius-full);
     border: 1px solid var(--color-gray-30);
     color: var(--color-text-secondary);
     background: var(--color-surface);
