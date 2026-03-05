@@ -9,6 +9,7 @@ use crate::AppState;
 use crate::worklog::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
+use crate::kernel::render::html_escape;
 use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
 use crate::integrations::get_sync_service;
@@ -115,12 +116,20 @@ pub async fn integrations_page(
         .await
         .unwrap_or_default();
 
+    let (is_syncing, current_service) = state
+        .sync_status
+        .get(&auth.user_id)
+        .map(|s| (s.is_syncing, s.current_service.clone()))
+        .unwrap_or((false, None));
+
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
     ctx.insert("services", &services);
     ctx.insert("source_counts", &source_counts);
     ctx.insert("sync_logs", &sync_logs);
+    ctx.insert("is_syncing", &is_syncing);
+    ctx.insert("current_service", &current_service);
     ctx.insert("current_page", "integrations");
     ctx.insert("public_only", &state.config.public_only);
 
@@ -129,12 +138,6 @@ pub async fn integrations_page(
 }
 
 // Minimal HTML entity escaping for dynamic strings injected into HTML responses.
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
 
 /// Form payload for saving or testing an integration. Fields are a superset of all services.
 #[derive(serde::Deserialize)]

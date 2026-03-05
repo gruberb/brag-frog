@@ -135,6 +135,8 @@ pub async fn callback(
 
     auth_mw::set_user_session(&session, user.id).await?;
 
+    crate::integrations::background::spawn_sync_all(state.clone(), user.id);
+
     tracing::info!("Session set, redirecting to /");
 
     Ok(Redirect::to("/"))

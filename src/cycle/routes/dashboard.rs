@@ -256,6 +256,7 @@ pub async fn update_focus(
     crate::cycle::model::WeeklyFocus::update(
         &state.db,
         focus_id,
+        auth.user_id,
         &crate::cycle::model::UpdateFocusParams {
             title: &input.title,
             linked_type: linked_type.as_deref(),
@@ -276,10 +277,10 @@ pub async fn update_focus(
 
 /// DELETE /focus/{focus_id} — delete a focus item.
 pub async fn delete_focus(
-    _auth: AuthUser,
+    auth: AuthUser,
     State(state): State<AppState>,
     Path(focus_id): Path<i64>,
 ) -> Result<impl IntoResponse, AppError> {
-    crate::cycle::model::WeeklyFocus::delete(&state.db, focus_id).await?;
+    crate::cycle::model::WeeklyFocus::delete(&state.db, focus_id, auth.user_id).await?;
     Ok(hx_redirect("/dashboard"))
 }

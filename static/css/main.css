@@ -156,6 +156,16 @@ a:hover {
     margin-top: var(--space-3);
 }
 
+.sidebar-user-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+.sidebar-user-row .user-dropdown {
+    flex: 1;
+    min-width: 0;
+}
+
 /* ── Mobile Top Bar ── */
 .app-topbar {
     display: none;
@@ -833,4 +843,42 @@ button.user-dropdown-item {
 @keyframes toast-out {
     from { opacity: 1; transform: translateX(-50%) translateY(0); }
     to   { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+}
+
+/* ── Sync indicator (dot / spinning icon next to user dropdown) ── */
+.sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-decoration: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
+.sync-indicator:hover {
+    background: var(--color-gray-10);
+}
+.sync-dot {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.sync-indicator--idle .sync-dot {
+    background: var(--color-success, #22c55e);
+}
+.sync-indicator--error .sync-dot {
+    background: var(--color-error);
+}
+.sync-indicator--active {
+    color: var(--color-primary);
+}
+.sync-indicator--active svg {
+    display: block;
+    animation: sync-spin 1.2s linear infinite;
+}
+@keyframes sync-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }

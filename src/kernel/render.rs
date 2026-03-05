@@ -10,6 +10,14 @@ pub fn hx_redirect(path: &'static str) -> impl IntoResponse {
     ([(header::HeaderName::from_static("hx-redirect"), path)], "")
 }
 
+/// Escape HTML special characters for safe embedding in HTML attributes/content.
+pub fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
 /// Tera filter: renders Markdown to HTML via pulldown-cmark, then sanitizes with ammonia.
 pub fn markdown_filter(
     value: &tera::Value,

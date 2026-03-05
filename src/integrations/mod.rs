@@ -1,4 +1,5 @@
 pub mod atlassian;
+pub mod background;
 pub mod bugzilla;
 pub mod confluence;
 pub mod factory;
@@ -13,6 +14,7 @@ pub mod phabricator;
 pub mod repo;
 pub mod services_config;
 pub mod sync_routes;
+pub mod sync_status;
 pub mod validation;
 
 use async_trait::async_trait;

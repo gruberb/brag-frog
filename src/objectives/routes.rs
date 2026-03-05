@@ -49,6 +49,12 @@ pub async fn priorities_page(
     let (goal_priorities, unassigned_priorities) =
         crate::objectives::service::group_by_department_goal(&priorities);
 
+    // Status counts for the summary bar
+    let mut status_counts = std::collections::HashMap::new();
+    for p in &priorities {
+        *status_counts.entry(p.status.as_str()).or_insert(0usize) += 1;
+    }
+
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
@@ -57,6 +63,12 @@ pub async fn priorities_page(
     ctx.insert("priorities", &priorities);
     ctx.insert("goal_priorities", &goal_priorities);
     ctx.insert("unassigned_priorities", &unassigned_priorities);
+    ctx.insert("total_priorities", &priorities.len());
+    ctx.insert("count_active", &status_counts.get("active").unwrap_or(&0));
+    ctx.insert("count_not_started", &status_counts.get("not_started").unwrap_or(&0));
+    ctx.insert("count_on_hold", &status_counts.get("on_hold").unwrap_or(&0));
+    ctx.insert("count_completed", &status_counts.get("completed").unwrap_or(&0));
+    ctx.insert("count_cancelled", &status_counts.get("cancelled").unwrap_or(&0));
     ctx.insert("current_page", "priorities");
 
     let html = state.templates.render("pages/priorities.html", &ctx)?;
@@ -239,12 +251,25 @@ pub async fn delete_priority(
 // Lattice CSV Import
 // ---------------------------------------------------------------------------
 
+/// Renders the Lattice CSV import form inside a right-hand panel.
+pub async fn import_panel(
+    _auth: AuthUser,
+    State(state): State<AppState>,
+) -> Result<Html<String>, AppError> {
+    let ctx = tera::Context::new();
+    let html = state
+        .templates
+        .render("panels/lattice_import.html", &ctx)?;
+    Ok(Html(html))
+}
+
 /// Imports department goals and priorities from a Lattice OKR CSV export.
+/// Returns an HTML status fragment rendered inside the import panel.
 pub async fn import_lattice_csv(
     auth: AuthUser,
     State(state): State<AppState>,
     mut multipart: Multipart,
-) -> Result<axum::response::Response, AppError> {
+) -> Result<Html<String>, AppError> {
     let phase = BragPhase::get_active(&state.db, auth.user_id)
         .await?
         .ok_or_else(|| AppError::BadRequest("No active phase".to_string()))?;
@@ -265,19 +290,45 @@ pub async fn import_lattice_csv(
         }
     }
 
-    let bytes = csv_bytes.ok_or_else(|| AppError::BadRequest("No CSV file provided".to_string()))?;
-    let rows = import::parse_lattice_csv(&bytes)
-        .map_err(|e| AppError::BadRequest(format!("CSV parse error: {e}")))?;
+    let bytes = match csv_bytes {
+        Some(b) if !b.is_empty() => b,
+        _ => {
+            return Ok(Html(
+                r#"<div class="import-result import-result--error"><strong>Error:</strong> No CSV file provided.</div>"#.to_string(),
+            ));
+        }
+    };
 
-    crate::objectives::service::import_lattice_rows(
+    let rows = match import::parse_lattice_csv(&bytes) {
+        Ok(r) => r,
+        Err(e) => {
+            return Ok(Html(format!(
+                r#"<div class="import-result import-result--error"><strong>CSV parse error:</strong> {}</div>"#,
+                crate::kernel::render::html_escape(&e.to_string()),
+            )));
+        }
+    };
+
+    if let Err(e) = crate::objectives::service::import_lattice_rows(
         &state.db,
         phase.id,
         auth.user_id,
         &rows,
         &auth.crypto,
     )
-    .await?;
+    .await
+    {
+        return Ok(Html(format!(
+            r#"<div class="import-result import-result--error"><strong>Import failed:</strong> {}</div>"#,
+            crate::kernel::render::html_escape(&e.to_string()),
+        )));
+    }
 
-    Ok(([("HX-Redirect", "/priorities")], "").into_response())
+    let count = rows.len();
+    Ok(Html(format!(
+        r#"<div class="import-result import-result--success"><strong>Imported {} row{}.</strong> <a href="/priorities" hx-boost="true" onclick="closePanel()">View priorities</a></div>"#,
+        count,
+        if count == 1 { "" } else { "s" },
+    )))
 }
 

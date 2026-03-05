@@ -17,6 +17,7 @@ use tera::Tera;
 
 use kernel::config::Config;
 use kernel::crypto::Crypto;
+use integrations::sync_status::SyncStatusMap;
 
 /// Registers custom Tera filters used by templates.
 /// Called at startup from `app::build_state()` and in test helpers.
@@ -56,4 +57,6 @@ pub struct AppState {
     pub templates: Arc<Tera>,
     /// AES-256-GCM encryption context for API token storage.
     pub crypto: Arc<Crypto>,
+    /// In-memory sync status per user, updated by background sync tasks.
+    pub sync_status: SyncStatusMap,
 }

@@ -11,7 +11,7 @@ const PRIORITY_COLORS: &[&str] = &[
     "#C2185B", "#6D4C41", "#5C6BC0", "#00ACC1", "#7CB342", "#F9A825", "#546E7A",
 ];
 
-fn random_color() -> String {
+pub fn random_color() -> String {
     let mut rng = rand::rng();
     let idx = rng.random_range(0..PRIORITY_COLORS.len());
     PRIORITY_COLORS[idx].to_string()

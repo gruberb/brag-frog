@@ -92,6 +92,7 @@ impl TestApp {
             config: config.clone(),
             templates: Arc::new(templates),
             crypto: crypto.clone(),
+            sync_status: brag_frog::integrations::sync_status::new_sync_status_map(),
         };
 
         // Build app with a test-only login route

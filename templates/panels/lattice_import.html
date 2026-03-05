@@ -1,0 +1,22 @@
+<!-- Lattice CSV import panel (loaded into #panel-body via openPanelFromUrl) -->
+<div class="panel-form">
+    <p class="text-muted text-sm" style="margin-bottom:var(--space-3);">Upload a CSV export from Lattice. Department goals and individual goals will be imported as department goals and priorities respectively.</p>
+    <form hx-post="/priorities/import"
+          hx-encoding="multipart/form-data"
+          hx-target="#lattice-import-result"
+          hx-swap="innerHTML"
+          hx-disabled-elt="find button[type=submit]">
+        <div class="form-group">
+            <label class="form-label">CSV File</label>
+            <input type="file" name="csv_file" accept=".csv" class="form-input" required>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-loading-indicator">
+                <span class="btn-label">Import</span>
+                <span class="btn-spinner"></span>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="closePanel()">Cancel</button>
+        </div>
+    </form>
+    <div id="lattice-import-result" style="margin-top:var(--space-3);"></div>
+</div>

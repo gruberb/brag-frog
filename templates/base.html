@@ -113,35 +113,36 @@
 
             <div class="sidebar-bottom">
                 {% if user %}
-                <div class="user-dropdown" id="user-dropdown">
-                    <button
-                        class="user-dropdown-trigger"
-                        onclick="toggleUserDropdown()"
-                        type="button"
-                    >
-                        {% if user.avatar_url %}
-                        <img
-                            src="{{ user.avatar_url }}"
-                            alt="{{ user.name }}"
-                            class="avatar"
-                            referrerpolicy="no-referrer"
-                        />
-                        {% endif %}
-                        <span class="user-name"
-                            >{{ user.name | split(pat=" ") | first }}</span
+                <div class="sidebar-user-row">
+                    <div class="user-dropdown" id="user-dropdown">
+                        <button
+                            class="user-dropdown-trigger"
+                            onclick="toggleUserDropdown()"
+                            type="button"
                         >
-                        <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 16 16"
-                            fill="currentColor"
-                            class="dropdown-chevron"
-                        >
-                            <path
-                                d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z"
+                            {% if user.avatar_url %}
+                            <img
+                                src="{{ user.avatar_url }}"
+                                alt="{{ user.name }}"
+                                class="avatar"
+                                referrerpolicy="no-referrer"
                             />
-                        </svg>
-                    </button>
+                            {% endif %}
+                            <span class="user-name"
+                                >{{ user.name | split(pat=" ") | first }}</span
+                            >
+                            <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 16 16"
+                                fill="currentColor"
+                                class="dropdown-chevron"
+                            >
+                                <path
+                                    d="M4.427 7.427l3.396 3.396a.25.25 0 00.354 0l3.396-3.396A.25.25 0 0011.396 7H4.604a.25.25 0 00-.177.427z"
+                                />
+                            </svg>
+                        </button>
                     <div class="user-dropdown-menu" id="user-dropdown-menu">
                         <a href="/settings" class="user-dropdown-item">
                             <svg
@@ -262,42 +263,6 @@
                             </svg>
                             Export
                         </a>
-                        <button
-                            type="button"
-                            class="user-dropdown-item"
-                            id="nav-sync-btn"
-                            hx-post="/sync/all"
-                            hx-swap="none"
-                            hx-disabled-elt="this"
-                            hx-on::before-request="this.querySelector('.sync-label').textContent='Syncing...'"
-                            hx-on::after-request="this.querySelector('.sync-label').textContent='Sync All'; window.location.reload();"
-                            style="
-                                width: 100%;
-                                text-align: left;
-                                background: none;
-                                border: none;
-                                cursor: pointer;
-                                color: inherit;
-                            "
-                        >
-                            <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            >
-                                <polyline points="23 4 23 10 17 10" />
-                                <polyline points="1 20 1 14 7 14" />
-                                <path
-                                    d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-                                />
-                            </svg>
-                            <span class="sync-label">Sync All</span>
-                        </button>
                         <div class="user-dropdown-divider"></div>
                         <form
                             method="post"
@@ -329,6 +294,16 @@
                             </button>
                         </form>
                     </div>
+                </div>
+                <a id="sync-indicator"
+                   href="/integrations"
+                   hx-get="/sync/status"
+                   hx-trigger="load, every 30s"
+                   hx-swap="outerHTML"
+                   class="sync-indicator sync-indicator--idle"
+                   title="Checking sync status...">
+                    <span class="sync-dot"></span>
+                </a>
                 </div>
                 {% endif %}
             </div>

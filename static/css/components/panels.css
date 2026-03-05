@@ -81,6 +81,25 @@
     flex-shrink: 0;
 }
 
+/* Import result feedback (success/error) */
+.import-result {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+}
+.import-result--success {
+    background: var(--color-success-bg, #f0fdf4);
+    border-left: 3px solid var(--color-success, #22c55e);
+}
+.import-result--error {
+    background: var(--color-error-bg, #fef2f2);
+    border-left: 3px solid var(--color-error);
+}
+.import-result a {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
 /* Mobile: full-width panel */
 @media (max-width: 768px) {
     .panel-container {

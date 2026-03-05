@@ -42,16 +42,16 @@
                 <h2 style="margin:0;">Services</h2>
                 <p class="text-muted text-sm" style="margin-top:2px;">Configure and manage your connected services.</p>
             </div>
-            {% if source_counts | length == 0 %}
-            <button class="btn btn-primary btn-sm btn-loading-indicator"
-                    hx-post="/sync/all"
-                    hx-target="#sync-activity"
-                    hx-swap="innerHTML"
-                    hx-disabled-elt="this">
-                <span class="btn-label">Sync All</span>
-                <span class="btn-spinner"></span>
-            </button>
-            {% endif %}
+            <span id="sync-all-btn">
+                <button class="btn btn-primary btn-sm btn-loading-indicator"
+                        hx-post="/sync/all"
+                        hx-target="#sync-activity"
+                        hx-swap="innerHTML"
+                        hx-disabled-elt="this">
+                    <span class="btn-label">Sync All</span>
+                    <span class="btn-spinner"></span>
+                </button>
+            </span>
         </div>
 
         <div class="intg-list">
@@ -78,14 +78,16 @@
                     {% endif %}
                     {% if service.has_token and not service.token_only %}
                     <div class="intg-card-actions" onclick="event.stopPropagation();">
-                        <button type="button" class="btn btn-secondary btn-sm btn-loading-indicator"
-                                hx-post="/sync/{{ service.name }}"
-                                hx-target="#sync-activity"
-                                hx-swap="innerHTML"
-                                hx-disabled-elt="this">
-                            <span class="btn-label">Sync</span>
-                            <span class="btn-spinner"></span>
-                        </button>
+                        <span id="sync-btn-{{ service.name }}">
+                            <button type="button" class="btn btn-secondary btn-sm btn-loading-indicator"
+                                    hx-post="/sync/{{ service.name }}"
+                                    hx-target="#sync-activity"
+                                    hx-swap="innerHTML"
+                                    hx-disabled-elt="this">
+                                <span class="btn-label">Sync</span>
+                                <span class="btn-spinner"></span>
+                            </button>
+                        </span>
                         <button type="button" class="btn btn-danger btn-sm btn-loading-indicator"
                                 hx-post="/sync/{{ service.name }}/hard"
                                 hx-target="#sync-activity"

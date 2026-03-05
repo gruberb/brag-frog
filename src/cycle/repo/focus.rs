@@ -62,6 +62,7 @@ impl WeeklyFocus {
     pub async fn update(
         pool: &SqlitePool,
         id: i64,
+        user_id: i64,
         p: &UpdateFocusParams<'_>,
         crypto: &UserCrypto,
     ) -> Result<Self, AppError> {
@@ -73,7 +74,7 @@ impl WeeklyFocus {
                 title = ?, linked_type = ?, linked_id = ?,
                 link_1 = ?, link_2 = ?, link_3 = ?,
                 updated_at = datetime('now')
-            WHERE id = ?
+            WHERE id = ? AND user_id = ?
             RETURNING *
             "#,
         )
@@ -84,6 +85,7 @@ impl WeeklyFocus {
         .bind(p.link_2)
         .bind(p.link_3)
         .bind(id)
+        .bind(user_id)
         .fetch_one(pool)
         .await?;
 
@@ -91,9 +93,10 @@ impl WeeklyFocus {
     }
 
     /// Delete a focus item.
-    pub async fn delete(pool: &SqlitePool, id: i64) -> Result<(), AppError> {
-        sqlx::query("DELETE FROM weekly_focus WHERE id = ?")
+    pub async fn delete(pool: &SqlitePool, id: i64, user_id: i64) -> Result<(), AppError> {
+        sqlx::query("DELETE FROM weekly_focus WHERE id = ? AND user_id = ?")
             .bind(id)
+            .bind(user_id)
             .execute(pool)
             .await?;
         Ok(())

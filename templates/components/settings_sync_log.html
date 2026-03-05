@@ -1,3 +1,7 @@
+{% if is_syncing %}
+<div hx-get="/sync/status/activity" hx-trigger="every 3s" hx-target="#sync-activity" hx-swap="innerHTML">
+{% endif %}
+
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-2);">
     <h2 style="margin:0;">Sync Activity</h2>
     {% if sync_logs | length > 0 %}
@@ -8,6 +12,14 @@
             hx-confirm="Clear all sync logs?">Clear Logs</button>
     {% endif %}
 </div>
+
+{% if is_syncing %}
+<div class="sync-progress-banner">
+    <span class="btn-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,0.15);border-top-color:var(--color-primary);border-radius:50%;animation:spin 0.6s linear infinite;flex-shrink:0;"></span>
+    <span>Syncing{% if current_service %} <strong>{{ current_service | source_label }}</strong>{% endif %}...</span>
+</div>
+{% endif %}
+
 {% if sync_logs | length > 0 %}
 <div class="sync-log">
     {% for log in sync_logs %}
@@ -33,5 +45,31 @@
     {% endfor %}
 </div>
 {% else %}
+{% if not is_syncing %}
 <p class="text-muted text-sm">No sync activity yet. Configure an integration and click Sync to get started.</p>
+{% endif %}
+{% endif %}
+
+{% if is_syncing %}
+</div>
+
+{# OOB: disable Sync All button while syncing #}
+<span id="sync-all-btn" hx-swap-oob="outerHTML:#sync-all-btn">
+    <button class="btn btn-primary btn-sm btn-loading-indicator" disabled>
+        <span class="btn-label" style="display:none;">Sync All</span>
+        <span class="btn-spinner" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite;"></span>
+    </button>
+</span>
+{% else %}
+{# OOB: reset Sync All button to clickable state #}
+<span id="sync-all-btn" hx-swap-oob="outerHTML:#sync-all-btn">
+    <button class="btn btn-primary btn-sm btn-loading-indicator"
+            hx-post="/sync/all"
+            hx-target="#sync-activity"
+            hx-swap="innerHTML"
+            hx-disabled-elt="this">
+        <span class="btn-label">Sync All</span>
+        <span class="btn-spinner"></span>
+    </button>
+</span>
 {% endif %}

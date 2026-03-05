@@ -1,26 +1,31 @@
 use serde::Deserialize;
 
 /// One row from a Lattice OKR CSV export.
+/// All fields except `goal_name` are optional to accommodate different Lattice export versions.
 #[derive(Debug, Deserialize)]
 pub struct LatticeRow {
-    #[serde(rename = "Goal name")]
+    #[serde(alias = "Goal name", alias = "Goal Name", alias = "Name")]
     pub goal_name: String,
-    #[serde(rename = "Description")]
+    #[serde(alias = "Description", default)]
     pub description: Option<String>,
-    #[serde(rename = "Goal type")]
-    pub goal_type: String,
-    #[serde(rename = "Status")]
+    #[serde(alias = "Goal type", alias = "Goal Type", alias = "Type", default)]
+    pub goal_type: Option<String>,
+    #[serde(alias = "Status", default)]
     pub status: Option<String>,
-    #[serde(rename = "Start date")]
+    #[serde(alias = "Start date", alias = "Start Date", default)]
     pub start_date: Option<String>,
-    #[serde(rename = "Goal ID")]
-    pub goal_id: String,
-    #[serde(rename = "Parent ID")]
+    #[serde(alias = "Goal ID", alias = "Goal Id", alias = "ID", alias = "Id", default)]
+    pub goal_id: Option<String>,
+    #[serde(alias = "Parent ID", alias = "Parent Id", default)]
     pub parent_id: Option<String>,
+    #[serde(alias = "Parent goal", alias = "Parent Goal", alias = "Parent", default)]
+    pub parent_goal: Option<String>,
 }
 
 /// Parses a Lattice CSV export from raw bytes.
+/// Strips a UTF-8 BOM if present (common in Excel exports).
 pub fn parse_lattice_csv(bytes: &[u8]) -> Result<Vec<LatticeRow>, csv::Error> {
+    let bytes = bytes.strip_prefix(b"\xef\xbb\xbf").unwrap_or(bytes);
     let mut reader = csv::ReaderBuilder::new()
         .flexible(true)
         .trim(csv::Trim::All)

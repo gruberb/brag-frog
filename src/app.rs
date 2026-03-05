@@ -79,6 +79,7 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
         config: Arc::new(config),
         templates: Arc::new(templates),
         crypto: Arc::new(crypto),
+        sync_status: crate::integrations::sync_status::new_sync_status_map(),
     };
 
     (state, session_store)
@@ -228,6 +229,7 @@ pub fn create_router() -> Router<AppState> {
         // Priorities
         .route("/priorities", get(objectives_routes::priorities_page).post(objectives_routes::create_priority))
         .route("/priorities/new-panel", get(objectives_routes::priority_form_panel))
+        .route("/priorities/import-panel", get(objectives_routes::import_panel))
         .route("/priorities/{id}/edit-panel", get(objectives_routes::priority_edit_panel))
         .route("/priorities/goals/new-panel", get(objectives_routes::department_goal_form_panel))
         .route("/priorities/goals/{id}/edit-panel", get(objectives_routes::department_goal_edit_panel))
@@ -300,6 +302,8 @@ pub fn create_router() -> Router<AppState> {
             get(identity_routes::connect_google_calendar),
         )
         // Sync
+        .route("/sync/status", get(sync_routes::sync_status))
+        .route("/sync/status/activity", get(sync_routes::sync_status_activity))
         .route("/sync/{service}", post(sync_routes::sync_service))
         .route("/sync/{service}/hard", post(sync_routes::hard_sync_service))
         .route("/sync/all", post(sync_routes::sync_all))

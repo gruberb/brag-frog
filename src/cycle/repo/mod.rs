@@ -99,6 +99,14 @@ impl BragPhase {
         .execute(&mut *tx)
         .await?;
 
+        // Delete meeting prep notes for weeks in this phase
+        sqlx::query(
+            "DELETE FROM meeting_prep_notes WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+
         // Delete entries in weeks belonging to this phase
         sqlx::query(
             "DELETE FROM brag_entries WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",

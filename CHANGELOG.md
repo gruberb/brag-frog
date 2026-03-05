@@ -2,6 +2,30 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [2.4.0] - 2026-03-05
+
+### Added
+- **Live sync status on integrations page.** Sync All spawns a background sync and the activity area polls every 3s, showing a progress banner with the current service. Sync All button stays in spinner state until sync completes.
+- **Sidebar sync indicator.** Green dot when synced, red dot on error, spinning arrows during active sync. Links to integrations page. Updates immediately via OOB swaps when sync starts/stops.
+- **Lattice import via sidebar panel.** Import from Lattice now opens in the slide-over panel with inline success/error feedback instead of a full-page form.
+- **Auto-create department goals from Lattice parent references.** Individual-only Lattice exports include Parent ID and Parent goal columns — the importer now auto-creates department goals from these and nests priorities under them.
+- **Import upsert with external_id.** Re-importing the same Lattice CSV updates existing records instead of creating duplicates. New `external_id` column on priorities and department_goals tables.
+- **Priorities page status summary bar.** Colored dot counts for Active, Not Started, On Hold, Completed, Cancelled. Click a status to filter.
+- **Priorities search and filter toolbar.** Text search filters by title, dropdown filters by status.
+- **Click-to-edit priorities and department goals.** Clicking a priority or department goal row opens the edit panel. No more inline edit/delete/info buttons.
+- **Delete button in edit panels.** Both priority and department goal edit panels include a delete action at the bottom.
+- **Background sync infrastructure.** `SyncStatusMap` (DashMap) tracks per-user sync state in memory, updated by background sync tasks.
+
+### Changed
+- Sync All button always visible on integrations page (not just when no entries exist).
+- Synced Entries card no longer has its own Sync All button (single source in Services header).
+- Lattice CSV parser accepts flexible column names (`ID`/`Goal ID`, `Goal name`/`Name`, etc.) and strips BOM.
+- Department goal rows: chevron toggles collapse, clicking the row opens edit panel.
+
+### Fixed
+- Sync All button no longer returns to clickable state before sync finishes (was caused by background spawn returning immediately).
+- Sidebar sync indicator was invisible due to `hx-preserve` conflicts with hx-boost page transitions and competing `margin-left: auto` in flex layout.
+
 ## [2.2.0] - 2026-02-26
 
 ### Added

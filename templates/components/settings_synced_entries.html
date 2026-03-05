@@ -1,16 +1,6 @@
 {% if source_counts | length > 0 %}
 <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-3);">
-        <h2 style="margin:0;">Synced Entries</h2>
-        <button class="btn btn-primary btn-sm btn-loading-indicator"
-                hx-post="/sync/all"
-                hx-target="#sync-activity"
-                hx-swap="innerHTML"
-                hx-disabled-elt="this">
-            <span class="btn-label">Sync All</span>
-            <span class="btn-spinner"></span>
-        </button>
-    </div>
+    <h2 style="margin:0 0 var(--space-3) 0;">Synced Entries</h2>
     <div class="stat-chips">
         {% for sc in source_counts %}
         <a href="/logbook?source={{ sc.0 }}" class="stat-chip" style="text-decoration:none;color:inherit;">

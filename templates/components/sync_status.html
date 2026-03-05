@@ -1,0 +1,15 @@
+<a id="sync-indicator"
+   href="/integrations"
+   hx-get="/sync/status"
+   hx-trigger="{% if is_syncing %}every 3s{% else %}every 30s{% endif %}"
+   hx-swap="outerHTML"
+   class="sync-indicator {% if is_syncing %}sync-indicator--active{% elif last_error %}sync-indicator--error{% else %}sync-indicator--idle{% endif %}"
+   title="{% if is_syncing %}Syncing{% if current_service %} {{ current_service }}{% endif %}{% if services_total > 0 %} ({{ services_total - services_remaining + 1 }}/{{ services_total }}){% endif %}{% elif last_error %}Sync error: {{ last_error }}{% elif last_synced_at %}Last synced: {{ last_synced_at }}{% else %}Not synced{% endif %}">
+    {% if is_syncing %}
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+    </svg>
+    {% else %}
+    <span class="sync-dot"></span>
+    {% endif %}
+</a>

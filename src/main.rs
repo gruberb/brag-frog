@@ -19,7 +19,12 @@ async fn main() {
     let addr = format!("{}:{}", state.config.host, state.config.port);
     tracing::info!("Starting Brag Frog on {}", addr);
 
-    let app = brag_frog::app::build_app(state, session_store);
+    let app = brag_frog::app::build_app(state.clone(), session_store);
+
+    let sync_state = state.clone();
+    tokio::spawn(async move {
+        brag_frog::integrations::background::hourly_sync_loop(sync_state).await;
+    });
 
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

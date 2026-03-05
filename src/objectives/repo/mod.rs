@@ -1,2 +1,2 @@
 mod department_goal;
-mod priority;
+pub(crate) mod priority;

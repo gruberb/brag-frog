@@ -25,4 +25,13 @@
             <button type="button" class="btn btn-secondary" onclick="closePanel()">Cancel</button>
         </div>
     </form>
+    <div style="margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border);">
+        <button type="button" class="btn btn-danger btn-sm"
+                hx-delete="/priorities/goals/{{ goal.id }}"
+                hx-swap="none"
+                hx-confirm="Delete this department goal and unassign its priorities?"
+                hx-on::after-request="if(event.detail.successful){ closePanel(); window.location.href='/priorities'; }">
+            Delete Department Goal
+        </button>
+    </div>
 </div>

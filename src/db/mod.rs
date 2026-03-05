@@ -103,6 +103,14 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "010_priority_level_and_measurement",
         include_str!("../../migrations/010_priority_level_and_measurement.sql"),
     ),
+    (
+        "011_external_id_for_imports",
+        include_str!("../../migrations/011_external_id_for_imports.sql"),
+    ),
+    (
+        "012_fix_external_id_indexes",
+        include_str!("../../migrations/012_fix_external_id_indexes.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.

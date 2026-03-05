@@ -8,6 +8,7 @@ use crate::AppState;
 use crate::worklog::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
+use crate::kernel::render::html_escape;
 use crate::cycle::model::{
     BragPhase, ContributionExample, CreateContributionExample, UpdateContributionExample,
 };
@@ -177,9 +178,3 @@ async fn render_linked_entries_chips(
     Ok(Html(html))
 }
 
-fn html_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-}
