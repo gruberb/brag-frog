@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [2.4.1] - 2026-03-09
+
+### Fixed
+- **Google Docs comment-only interactions missing from sync.** The Drive Activity API does not reliably surface comment activities on shared/team documents. Added a supplementary fetch using the Drive Files API and Comments API to catch comments that the Activity API misses. Files recently viewed by the user are checked for authored comments within the sync date range, creating `drive_commented` entries for any found.
+- **Google Drive OAuth scope expanded.** Added `drive.readonly` scope alongside the existing `drive.activity.readonly` to support the supplementary comments fetch. Users need to re-connect Google Drive in integrations settings to grant the new scope. Existing tokens without the new scope degrade gracefully — the Activity API results are still returned.
+
 ## [2.4.0] - 2026-03-05
 
 ### Added

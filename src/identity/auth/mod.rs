@@ -124,7 +124,8 @@ pub async fn authenticate_user(
     Ok(user)
 }
 
-/// Builds a Google OAuth consent-screen URL requesting Drive Activity API read access.
+/// Builds a Google OAuth consent-screen URL requesting Drive Activity API read access
+/// and Drive read-only access (for supplementary comments fetch).
 /// Uses `access_type=offline&prompt=consent` to ensure a refresh token is returned.
 pub fn google_drive_auth_url(config: &Config, state_token: &str) -> String {
     let hd_param = config
@@ -133,7 +134,7 @@ pub fn google_drive_auth_url(config: &Config, state_token: &str) -> String {
         .map(|d| format!("&hd={}", urlencoding::encode(d)))
         .unwrap_or_default();
     format!(
-        "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.activity.readonly&access_type=offline&prompt=consent&state={}{}",
+        "https://accounts.google.com/o/oauth2/v2/auth?client_id={}&redirect_uri={}&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.activity.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fdrive.readonly&access_type=offline&prompt=consent&state={}{}",
         urlencoding::encode(&config.google_client_id),
         urlencoding::encode(&config.google_redirect_uri),
         urlencoding::encode(state_token),

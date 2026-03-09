@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use serde::Deserialize;
+use std::collections::HashSet;
 
 use super::{ConnectionStatus, SyncService, SyncedEntry};
 use crate::kernel::error::AppError;
@@ -91,6 +92,45 @@ struct KnownUser {
 #[serde(rename_all = "camelCase")]
 struct TimeRange {
     end_time: Option<String>,
+}
+
+// --- Drive Files API types (for supplementary comments fetch) ---
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FilesListResponse {
+    #[serde(default)]
+    files: Vec<DriveFile>,
+    next_page_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DriveFile {
+    id: String,
+    name: String,
+    mime_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CommentsListResponse {
+    #[serde(default)]
+    comments: Vec<DriveComment>,
+    next_page_token: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DriveComment {
+    author: Option<CommentAuthor>,
+    created_time: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CommentAuthor {
+    me: Option<bool>,
 }
 
 /// Google Workspace MIME types we care about (excludes folders, PDFs, images, etc.).
@@ -324,6 +364,30 @@ impl SyncService for GoogleDriveSync {
             }
         }
 
+        // Supplement with Drive Comments API to catch comment-only interactions
+        // that the Activity API misses (common for shared/team documents).
+        let comment_entries = fetch_comment_only_entries(
+            &http,
+            &access_token,
+            &start_date,
+            &end_date,
+            &entry_map,
+            &excluded_file_ids,
+        )
+        .await;
+        match comment_entries {
+            Ok(extras) => {
+                for (key, entry) in extras {
+                    entry_map.entry(key).or_insert(entry);
+                }
+            }
+            Err(e) => {
+                // Non-fatal: the Activity API results are still valid. This fails
+                // when the token was issued before the drive.readonly scope was added.
+                tracing::debug!("Supplementary comments fetch skipped: {}", e);
+            }
+        }
+
         let entries: Vec<SyncedEntry> = entry_map.into_values().collect();
 
         Ok(entries)
@@ -397,4 +461,183 @@ fn mime_label(mime: &str) -> &'static str {
         "application/vnd.google-apps.form" => "Google Form",
         _ => "Google Drive",
     }
+}
+
+/// Fetch comment-only interactions missed by the Drive Activity API.
+///
+/// Lists recently-viewed Workspace files via the Drive Files API, then checks
+/// the Comments API for user-authored comments on files not already captured
+/// by the Activity API. Returns entries keyed by (file_id, date).
+async fn fetch_comment_only_entries(
+    http: &reqwest::Client,
+    access_token: &str,
+    start_date: &NaiveDate,
+    end_date: &NaiveDate,
+    existing: &std::collections::HashMap<(String, String), SyncedEntry>,
+    excluded: &HashSet<String>,
+) -> Result<Vec<((String, String), SyncedEntry)>, AppError> {
+    let existing_file_ids: HashSet<&str> = existing.keys().map(|(fid, _)| fid.as_str()).collect();
+
+    // Build MIME type query: (mimeType='...' or mimeType='...')
+    let mime_clauses: Vec<String> = WORKSPACE_MIME_TYPES
+        .iter()
+        .map(|m| format!("mimeType='{}'", m))
+        .collect();
+    let mime_filter = mime_clauses.join(" or ");
+
+    let start_rfc3339 = format!("{}T00:00:00Z", start_date);
+    let q = format!(
+        "({}) and viewedByMeTime >= '{}'",
+        mime_filter, start_rfc3339
+    );
+
+    // Fetch recently-viewed Workspace files (paginated, cap at 200)
+    let mut candidate_files: Vec<DriveFile> = Vec::new();
+    let mut page_token: Option<String> = None;
+    let max_files = 200;
+
+    loop {
+        let mut req = http
+            .get("https://www.googleapis.com/drive/v3/files")
+            .bearer_auth(access_token)
+            .query(&[
+                ("q", q.as_str()),
+                ("fields", "nextPageToken,files(id,name,mimeType)"),
+                ("pageSize", "100"),
+                ("orderBy", "viewedByMeTime desc"),
+            ]);
+        if let Some(ref pt) = page_token {
+            req = req.query(&[("pageToken", pt.as_str())]);
+        }
+
+        let resp = req.send().await?;
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            let message =
+                extract_api_error(&text).unwrap_or_else(|| format!("HTTP {}", status));
+            return Err(AppError::Internal(format!("Drive Files API: {}", message)));
+        }
+
+        let result: FilesListResponse = resp.json().await?;
+        candidate_files.extend(result.files);
+        page_token = result.next_page_token;
+
+        if page_token.is_none() || candidate_files.len() >= max_files {
+            break;
+        }
+    }
+
+    // For each file not already captured by the Activity API, check comments
+    let mut extras: Vec<((String, String), SyncedEntry)> = Vec::new();
+    let start_rfc3339_full = format!("{}T00:00:00Z", start_date);
+    let end_rfc3339_full = format!("{}T23:59:59Z", end_date);
+
+    for file in &candidate_files {
+        if existing_file_ids.contains(file.id.as_str()) || excluded.contains(&file.id) {
+            continue;
+        }
+
+        // Fetch user-authored comments on this file within the date range
+        let comment_dates = fetch_user_comment_dates(
+            http,
+            access_token,
+            &file.id,
+            &start_rfc3339_full,
+            &end_rfc3339_full,
+        )
+        .await?;
+
+        for date in comment_dates {
+            let map_key = (file.id.clone(), date.clone());
+            let source_id = format!("drive:{}:{}", file.id, date);
+            let source_url = format!("https://drive.google.com/file/d/{}", file.id);
+
+            extras.push((
+                map_key,
+                SyncedEntry {
+                    source: "google_drive",
+                    source_id,
+                    source_url: Some(source_url),
+                    title: file.name.clone(),
+                    description: Some(mime_label(&file.mime_type).to_string()),
+                    entry_type: "drive_commented",
+                    status: None,
+                    repository: None,
+                    occurred_at: date,
+                    meeting_role: None,
+                    recurring_group: None,
+                    start_time: None,
+                    end_time: None,
+                    collaborators: None,
+                },
+            ));
+        }
+    }
+
+    Ok(extras)
+}
+
+/// Fetch dates on which the current user authored comments on a specific file.
+/// Returns unique YYYY-MM-DD dates within the given time range.
+async fn fetch_user_comment_dates(
+    http: &reqwest::Client,
+    access_token: &str,
+    file_id: &str,
+    start_rfc3339: &str,
+    end_rfc3339: &str,
+) -> Result<Vec<String>, AppError> {
+    let mut dates: HashSet<String> = HashSet::new();
+    let mut page_token: Option<String> = None;
+
+    loop {
+        let url = format!(
+            "https://www.googleapis.com/drive/v3/files/{}/comments",
+            file_id
+        );
+        let mut req = http
+            .get(&url)
+            .bearer_auth(access_token)
+            .query(&[
+                ("fields", "nextPageToken,comments(author(me),createdTime)"),
+                ("pageSize", "100"),
+            ]);
+        if let Some(ref pt) = page_token {
+            req = req.query(&[("pageToken", pt.as_str())]);
+        }
+
+        let resp = req.send().await?;
+        if !resp.status().is_success() {
+            // File may not support comments (Forms) or access denied — skip silently
+            break;
+        }
+
+        let result: CommentsListResponse = resp.json().await?;
+
+        for comment in &result.comments {
+            let is_me = comment
+                .author
+                .as_ref()
+                .and_then(|a| a.me)
+                .unwrap_or(false);
+            if !is_me {
+                continue;
+            }
+
+            if let Some(ref ts) = comment.created_time
+                && ts.as_str() >= start_rfc3339
+                && ts.as_str() <= end_rfc3339
+                && let Some(date) = timestamp_to_date(ts)
+            {
+                dates.insert(date);
+            }
+        }
+
+        page_token = result.next_page_token;
+        if page_token.is_none() {
+            break;
+        }
+    }
+
+    Ok(dates.into_iter().collect())
 }
