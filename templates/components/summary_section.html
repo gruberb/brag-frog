@@ -21,9 +21,16 @@
     <div id="summary-view-{{ section.key }}">
         {% if section.content %}
         <div class="summary-content markdown-content" id="summary-text-{{ section.key }}">{{ section.content | markdown | safe }}</div>
-        {% if section.generated_at %}
-        <div class="summary-meta">Generated {{ section.generated_at }}</div>
-        {% endif %}
+        <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-2);">
+            {% if section.generated_at %}
+            <span class="summary-meta">Generated {{ section.generated_at }}</span>
+            {% endif %}
+            <button type="button" class="btn-icon btn-icon--sm" title="Copy to clipboard"
+                    onclick="copySectionToClipboard('{{ section.key }}')">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+            </button>
+            <span id="summary-copy-status-{{ section.key }}" style="font-size:var(--text-xs);color:var(--color-success);display:none;">Copied!</span>
+        </div>
         {% else %}
         <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">No content yet. Click the pencil to start writing.</p>
         {% endif %}
@@ -156,6 +163,20 @@ function saveSummarySection(key, phaseId) {
     })
     .catch(function() {
         status.innerHTML = '<span style="color:var(--color-error);">Save failed. Try again.</span>';
+    });
+}
+
+function copySectionToClipboard(key) {
+    var textEl = document.getElementById('summary-text-' + key);
+    if (!textEl) return;
+    var text = textEl.innerText.trim();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(function() {
+        var status = document.getElementById('summary-copy-status-' + key);
+        if (status) {
+            status.style.display = 'inline';
+            setTimeout(function() { status.style.display = 'none'; }, 1500);
+        }
     });
 }
 

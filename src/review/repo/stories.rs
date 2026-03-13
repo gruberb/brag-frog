@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-use crate::cycle::model::{
+use crate::review::model::{
     ContributionExample, ContributionExampleRow, CreateContributionExample,
     UpdateContributionExample,
 };

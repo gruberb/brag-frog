@@ -9,9 +9,8 @@ use crate::worklog::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
 use crate::kernel::render::html_escape;
-use crate::cycle::model::{
-    BragPhase, ContributionExample, CreateContributionExample, UpdateContributionExample,
-};
+use crate::cycle::model::BragPhase;
+use crate::review::model::{ContributionExample, CreateContributionExample, UpdateContributionExample};
 use crate::kernel::error::AppError;
 
 /// Renders the contribution examples page for the active phase.
@@ -50,7 +49,7 @@ pub async fn contribution_examples_page(
         }));
     }
 
-    let has_ai = super::has_ai_for_user(&state, auth.user_id).await;
+    let has_ai = crate::ai::has_ai_for_user(&state, auth.user_id).await;
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
@@ -177,4 +176,3 @@ async fn render_linked_entries_chips(
 
     Ok(Html(html))
 }
-

@@ -4,7 +4,10 @@ use sqlx::SqlitePool;
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
 
-use super::super::model::{CreatePriority, Priority, PriorityRow, UpdatePriority};
+use super::super::model::{
+    CreatePriority, PostPriorityUpdate, Priority, PriorityRow, PriorityUpdate,
+    PriorityUpdateRow, UpdatePriority,
+};
 
 const PRIORITY_COLORS: &[&str] = &[
     "#FF453F", "#E0439D", "#D94F04", "#0B8043", "#1A73E8", "#F4511E", "#8E24AA", "#00897B",
@@ -19,7 +22,8 @@ pub fn random_color() -> String {
 
 const SELECT_COLS: &str = "id, phase_id, user_id, title, status, color, sort_order,
     scope, started_at, completed_at, impact_narrative, department_goal_id, created_at,
-    priority_level, measure_type, measure_start, measure_target, measure_current, description";
+    priority_level, measure_type, measure_start, measure_target, measure_current, description,
+    tracking_status, due_date, tier";
 
 impl Priority {
     /// All priorities for a phase, ordered by sort_order.
@@ -68,7 +72,8 @@ impl Priority {
                 pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
                 pr.impact_narrative, pr.department_goal_id, pr.created_at,
                 pr.priority_level, pr.measure_type, pr.measure_start, pr.measure_target,
-                pr.measure_current, pr.description
+                pr.measure_current, pr.description,
+                pr.tracking_status, pr.due_date, pr.tier
             FROM priorities pr
             JOIN brag_phases p ON pr.phase_id = p.id
             WHERE p.user_id = ? AND p.is_active = 1
@@ -95,7 +100,8 @@ impl Priority {
                 pr.color, pr.sort_order, pr.scope, pr.started_at, pr.completed_at,
                 pr.impact_narrative, pr.department_goal_id, pr.created_at,
                 pr.priority_level, pr.measure_type, pr.measure_start, pr.measure_target,
-                pr.measure_current, pr.description
+                pr.measure_current, pr.description,
+                pr.tracking_status, pr.due_date, pr.tier
             FROM priorities pr
             JOIN brag_phases p ON pr.phase_id = p.id
             WHERE pr.id = ? AND p.user_id = ?
@@ -146,12 +152,12 @@ impl Priority {
             INSERT INTO priorities (phase_id, user_id, title, status, color, sort_order,
                 scope, impact_narrative, department_goal_id,
                 priority_level, measure_type, measure_start, measure_target, measure_current,
-                description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                description, tracking_status, due_date, tier)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id, phase_id, user_id, title, status, color, sort_order,
                 scope, started_at, completed_at, impact_narrative, department_goal_id, created_at,
                 priority_level, measure_type, measure_start, measure_target, measure_current,
-                description
+                description, tracking_status, due_date, tier
             "#,
         )
         .bind(phase_id)
@@ -169,6 +175,9 @@ impl Priority {
         .bind(input.measure_target)
         .bind(measure_current)
         .bind(&enc_description)
+        .bind(&input.tracking_status)
+        .bind(&input.due_date)
+        .bind(&input.tier)
         .fetch_one(pool)
         .await?;
 
@@ -196,12 +205,12 @@ impl Priority {
                 started_at = ?, completed_at = ?,
                 priority_level = ?, measure_type = ?,
                 measure_start = ?, measure_target = ?, measure_current = ?,
-                description = ?
+                description = ?, tracking_status = ?, due_date = ?, tier = ?
             WHERE id = ? AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)
             RETURNING id, phase_id, user_id, title, status, color, sort_order,
                 scope, started_at, completed_at, impact_narrative, department_goal_id, created_at,
                 priority_level, measure_type, measure_start, measure_target, measure_current,
-                description
+                description, tracking_status, due_date, tier
             "#,
         )
         .bind(&enc_title)
@@ -217,6 +226,9 @@ impl Priority {
         .bind(input.measure_target)
         .bind(input.measure_current)
         .bind(&enc_description)
+        .bind(&input.tracking_status)
+        .bind(&input.due_date)
+        .bind(&input.tier)
         .bind(id)
         .bind(user_id)
         .fetch_one(pool)
@@ -225,11 +237,37 @@ impl Priority {
         row.decrypt(crypto)
     }
 
-    /// Deletes a priority and nullifies `priority_id` on all linked entries.
+    /// Marks all non-terminal priorities under a department goal as completed.
+    pub async fn complete_all_for_department_goal(
+        pool: &SqlitePool,
+        department_goal_id: i64,
+        user_id: i64,
+    ) -> Result<(), AppError> {
+        sqlx::query(
+            r#"
+            UPDATE priorities SET status = 'completed', completed_at = date('now')
+            WHERE department_goal_id = ?
+              AND status NOT IN ('completed', 'cancelled')
+              AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)
+            "#,
+        )
+        .bind(department_goal_id)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Deletes a priority, its update log, and nullifies `priority_id` on linked entries.
     pub async fn delete(pool: &SqlitePool, id: i64, user_id: i64) -> Result<(), AppError> {
         let mut tx = pool.begin().await?;
 
         sqlx::query("UPDATE brag_entries SET priority_id = NULL WHERE priority_id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+
+        sqlx::query("DELETE FROM priority_updates WHERE priority_id = ?")
             .bind(id)
             .execute(&mut *tx)
             .await?;
@@ -244,5 +282,76 @@ impl Priority {
 
         tx.commit().await?;
         Ok(())
+    }
+}
+
+impl PriorityUpdate {
+    /// Lists updates for a priority, newest first.
+    pub async fn list_for_priority(
+        pool: &SqlitePool,
+        priority_id: i64,
+        crypto: &UserCrypto,
+    ) -> Result<Vec<Self>, AppError> {
+        let rows = sqlx::query_as::<_, PriorityUpdateRow>(
+            "SELECT id, priority_id, user_id, tracking_status, measure_value, comment, created_at
+             FROM priority_updates WHERE priority_id = ? ORDER BY created_at DESC",
+        )
+        .bind(priority_id)
+        .fetch_all(pool)
+        .await?;
+        rows.into_iter().map(|r| r.decrypt(crypto)).collect()
+    }
+
+    /// Posts a new update, also syncing tracking_status and measure_current
+    /// on the parent priority.
+    pub async fn create(
+        pool: &SqlitePool,
+        priority_id: i64,
+        user_id: i64,
+        input: &PostPriorityUpdate,
+        crypto: &UserCrypto,
+    ) -> Result<Self, AppError> {
+        let enc_comment = crypto.encrypt_opt(&input.comment)?;
+
+        let row = sqlx::query_as::<_, PriorityUpdateRow>(
+            r#"
+            INSERT INTO priority_updates (priority_id, user_id, tracking_status, measure_value, comment)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id, priority_id, user_id, tracking_status, measure_value, comment, created_at
+            "#,
+        )
+        .bind(priority_id)
+        .bind(user_id)
+        .bind(&input.tracking_status)
+        .bind(input.measure_value)
+        .bind(&enc_comment)
+        .fetch_one(pool)
+        .await?;
+
+        // Sync tracking_status and measure_current back to the priority
+        if input.tracking_status.is_some() || input.measure_value.is_some() {
+            let mut set_parts = Vec::new();
+            if input.tracking_status.is_some() {
+                set_parts.push("tracking_status = ?");
+            }
+            if input.measure_value.is_some() {
+                set_parts.push("measure_current = ?");
+            }
+            let sql = format!(
+                "UPDATE priorities SET {} WHERE id = ? AND phase_id IN (SELECT id FROM brag_phases WHERE user_id = ?)",
+                set_parts.join(", ")
+            );
+            let mut query = sqlx::query(&sql);
+            if let Some(ref ts) = input.tracking_status {
+                query = query.bind(ts);
+            }
+            if let Some(mv) = input.measure_value {
+                query = query.bind(mv);
+            }
+            query = query.bind(priority_id).bind(user_id);
+            query.execute(pool).await?;
+        }
+
+        row.decrypt(crypto)
     }
 }

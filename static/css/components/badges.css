@@ -142,6 +142,45 @@
     color: var(--color-orange-30);
 }
 
+/* Tracking status badges — Lattice trajectory alignment */
+.badge-tracking {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-full);
+    text-transform: capitalize;
+}
+
+.badge-tracking--on_track {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--color-success);
+}
+
+.badge-tracking--progressing {
+    background: rgba(0, 96, 223, 0.1);
+    color: var(--color-blue-30);
+}
+
+.badge-tracking--off_track {
+    background: rgba(255, 69, 63, 0.12);
+    color: var(--color-primary);
+}
+
+.badge-tracking--complete {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--color-success);
+}
+
+.badge-tracking--incomplete {
+    background: rgba(226, 127, 46, 0.1);
+    color: var(--color-orange-30);
+}
+
+.badge-tracking--no_update {
+    background: var(--color-gray-10);
+    color: var(--color-gray-60);
+}
+
 /* Icon buttons */
 .btn-icon {
     display: inline-flex;
@@ -185,17 +224,4 @@
 
 .highlight-btn.active {
     color: var(--color-orange-40);
-}
-
-/* Page header with mascot */
-.page-header-with-mascot {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.page-mascot {
-    height: 120px;
-    width: auto;
-    flex-shrink: 0;
 }

@@ -4,11 +4,6 @@ use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
 
 impl BragPhase {
-    /// Whether this phase is currently active.
-    pub fn is_active(&self) -> bool {
-        self.is_active
-    }
-
     /// Validates that a date falls within this phase's date range.
     pub fn validate_date_in_range(&self, date: NaiveDate) -> Result<(), AppError> {
         let phase_start = NaiveDate::parse_from_str(&self.start_date, "%Y-%m-%d")

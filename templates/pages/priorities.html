@@ -117,7 +117,9 @@
                 <div class="cycle-item-view" id="priority-view-{{ priority.id }}">
                     <span class="kr-inline-dot" style="background:{{ priority.color | default(value='#999') }};"></span>
                     <span class="cycle-item-title">{{ priority.title }}</span>
-                    {% if priority.status %}
+                    {% if priority.tracking_status %}
+                    <span class="badge badge-tracking badge-tracking--{{ priority.tracking_status }}">{{ priority.tracking_status | replace(from="_", to=" ") }}</span>
+                    {% elif priority.status %}
                     <span class="badge badge-status badge-status--{{ priority.status }}">{{ priority.status | replace(from="_", to=" ") }}</span>
                     {% endif %}
                     {% if priority.priority_level %}
@@ -253,6 +255,19 @@ function filterPriorities() {
         var matchStatus = !status || rowStatus === status;
         row.style.display = (matchSearch && matchStatus) ? '' : 'none';
     });
+
+    // Hide department goal groups with no visible priorities
+    document.querySelectorAll('.cycle-goal-group').forEach(function(group) {
+        var visibleRows = group.querySelectorAll('.priority-row:not([style*="display: none"])');
+        group.style.display = visibleRows.length > 0 ? '' : 'none';
+    });
+
+    // Hide "Unassigned Priorities" section if all rows hidden
+    var unassigned = document.querySelector('.cycle-section');
+    if (unassigned) {
+        var visibleUnassigned = unassigned.querySelectorAll('.priority-row:not([style*="display: none"])');
+        unassigned.style.display = visibleUnassigned.length > 0 ? '' : 'none';
+    }
 }
 
 // Status chip click to filter

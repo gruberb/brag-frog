@@ -11,12 +11,90 @@ use crate::identity::auth::middleware::AuthUser;
 use crate::identity::clg::ClgLevel;
 use crate::identity::model::User;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::cycle::model::{
-    BragPhase, ContributionExample, Summary, assessment_config, rating_scale_config,
-    section_question, section_title,
+use crate::cycle::model::BragPhase;
+use crate::review::model::{
+    ContributionExample, Summary, assessment_config,
+    rating_scale_config, section_question, section_title,
 };
-use crate::cycle::routes::{get_ai_client, has_ai_for_user};
+use crate::reflections::model::QuarterlyCheckin;
+use crate::ai::{get_ai_client, has_ai_for_user};
 use crate::kernel::error::AppError;
+
+// Cycle overview card for a quarter within the phase.
+#[derive(serde::Serialize)]
+struct QuarterInfo {
+    quarter: String,
+    year: String,
+    is_review: bool,
+    label: String,
+    has_data: bool,
+}
+
+// Compute in-scope quarters for a phase, with 2026 vs 2027+ awareness.
+fn quarters_for_phase(phase: &BragPhase, checkins: &[QuarterlyCheckin]) -> Vec<QuarterInfo> {
+    let start_year: i32 = phase.start_date[..4].parse().unwrap_or(2026);
+    let start_month: u32 = phase.start_date[5..7].parse().unwrap_or(1);
+    let end_year: i32 = phase.end_date[..4].parse().unwrap_or(start_year);
+    let end_month: u32 = phase.end_date[5..7].parse().unwrap_or(12);
+
+    let mut quarters = Vec::new();
+
+    for year in start_year..=end_year {
+        for (q_name, q_start, q_end) in [("Q1", 1u32, 3u32), ("Q2", 4, 6), ("Q3", 7, 9), ("Q4", 10, 12)] {
+            // Quarter is in-scope if its months overlap with the phase date range
+            let phase_start = (start_year, start_month);
+            let phase_end = (end_year, end_month);
+            let q_start_ym = (year, q_start);
+            let q_end_ym = (year, q_end);
+
+            if q_end_ym < phase_start || q_start_ym > phase_end {
+                continue;
+            }
+
+            let is_review = if year == 2026 {
+                q_name == "Q2" || q_name == "Q4"
+            } else {
+                // 2027+: only Q4 is a review
+                q_name == "Q4"
+            };
+
+            let label = if is_review {
+                if q_name == "Q2" {
+                    "Mid-year Review".to_string()
+                } else {
+                    "Year-end Review".to_string()
+                }
+            } else {
+                "Check-in".to_string()
+            };
+
+            let year_str = year.to_string();
+            let has_data = checkins.iter().any(|c| {
+                c.quarter == q_name
+                    && c.year == year as i64
+                    && [
+                        &c.highlights_impact,
+                        &c.learnings_adjustments,
+                        &c.growth_development,
+                        &c.support_feedback,
+                        &c.looking_ahead,
+                    ]
+                    .iter()
+                    .any(|f| f.as_ref().is_some_and(|s| !s.trim().is_empty()))
+            });
+
+            quarters.push(QuarterInfo {
+                quarter: q_name.to_string(),
+                year: year_str,
+                is_review,
+                label,
+                has_data,
+            });
+        }
+    }
+
+    quarters
+}
 
 // Aggregated data needed to build AI prompts for summary generation.
 struct SummaryData {
@@ -75,6 +153,11 @@ pub async fn summary_page(
         ContributionExample::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
+    // Cycle overview: compute in-scope quarters for this phase
+    let quarterly_checkins =
+        QuarterlyCheckin::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let quarters = quarters_for_phase(&phase, &quarterly_checkins);
+
     // Build linked entry IDs per example for the contribution example cards
     let mut example_entries: Vec<serde_json::Value> = Vec::new();
     for ex in &examples {
@@ -89,6 +172,7 @@ pub async fn summary_page(
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
+    ctx.insert("quarters", &quarters);
     ctx.insert("sections", &build_sections_json(&summaries));
     ctx.insert("has_ai", &has_ai);
     ctx.insert("current_page", "summary");
@@ -141,7 +225,7 @@ pub async fn generate_all(
 
     let data = load_summary_data(&state, phase_id, auth.user_id).await?;
 
-    for section in &crate::cycle::model::section_slugs() {
+    for section in &crate::review::model::section_slugs() {
         let prompt = build_self_reflection_prompt(
             section,
             &data.dept_goals,
@@ -264,7 +348,7 @@ pub async fn save_section(
 
 // Builds the template-ready JSON array for all four CultureAmp sections, merging saved content.
 fn build_sections_json(summaries: &[Summary]) -> Vec<serde_json::Value> {
-    crate::cycle::model::section_slugs()
+    crate::review::model::section_slugs()
         .iter()
         .map(|&section| {
             let summary = summaries.iter().find(|s| s.section == section);

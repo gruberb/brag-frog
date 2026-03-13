@@ -1,56 +1,56 @@
 # Review section configuration for self-assessment generation.
-# Organizations can customize sections, titles, questions, and AI prompts
-# to match their performance review platform (CultureAmp, Lattice, 15Five, etc.).
+# Aligned with Lattice's performance review format.
+# Override via custom/review_sections.toml for other platforms.
 
-review_platform = "Generic"
+review_platform = "Lattice"
 
 [[sections]]
 slug = "goal_outcomes"
 title = "Goal Outcomes"
-question = "Describe measurable progress or outcomes of your goals"
-prompt = """Write the "Goal Outcomes" section. For each goal, use the status provided (Completed / In Progress / Not Started) and provide:
+question = "Describe measurable progress or outcomes of your priorities"
+prompt = """Write the "Goal Outcomes" section for a Lattice self-reflection. For each priority, use the tracking status provided (On Track / Progressing / Off Track / Complete) and provide:
 - **Impact**: 3-5 bullet points focusing on measurable outcomes and team/org impact
 - **Details**: 3-6 bullet points with context on collaboration, challenges, and communication
 
-Use first person. Be specific and quantitative where possible. Reference actual PRs, bugs, and key results."""
+Use first person. Be specific and quantitative where possible. Reference actual PRs, bugs, and key results. Format so the content can be directly pasted into Lattice's self-reflection text field."""
 promotion_addendum = "The engineer is targeting promotion. Frame outcomes to demonstrate impact, scope, and complexity at the next level. Emphasize cross-team influence that exceeds current-level expectations."
 
 [[sections]]
 slug = "clg_alignment"
 title = "Level Alignment"
 question = "How you achieved your goals in alignment with your career level expectations"
-prompt = """Write the "Level Alignment" section. Show how the engineer achieved their goals in alignment with these competencies:
+prompt = """Write the "Level Alignment" section for a Lattice self-reflection. Show how the engineer achieved their priorities in alignment with these competencies:
 - **Complexity**: Examples of handling technical ambiguity and complex problems
 - **Communication**: Cross-team coordination, documentation, presentations
 - **Collaboration**: Teamwork, code reviews, mentoring, pairing
 - **Leadership**: Initiative, driving decisions, improving processes
 
-Use first person. Draw specific examples from the entries."""
-prompt_with_clg = """Write the "Level Alignment" section. Using the level information provided above, show how the engineer achieved their goals in alignment with the specific expectations for their level. For each dimension (Problems and People), provide concrete examples from their entries that demonstrate they are meeting or exceeding their level's expectations. If targeting promotion, also highlight examples that demonstrate readiness for the next level.
+Use first person. Draw specific examples from the entries. Format for direct paste into Lattice."""
+prompt_with_clg = """Write the "Level Alignment" section for a Lattice self-reflection. Using the level information provided above, show how the engineer achieved their priorities in alignment with the specific expectations for their level. For each dimension (Problems and People), provide concrete examples from their entries that demonstrate they are meeting or exceeding their level's expectations. If targeting promotion, also highlight examples that demonstrate readiness for the next level.
 
-Use first person. Draw specific examples from the entries."""
+Use first person. Draw specific examples from the entries. Format for direct paste into Lattice."""
 promotion_addendum = ""
 
 [[sections]]
 slug = "developmental"
 title = "Developmental Progress"
 question = "Progress on developmental goals"
-prompt = """Write the "Developmental Progress" section. Cover:
+prompt = """Write the "Developmental Progress" section for a Lattice self-reflection. Cover:
 - Learning activities and skill development
 - Courses, workshops, teaching activities (e.g., study groups, tech talks)
 - How growth impacted performance and team contributions
 
-Use first person. Be specific about what was learned and how it was applied."""
+Use first person. Be specific about what was learned and how it was applied. Format for direct paste into Lattice."""
 promotion_addendum = "The engineer is targeting promotion. Highlight growth that demonstrates readiness for the next level's expectations."
 
 [[sections]]
 slug = "future_plans"
 title = "Future Plans"
 question = "Skills or work projects for next 6-12 months"
-prompt = """Write the "Future Plans" section. Suggest:
-- Next-half goals based on current trajectory
+prompt = """Write the "Future Plans" section for a Lattice self-reflection. Suggest:
+- Next-half priorities based on current trajectory
 - Skills or projects to focus on for career growth
 - How planned work connects to team/business impact
 
-Use first person. Be forward-looking and ambitious but realistic."""
+Use first person. Be forward-looking and ambitious but realistic. Format for direct paste into Lattice."""
 promotion_addendum = "The engineer is targeting promotion. Align future plans with the promotion target level. Show how planned work will close gaps between current performance and next-level expectations."

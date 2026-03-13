@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-use crate::cycle::model::{AiDocument, AiDocumentRow};
+use crate::review::model::{AiDocument, AiDocumentRow};
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
 

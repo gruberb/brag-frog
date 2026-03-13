@@ -28,6 +28,20 @@
                 </select>
             </div>
             <div class="form-group">
+                <label class="form-label">Tracking</label>
+                <select name="tracking_status" class="form-select">
+                    <option value="">—</option>
+                    <option value="on_track" {% if priority.tracking_status == "on_track" %}selected{% endif %}>On Track</option>
+                    <option value="progressing" {% if priority.tracking_status == "progressing" %}selected{% endif %}>Progressing</option>
+                    <option value="off_track" {% if priority.tracking_status == "off_track" %}selected{% endif %}>Off Track</option>
+                    <option value="complete" {% if priority.tracking_status == "complete" %}selected{% endif %}>Complete</option>
+                    <option value="incomplete" {% if priority.tracking_status == "incomplete" %}selected{% endif %}>Incomplete</option>
+                    <option value="no_update" {% if priority.tracking_status == "no_update" %}selected{% endif %}>No Update</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
                 <label class="form-label">Priority Level</label>
                 <select name="priority_level" class="form-select">
                     <option value="">—</option>
@@ -36,6 +50,15 @@
                     <option value="p2" {% if priority.priority_level == "p2" %}selected{% endif %}>P2</option>
                     <option value="p3" {% if priority.priority_level == "p3" %}selected{% endif %}>P3</option>
                     <option value="p4" {% if priority.priority_level == "p4" %}selected{% endif %}>P4</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tier</label>
+                <select name="tier" class="form-select">
+                    <option value="">—</option>
+                    <option value="department" {% if priority.tier == "department" %}selected{% endif %}>Department</option>
+                    <option value="team" {% if priority.tier == "team" %}selected{% endif %}>Team</option>
+                    <option value="individual" {% if priority.tier == "individual" %}selected{% endif %}>Individual</option>
                 </select>
             </div>
         </div>
@@ -88,16 +111,94 @@
                 <input type="date" name="started_at" class="form-input" value="{{ priority.started_at | default(value='') }}">
             </div>
             <div class="form-group">
-                <label class="form-label">Completed At</label>
-                <input type="date" name="completed_at" class="form-input" value="{{ priority.completed_at | default(value='') }}">
+                <label class="form-label">Due Date</label>
+                <input type="date" name="due_date" class="form-input" value="{{ priority.due_date | default(value='') }}">
             </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Completed At</label>
+            <input type="date" name="completed_at" class="form-input" value="{{ priority.completed_at | default(value='') }}">
         </div>
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save Priority</button>
             <button type="button" class="btn btn-secondary" onclick="closePanel()">Cancel</button>
         </div>
     </form>
-    <div style="margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border);">
+
+    <!-- Post Update -->
+    <details class="priority-panel-details" style="margin-top:var(--space-4);">
+        <summary class="priority-panel-summary">
+            <svg class="priority-panel-chevron" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
+            Post Update
+        </summary>
+        <form hx-post="/priorities/{{ priority.id }}/updates"
+              hx-swap="none"
+              hx-on::after-request="if(event.detail.successful){ closePanel(); window.location.href='/priorities'; }"
+              style="margin-top:var(--space-3);">
+            <div class="form-group">
+                <label class="form-label">Tracking Status</label>
+                <select name="tracking_status" class="form-select">
+                    <option value="">—</option>
+                    <option value="on_track">On Track</option>
+                    <option value="progressing">Progressing</option>
+                    <option value="off_track">Off Track</option>
+                    <option value="complete">Complete</option>
+                    <option value="incomplete">Incomplete</option>
+                    <option value="no_update">No Update</option>
+                </select>
+            </div>
+            {% if priority.measure_type %}
+            <div class="form-group">
+                <label class="form-label">Progress Value</label>
+                <input type="number" name="measure_value" class="form-input" step="any"
+                       value="{{ priority.measure_current | default(value='') }}"
+                       placeholder="{% if priority.measure_type == 'percent' %}e.g. 60{% elif priority.measure_type == 'number' %}Current value{% endif %}">
+            </div>
+            {% endif %}
+            <div class="form-group">
+                <label class="form-label">Comment</label>
+                <textarea name="comment" class="form-textarea" rows="3"
+                          placeholder="What progress was made? Any blockers?"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Post Update</button>
+            </div>
+        </form>
+    </details>
+
+    <!-- Update History -->
+    {% if updates | length > 0 %}
+    <details class="priority-panel-details" open>
+        <summary class="priority-panel-summary">
+            <svg class="priority-panel-chevron" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/></svg>
+            Update History ({{ updates | length }})
+        </summary>
+        <div style="margin-top:var(--space-2);">
+            {% for update in updates %}
+            <div style="padding:8px 0;{% if not loop.last %}border-bottom:1px solid var(--color-border);{% endif %}">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span class="text-sm text-muted">{{ update.created_at }}</span>
+                    {% if update.tracking_status %}
+                    <span class="badge badge-tracking badge-tracking--{{ update.tracking_status }}">{{ update.tracking_status | replace(from="_", to=" ") }}</span>
+                    {% endif %}
+                    {% if update.measure_value %}
+                    <span class="text-sm" style="font-weight:600;">{{ update.measure_value }}{% if priority.measure_type == "percent" %}%{% endif %}</span>
+                    {% endif %}
+                </div>
+                {% if update.comment %}
+                <div class="text-sm" style="margin-top:4px;white-space:pre-wrap;">{{ update.comment }}</div>
+                <button type="button" class="btn-icon btn-icon--sm" title="Copy update" style="margin-top:4px;"
+                        onclick="copyUpdateToClipboard(this)">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+
+    <div style="margin-top:var(--space-4);">
         <button type="button" class="btn btn-danger btn-sm"
                 hx-delete="/priorities/{{ priority.id }}"
                 hx-swap="none"
@@ -144,5 +245,13 @@ function toggleMeasureFields(type, prefix) {
         }
         if (binaryEl) binaryEl.style.display = 'none';
     }
+}
+
+function copyUpdateToClipboard(btn) {
+    var item = btn.closest('.priority-update-item');
+    if (!item) return;
+    var commentEl = item.querySelector('.text-sm:not(.text-muted)');
+    if (!commentEl) return;
+    navigator.clipboard.writeText(commentEl.textContent.trim());
 }
 </script>

@@ -1,6 +1,6 @@
 use sqlx::SqlitePool;
 
-use crate::cycle::model::{Summary, SummaryRow};
+use crate::review::model::{Summary, SummaryRow};
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
 

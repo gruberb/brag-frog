@@ -1,8 +1,9 @@
 use crate::worklog::model::BragEntry;
 use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::identity::clg::ClgLevel;
-use crate::cycle::model::{AiDocument, MeetingPrepNote, WeeklyCheckin, WeeklyFocus};
-use crate::cycle::model::get_section;
+use crate::cycle::model::{MeetingPrepNote, WeeklyFocus};
+use crate::reflections::model::WeeklyCheckin;
+use crate::review::model::{AiDocument, get_section};
 
 /// Assembles a complete prompt for one self-review section.
 ///
@@ -101,7 +102,7 @@ One-liner: {}
         String::new()
     };
 
-    let review_platform = &crate::cycle::model::review_config().review_platform;
+    let review_platform = &crate::review::model::review_config().review_platform;
 
     let context = format!(
         r#"You are helping a software engineer write their half-year self-review for a {review_platform} performance review cycle.
@@ -220,9 +221,15 @@ fn format_dept_goals_with_priorities(
                 .iter()
                 .filter(|p| p.department_goal_id == Some(g.id))
                 .map(|p| {
+                    let tracking = p
+                        .tracking_status
+                        .as_deref()
+                        .map(|t| format!(" ({})", t.replace('_', " ")))
+                        .unwrap_or_default();
                     format!(
-                        "  - [{}] {}",
+                        "  - [{}{}] {}",
                         p.status.replace('_', " "),
+                        tracking,
                         p.title,
                     )
                 })
@@ -285,10 +292,16 @@ fn group_entries_by_priority(
                         })
                         .collect::<Vec<_>>()
                         .join("\n");
+                    let tracking = p
+                        .tracking_status
+                        .as_deref()
+                        .map(|t| format!(", tracking: {}", t.replace('_', " ")))
+                        .unwrap_or_default();
                     format!(
-                        "  ### Priority: {} [{}]\n{}\n  ({} entries)",
+                        "  ### Priority: {} [{}{}]\n{}\n  ({} entries)",
                         p.title,
                         p.status.replace('_', " "),
+                        tracking,
                         if entry_text.is_empty() {
                             "    (no entries)".to_string()
                         } else {
@@ -331,10 +344,16 @@ fn group_entries_by_priority(
                 })
                 .collect::<Vec<_>>()
                 .join("\n");
+            let tracking = p
+                .tracking_status
+                .as_deref()
+                .map(|t| format!(", tracking: {}", t.replace('_', " ")))
+                .unwrap_or_default();
             format!(
-                "### Priority: {} [{}]\n{}\n({} entries)",
+                "### Priority: {} [{}{}]\n{}\n({} entries)",
                 p.title,
                 p.status.replace('_', " "),
+                tracking,
                 if entry_text.is_empty() {
                     "  (no entries)".to_string()
                 } else {
@@ -609,10 +628,12 @@ Priority: {} — status: {}
 
 ---
 
-Generate structured meeting prep notes in Markdown. Choose sections that fit this specific meeting — not every meeting needs the same structure. Common sections include:
+Generate structured meeting prep notes in Markdown. ALWAYS start with a numbered Talking Points list — these map directly to Lattice's 1:1 talking points format. Then add supporting context sections as appropriate.
 
 ## Talking Points
-- Topics to raise, grounded in the context above
+1. [First talking point — concise, actionable]
+2. [Second talking point]
+3. [...]
 
 ## Questions to Ask
 - Specific questions for this meeting
@@ -620,7 +641,10 @@ Generate structured meeting prep notes in Markdown. Choose sections that fit thi
 ## Updates to Share
 - Status updates and accomplishments to mention
 
-Keep it concise and actionable. Use any provided context, calendar description, meeting goal, and prior preps to make the output specific to this meeting. Do not infer or fabricate content from URLs."#,
+## Supporting Context
+- Background details, relevant data points
+
+Keep talking points concise (1-2 sentences each) so they can be directly pasted as individual talking points in Lattice's 1:1 interface. Use provided context, calendar description, meeting goal, and prior preps to make output specific to this meeting. Do not infer or fabricate content from URLs."#,
         title = title,
         date = date,
         time_range = time_range,

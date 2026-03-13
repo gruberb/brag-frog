@@ -1,12 +1,8 @@
-//! Persistence layer for the review bounded context.
+//! Persistence layer for the cycle bounded context.
 //! All SQL queries live here — `model.rs` contains no SQL.
 
-mod ai;
-mod checkin;
 mod focus;
 mod meeting;
-mod stories;
-mod summary;
 
 use chrono::{Datelike, NaiveDate};
 use sqlx::SqlitePool;

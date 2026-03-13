@@ -154,8 +154,21 @@
 
     {% if prep_note and prep_note.notes %}
     <div class="form-group">
-        <label class="form-label">Prep Notes</label>
-        <div class="text-sm markdown-content">{{ prep_note.notes | markdown | safe }}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <label class="form-label">Prep Notes</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <button type="button" class="btn-icon btn-icon--sm" title="Copy prep notes"
+                        onclick="copyMeetingPrepNotes()">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+                </button>
+                <button type="button" class="btn-icon btn-icon--sm" title="Copy as talking points"
+                        onclick="copyMeetingPrepAsTalkingPoints()">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h1v1H2V2zm3 0h11v1H5V2zM2 5h1v1H2V5zm3 0h11v1H5V5zM2 8h1v1H2V8zm3 0h11v1H5V8zM2 11h1v1H2v-1zm3 0h11v1H5v-1z"/></svg>
+                </button>
+                <span id="meeting-prep-copy-status" style="font-size:var(--text-xs);color:var(--color-success);display:none;">Copied!</span>
+            </div>
+        </div>
+        <div class="text-sm markdown-content" id="meeting-prep-notes-content">{{ prep_note.notes | markdown | safe }}</div>
     </div>
     {% endif %}
 
@@ -179,5 +192,32 @@
                 hx-target="#meeting-prep-panel"
                 hx-swap="outerHTML">Edit</button>
     </div>
+
+    <script>
+    function copyMeetingPrepNotes() {
+        var el = document.getElementById('meeting-prep-notes-content');
+        if (!el) return;
+        navigator.clipboard.writeText(el.innerText.trim()).then(function() {
+            var status = document.getElementById('meeting-prep-copy-status');
+            if (status) { status.style.display = 'inline'; setTimeout(function() { status.style.display = 'none'; }, 1500); }
+        });
+    }
+    function copyMeetingPrepAsTalkingPoints() {
+        var el = document.getElementById('meeting-prep-notes-content');
+        if (!el) return;
+        var text = el.innerText.trim();
+        // Extract bullet points from markdown-rendered content
+        var lines = text.split('\n').filter(function(l) { return l.trim(); });
+        var points = [];
+        lines.forEach(function(line) {
+            var trimmed = line.replace(/^[\s*•\-]+/, '').trim();
+            if (trimmed) points.push('- ' + trimmed);
+        });
+        navigator.clipboard.writeText(points.join('\n')).then(function() {
+            var status = document.getElementById('meeting-prep-copy-status');
+            if (status) { status.style.display = 'inline'; setTimeout(function() { status.style.display = 'none'; }, 1500); }
+        });
+    }
+    </script>
     {% endif %}
 </div>

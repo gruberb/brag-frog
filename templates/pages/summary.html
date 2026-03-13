@@ -23,8 +23,40 @@
     </div>
 </div>
 
-<!-- Contribution Examples -->
+<!-- Cycle Timeline -->
+{% if quarters | length > 0 %}
 <div class="card" style="margin-bottom:16px;">
+    <h3 class="section-title" style="margin:0 0 12px 0;">Cycle Timeline</h3>
+    <div class="cycle-quarters-grid">
+        {% for q in quarters %}
+        {% if q.is_review %}
+        <div class="cycle-quarter-card cycle-quarter-card--review" style="cursor:pointer;" onclick="document.getElementById('self-review-sections').scrollIntoView({behavior:'smooth'})">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                <h4 style="margin:0;white-space:nowrap;">{{ q.quarter }} {{ q.year }}</h4>
+            </div>
+            <p class="text-sm" style="margin:0;font-weight:600;">{{ q.label }}</p>
+        </div>
+        {% else %}
+        <div class="cycle-quarter-card" style="cursor:pointer;"
+             onclick="openPanelFromUrl('{{ q.quarter }} {{ q.year }} Conversation Prep', '/quarterly-checkin/{{ q.quarter }}/{{ q.year }}/panel')">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+                <h4 style="margin:0;white-space:nowrap;">{{ q.quarter }} {{ q.year }}</h4>
+                {% if q.has_data %}
+                <span class="badge" style="background:var(--color-success);color:#fff;font-size:0.65rem;white-space:nowrap;">Completed</span>
+                {% else %}
+                <span class="badge" style="font-size:0.65rem;white-space:nowrap;">Not started</span>
+                {% endif %}
+            </div>
+            <p class="text-sm text-muted" style="margin:0;">Conversation prep</p>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Contribution Examples -->
+<div id="self-review-sections" class="card" style="margin-bottom:16px;">
     <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3 class="section-title" style="margin:0;">Contribution Examples ({{ examples | length }})</h3>
         <button class="btn btn-primary btn-sm" onclick="document.getElementById('new-example-form').classList.toggle('hidden')">+ New Example</button>
@@ -121,4 +153,27 @@ function copyExampleToClipboard(exampleId) {
     });
 }
 </script>
+
+<style>
+.cycle-quarters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+.cycle-quarter-card {
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.15s;
+}
+.cycle-quarter-card:hover {
+    border-color: var(--color-primary);
+}
+.cycle-quarter-card--review {
+    border-color: var(--color-primary);
+    background: var(--color-secondary-bg);
+}
+</style>
 {% endblock %}

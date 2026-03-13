@@ -197,9 +197,13 @@ pub struct QuarterlyCheckin {
 }
 
 /// Form payload for saving a quarterly check-in.
+/// `quarter` and `year` are populated from the URL path by the handler,
+/// so they default to empty/zero to avoid 422 when absent from the form body.
 #[derive(Debug, Deserialize)]
 pub struct SaveQuarterlyCheckin {
+    #[serde(default)]
     pub quarter: String,
+    #[serde(default)]
     pub year: i64,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub highlights_impact: Option<String>,

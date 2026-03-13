@@ -2,6 +2,24 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [3.0.0] - 2026-03-13
+
+### Changed
+- **DDD decomposition of cycle/ module.** Split into three focused bounded contexts:
+  - `cycle/` — Phase lifecycle, weeks, focus items, dashboard, logbook, meeting prep, trends
+  - `reflections/` — Weekly and quarterly check-ins with config
+  - `review/` — Self-review summaries, contribution examples, AI documents, export, assessment/rating config
+- **AI helper functions moved to ai/ module.** `get_ai_client()` and `has_ai_for_user()` shared by all modules.
+- **Config initialization decentralized.** Each module loads its own config; `initialize_config()` removed.
+- Saving a weekly reflection now redirects to /checkins instead of /dashboard.
+- Conversation prep opens in slide-over panel on review page instead of navigating away.
+
+### Removed
+- Dead code: `get_checkin_section()`, `BragPhase::is_active()` method
+- Dead template: `department_goal_item.html`
+- Dead CSS: sidebar panel, sidebar list, page mascot, bulk merge toggle classes
+- Empty directories: `tools/`, `static/img/product/`
+
 ## [2.4.1] - 2026-03-09
 
 ### Fixed

@@ -25,6 +25,8 @@ use crate::identity::routes as identity_routes;
 use crate::worklog::routes as worklog_routes;
 use crate::objectives::routes as objectives_routes;
 use crate::cycle::routes as cycle_routes;
+use crate::reflections::routes as reflections_routes;
+use crate::review::routes as review_routes;
 use crate::integrations::integrations_routes;
 use crate::integrations::sync_routes;
 
@@ -57,7 +59,10 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
 
     // Config files — check custom/ overlay first, then fall back to config/
     crate::identity::clg::load_levels(&config_path("clg_levels.toml"));
-    crate::cycle::model::initialize_config(config_path);
+    crate::review::model::load_review_config(&config_path("review_sections.toml"));
+    crate::reflections::model::load_checkin_config(&config_path("checkin_sections.toml"));
+    crate::review::model::load_assessment_config(&config_path("assessment_templates.toml"));
+    crate::review::model::load_rating_scale(&config_path("rating_scale.toml"));
     crate::integrations::services_config::load(&config_path("services.toml"));
 
     // Templates
@@ -192,34 +197,38 @@ pub fn create_router() -> Router<AppState> {
             post(cycle_routes::meeting_prep::ai_draft_meeting_prep),
         )
         // Check-ins
-        .route("/checkins", get(cycle_routes::checkins::checkins_list))
+        .route("/checkins", get(reflections_routes::checkins::checkins_list))
         .route(
             "/checkin/{week_id}",
-            get(cycle_routes::checkins::checkin_page)
-                .post(cycle_routes::checkins::save_checkin)
-                .delete(cycle_routes::checkins::delete_checkin),
+            get(reflections_routes::checkins::checkin_page)
+                .post(reflections_routes::checkins::save_checkin)
+                .delete(reflections_routes::checkins::delete_checkin),
         )
         // Contribution Examples
         .route(
             "/contribution-examples",
-            get(cycle_routes::contribution_examples::contribution_examples_page)
-                .post(cycle_routes::contribution_examples::create_contribution_example),
+            get(review_routes::contribution_examples::contribution_examples_page)
+                .post(review_routes::contribution_examples::create_contribution_example),
         )
         .route(
             "/contribution-examples/{id}",
-            put(cycle_routes::contribution_examples::update_contribution_example)
-                .delete(cycle_routes::contribution_examples::delete_contribution_example),
+            put(review_routes::contribution_examples::update_contribution_example)
+                .delete(review_routes::contribution_examples::delete_contribution_example),
         )
         .route(
             "/contribution-examples/{example_id}/entries/{entry_id}",
-            post(cycle_routes::contribution_examples::link_entry_to_example)
-                .delete(cycle_routes::contribution_examples::unlink_entry_from_example),
+            post(review_routes::contribution_examples::link_entry_to_example)
+                .delete(review_routes::contribution_examples::unlink_entry_from_example),
         )
         // Quarterly Check-ins
         .route(
             "/quarterly-checkin/{quarter}/{year}",
-            get(cycle_routes::checkins::quarterly_checkin_page)
-                .post(cycle_routes::checkins::save_quarterly_checkin),
+            get(reflections_routes::checkins::quarterly_checkin_page)
+                .post(reflections_routes::checkins::save_quarterly_checkin),
+        )
+        .route(
+            "/quarterly-checkin/{quarter}/{year}/panel",
+            get(reflections_routes::checkins::quarterly_checkin_panel),
         )
         // Logbook filtered entries (HTMX)
         .route(
@@ -247,6 +256,10 @@ pub fn create_router() -> Router<AppState> {
             "/priorities/{id}",
             put(objectives_routes::update_priority).delete(objectives_routes::delete_priority),
         )
+        .route(
+            "/priorities/{id}/updates",
+            post(objectives_routes::post_priority_update),
+        )
         // Phases (Performance Cycle)
         .route("/phases", post(cycle_routes::phases::create_phase))
         .route("/phases/{id}", delete(cycle_routes::phases::delete_phase))
@@ -262,12 +275,12 @@ pub fn create_router() -> Router<AppState> {
         // Level Guide
         .route("/level-guide", get(identity_routes::clg_guide_page))
         // Review Guide
-        .route("/review-guide", get(cycle_routes::summaries::review_guide_page))
+        .route("/review-guide", get(review_routes::summaries::review_guide_page))
         // Export
-        .route("/export", get(cycle_routes::export::export_page))
+        .route("/export", get(review_routes::export::export_page))
         .route(
             "/export/download",
-            get(cycle_routes::export::export_download),
+            get(review_routes::export::export_download),
         )
         // Integrations page + API routes
         .route("/integrations", get(integrations_routes::integrations_page))
@@ -311,19 +324,19 @@ pub fn create_router() -> Router<AppState> {
         // Self Review
         .route(
             "/review/{phase_id}",
-            get(cycle_routes::summaries::summary_page),
+            get(review_routes::summaries::summary_page),
         )
         .route(
             "/review/{phase_id}/generate",
-            post(cycle_routes::summaries::generate_all),
+            post(review_routes::summaries::generate_all),
         )
         .route(
             "/review/{phase_id}/ai-draft/{section}",
-            post(cycle_routes::summaries::ai_draft_section),
+            post(review_routes::summaries::ai_draft_section),
         )
         .route(
             "/review/{phase_id}/save/{section}",
-            post(cycle_routes::summaries::save_section),
+            post(review_routes::summaries::save_section),
         )
         .layer(middleware::from_fn(require_auth))
         .layer(middleware::from_fn(csrf_protection));

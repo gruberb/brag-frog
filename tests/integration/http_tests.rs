@@ -547,8 +547,8 @@ async fn test_checkin_page_loads() {
         .await;
     assert_eq!(resp.status, StatusCode::OK);
     assert!(
-        resp.body.contains("Check-in") || resp.body.contains("check-in"),
-        "Page should contain 'Check-in'"
+        resp.body.contains("Reflection") || resp.body.contains("reflection"),
+        "Page should contain 'Reflection'"
     );
 }
 
@@ -581,8 +581,8 @@ async fn test_checkins_list_page_loads() {
     let resp = app.get("/checkins", Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
     assert!(
-        resp.body.contains("Check-in History") || resp.body.contains("No check-ins"),
-        "Page should contain check-in history content"
+        resp.body.contains("Reflections") || resp.body.contains("No reflections"),
+        "Page should contain reflections content"
     );
 }
 

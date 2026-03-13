@@ -7,6 +7,8 @@ pub mod worklog;
 pub mod identity;
 pub mod objectives;
 pub mod cycle;
+pub mod reflections;
+pub mod review;
 pub mod kernel;
 pub mod integrations;
 

@@ -7,12 +7,14 @@ use chrono::{Duration, Local};
 
 use crate::AppState;
 use crate::ai::prompts::build_meeting_prep_prompt;
+use crate::ai::{get_ai_client, has_ai_for_user};
 use crate::worklog::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::cycle::model::{AiDocument, BragPhase, MeetingPrepNote, Week, WeeklyCheckin, WeeklyFocus};
-use crate::cycle::routes::{get_ai_client, has_ai_for_user};
+use crate::cycle::model::{BragPhase, MeetingPrepNote, Week, WeeklyFocus};
+use crate::reflections::model::WeeklyCheckin;
+use crate::review::model::AiDocument;
 use crate::kernel::error::AppError;
 
 /// Query params for the panel GET.

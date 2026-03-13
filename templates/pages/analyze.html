@@ -237,18 +237,32 @@ function bulkApply() {
 }
 
 // After bulk update completes, refresh entries and reset
-document.body.addEventListener('bulk-update-done', function() {
+var _pendingHighlightIds = [];
+document.body.addEventListener('bulk-update-done', function(evt) {
+    var detail = evt.detail || {};
+    if (detail.ids) {
+        _pendingHighlightIds = String(detail.ids).split(',').map(function(s) { return s.trim(); });
+    }
     applyFilters();
     resetBulkFields();
     bulkDeselectAll();
 });
 
-// After HTMX swaps entry list, re-show checkboxes if bulk mode is active
+// After HTMX swaps entry list, re-show checkboxes if bulk mode is active and highlight updated entries
 document.body.addEventListener('htmx:afterSwap', function(evt) {
-    if (_bulkEditActive && evt.detail.target && evt.detail.target.id === 'analyze-results') {
-        document.querySelectorAll('.bulk-edit-checkbox').forEach(function(cb) {
-            cb.style.display = '';
-        });
+    if (evt.detail.target && evt.detail.target.id === 'analyze-results') {
+        if (_bulkEditActive) {
+            document.querySelectorAll('.bulk-edit-checkbox').forEach(function(cb) {
+                cb.style.display = '';
+            });
+        }
+        if (_pendingHighlightIds.length > 0) {
+            _pendingHighlightIds.forEach(function(id) {
+                var row = document.getElementById('entry-' + id);
+                if (row) row.classList.add('entry-row--updated');
+            });
+            _pendingHighlightIds = [];
+        }
     }
 });
 

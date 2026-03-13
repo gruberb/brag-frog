@@ -3,7 +3,8 @@ use super::common;
 use brag_frog::worklog::model::BragEntry;
 use brag_frog::worklog::model::{CreateEntry, UpdateEntry};
 use brag_frog::objectives::model::DepartmentGoal;
-use brag_frog::cycle::model::{BragPhase, Summary, Week};
+use brag_frog::cycle::model::{BragPhase, Week};
+use brag_frog::review::model::Summary;
 
 #[tokio::test]
 async fn test_entry_crud() {

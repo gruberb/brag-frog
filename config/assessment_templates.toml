@@ -1,27 +1,27 @@
-# Self-assessment templates for mid-year and year-end reviews.
-# Override via custom/assessment_templates.toml.
+# Self-assessment templates aligned with Lattice's performance review format.
+# Override via custom/assessment_templates.toml for other platforms.
 
 [mid_year]
-title = "Mid-year Self-Assessment"
+title = "Mid-year Self-Reflection"
 max_examples = 2
-question = "Describe 1–2 examples of your work so far this year that illustrate your level of contribution and impact."
+question = "Describe 1–2 examples of your contribution and impact so far this year."
 guidance = "For each example, summarize:"
 bullets = [
     "The outcome or progress made (or impact still in progress)",
     "The skills and behaviors that were key to success and how they were demonstrated",
     "What you learned that you'll carry forward, and what you will do next to continue your development",
 ]
-tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work."
-ai_prompt = """Using the linked entries and priority context, draft a contribution example for a mid-year self-assessment. Structure as:
+tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work. This maps directly to Lattice's self-reflection prompt."
+ai_prompt = """Using the linked entries and priority context, draft a contribution example for a Lattice mid-year self-reflection. Lattice asks for "1-2 examples of contribution and impact." Structure as:
 - **Outcome**: What was achieved or is in progress
 - **Skills & Behaviors**: Which key behaviors were demonstrated and how
 - **Learnings**: What was learned and carried forward
-Use first person. Be specific and quantitative where possible."""
+Use first person. Be specific and quantitative where possible. Format for direct paste into Lattice."""
 
 [year_end]
-title = "Year-end Self-Assessment"
+title = "Year-end Self-Reflection"
 max_examples = 4
-question = "Describe up to 4 examples from this year that illustrate your contributions."
+question = "Describe up to 4 examples from this year that illustrate your contributions and impact."
 guidance = "For each, summarize:"
 bullets = [
     "The results or outcomes achieved (or still in progress)",
@@ -29,10 +29,10 @@ bullets = [
     "The level of impact — on your work, your team, or the organization overall",
     "What you learned that you'll carry forward",
 ]
-tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work."
-ai_prompt = """Using the linked entries and priority context, draft a contribution example for a year-end self-assessment. Structure as:
+tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work. This maps directly to Lattice's self-reflection prompt."
+ai_prompt = """Using the linked entries and priority context, draft a contribution example for a Lattice year-end self-reflection. Lattice asks for "examples of contribution and impact." Structure as:
 - **Outcome**: Results and business impact
 - **Skills & Behaviors**: Key behaviors demonstrated
 - **Impact Level**: Team, cross-team, org, or company-wide
 - **Learnings**: What was learned
-Use first person. Be specific and quantitative where possible."""
+Use first person. Be specific and quantitative where possible. Format for direct paste into Lattice."""

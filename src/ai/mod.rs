@@ -1,4 +1,7 @@
+pub mod helpers;
 pub mod prompts;
+
+pub use helpers::{get_ai_client, has_ai_for_user};
 
 use serde::{Deserialize, Serialize};
 

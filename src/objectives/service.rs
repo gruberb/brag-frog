@@ -171,18 +171,25 @@ pub async fn import_lattice_rows(
         let status = import::map_status_priority(row.status.as_deref());
         let external_id = row.goal_id.as_deref();
 
+        let tracking = import::map_tracking_status(row.status.as_deref());
+        let tier = import::map_tier(row.goal_type.as_deref());
+
         if let Some(ext_id) = external_id {
             sqlx::query(
                 r#"
                 INSERT INTO priorities (phase_id, user_id, title, status, color, sort_order,
-                    impact_narrative, department_goal_id, external_id)
+                    impact_narrative, department_goal_id, external_id,
+                    tracking_status, due_date, tier)
                 VALUES (?, ?, ?, ?, ?, (SELECT COALESCE(MAX(sort_order), 0) + 1 FROM priorities WHERE phase_id = ?),
-                    ?, ?, ?)
+                    ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(phase_id, external_id) DO UPDATE SET
                     title = excluded.title,
                     status = excluded.status,
                     impact_narrative = excluded.impact_narrative,
-                    department_goal_id = excluded.department_goal_id
+                    department_goal_id = excluded.department_goal_id,
+                    tracking_status = excluded.tracking_status,
+                    due_date = excluded.due_date,
+                    tier = excluded.tier
                 "#,
             )
             .bind(phase_id)
@@ -194,9 +201,14 @@ pub async fn import_lattice_rows(
             .bind(&enc_narrative)
             .bind(dept_goal_id)
             .bind(ext_id)
+            .bind(tracking)
+            .bind(&row.due_date)
+            .bind(tier)
             .execute(pool)
             .await?;
         } else {
+            let tracking = import::map_tracking_status(row.status.as_deref());
+            let tier = import::map_tier(row.goal_type.as_deref());
             Priority::create(
                 pool, phase_id, user_id,
                 &CreatePriority {
@@ -210,6 +222,9 @@ pub async fn import_lattice_rows(
                     measure_start: None,
                     measure_target: None,
                     description: None,
+                    tracking_status: tracking.map(|s| s.to_string()),
+                    due_date: row.due_date.clone(),
+                    tier: tier.map(|s| s.to_string()),
                 },
                 crypto,
             ).await?;

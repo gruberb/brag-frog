@@ -28,6 +28,11 @@ pub struct PriorityRow {
     pub measure_target: Option<f64>,
     pub measure_current: Option<f64>,
     pub description: Option<Vec<u8>>,
+    /// Lattice-aligned trajectory status: on_track/progressing/off_track/complete/incomplete/no_update.
+    pub tracking_status: Option<String>,
+    pub due_date: Option<String>,
+    /// Priority tier: department/team/individual.
+    pub tier: Option<String>,
 }
 
 impl PriorityRow {
@@ -52,6 +57,9 @@ impl PriorityRow {
             measure_target: self.measure_target,
             measure_current: self.measure_current,
             description: crypto.decrypt_opt(&self.description)?,
+            tracking_status: self.tracking_status,
+            due_date: self.due_date,
+            tier: self.tier,
         })
     }
 }
@@ -63,7 +71,7 @@ pub struct Priority {
     pub phase_id: i64,
     pub user_id: i64,
     pub title: String,
-    /// One of: `not_started`, `active`, `on_hold`, `completed`, `cancelled`.
+    /// Lifecycle status: `not_started`, `active`, `on_hold`, `completed`, `cancelled`.
     pub status: String,
     /// Hex color for UI badges.
     pub color: Option<String>,
@@ -84,6 +92,11 @@ pub struct Priority {
     pub measure_target: Option<f64>,
     pub measure_current: Option<f64>,
     pub description: Option<String>,
+    /// Lattice-aligned trajectory: `on_track`, `progressing`, `off_track`, `complete`, `incomplete`, `no_update`.
+    pub tracking_status: Option<String>,
+    pub due_date: Option<String>,
+    /// Priority tier: `department`, `team`, `individual`.
+    pub tier: Option<String>,
 }
 
 /// Form payload for creating a priority.
@@ -107,6 +120,12 @@ pub struct CreatePriority {
     pub measure_target: Option<f64>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub tracking_status: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub due_date: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub tier: Option<String>,
 }
 
 /// Form payload for updating a priority.
@@ -136,4 +155,59 @@ pub struct UpdatePriority {
     pub measure_current: Option<f64>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub description: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub tracking_status: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub due_date: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub tier: Option<String>,
+}
+
+/// Form payload for posting a priority update (progress log entry).
+#[derive(Debug, Deserialize)]
+pub struct PostPriorityUpdate {
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub tracking_status: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_f64")]
+    pub measure_value: Option<f64>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub comment: Option<String>,
+}
+
+/// A single priority update log entry.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PriorityUpdate {
+    pub id: i64,
+    pub priority_id: i64,
+    pub user_id: i64,
+    pub tracking_status: Option<String>,
+    pub measure_value: Option<f64>,
+    pub comment: Option<String>,
+    pub created_at: String,
+}
+
+/// Raw database row for priority updates (comment is encrypted BLOB).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct PriorityUpdateRow {
+    pub id: i64,
+    pub priority_id: i64,
+    pub user_id: i64,
+    pub tracking_status: Option<String>,
+    pub measure_value: Option<f64>,
+    pub comment: Option<Vec<u8>>,
+    pub created_at: String,
+}
+
+impl PriorityUpdateRow {
+    pub fn decrypt(self, crypto: &UserCrypto) -> Result<PriorityUpdate, AppError> {
+        Ok(PriorityUpdate {
+            id: self.id,
+            priority_id: self.priority_id,
+            user_id: self.user_id,
+            tracking_status: self.tracking_status,
+            measure_value: self.measure_value,
+            comment: crypto.decrypt_opt(&self.comment)?,
+            created_at: self.created_at,
+        })
+    }
 }

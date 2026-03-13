@@ -1,25 +1,15 @@
-//! Domain types and pure logic for the review bounded context.
-//! No SQL lives here — all persistence is in `repo.rs`.
+//! Domain types and pure logic for the cycle bounded context.
+//! Phases, weeks, focus items, meetings.
 
-mod ai;
-mod checkin;
-mod config;
 mod focus;
 mod meeting;
-mod stories;
-mod summary;
 
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-pub use ai::*;
-pub use checkin::*;
-pub use config::*;
 pub use focus::*;
 pub use meeting::*;
-pub use stories::*;
-pub use summary::*;
 
 // ---------------------------------------------------------------------------
 // Phase

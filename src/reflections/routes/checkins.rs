@@ -8,8 +8,9 @@ use crate::AppState;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
 use crate::objectives::model::Priority;
-use crate::cycle::model::{
-    BragPhase, QuarterlyCheckin, SaveCheckin, SaveQuarterlyCheckin, Week, WeeklyCheckin,
+use crate::cycle::model::{BragPhase, Week};
+use crate::reflections::model::{
+    QuarterlyCheckin, SaveCheckin, SaveQuarterlyCheckin, WeeklyCheckin,
 };
 use crate::kernel::error::AppError;
 use crate::kernel::render::hx_redirect;
@@ -37,7 +38,7 @@ pub async fn checkin_page(
     let existing =
         WeeklyCheckin::find_for_week(&state.db, week_id, auth.user_id, &auth.crypto).await?;
     let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
-    let checkin_sections = &crate::cycle::model::checkin_config().sections;
+    let checkin_sections = &crate::reflections::model::checkin_config().sections;
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
@@ -52,7 +53,7 @@ pub async fn checkin_page(
     Ok(Html(html))
 }
 
-/// Unified check-in history page — tabs for Weekly and Quarterly.
+/// Weekly reflections history page.
 pub async fn checkins_list(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -65,17 +66,18 @@ pub async fn checkins_list(
 
     let checkins = WeeklyCheckin::list_with_weeks(&state.db, auth.user_id, &auth.crypto).await?;
 
-    let quarterly_checkins = if let Some(ref p) = phase {
-        QuarterlyCheckin::list_for_phase(&state.db, p.id, &auth.crypto).await?
+    let current_week = if let Some(ref p) = phase {
+        let now = chrono::Local::now().naive_local().date();
+        Some(Week::find_or_create_for_date(&state.db, p.id, now).await?)
     } else {
-        vec![]
+        None
     };
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
     ctx.insert("checkins", &checkins);
-    ctx.insert("quarterly_checkins", &quarterly_checkins);
+    ctx.insert("current_week", &current_week);
     ctx.insert("current_page", "checkins");
 
     let html = state.templates.render("pages/checkins_list.html", &ctx)?;
@@ -98,7 +100,7 @@ pub async fn delete_checkin(
     Ok(hx_redirect("/checkins"))
 }
 
-/// Saves a weekly check-in (upsert) and redirects to dashboard.
+/// Saves a weekly check-in (upsert) and redirects to checkins list.
 pub async fn save_checkin(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -113,7 +115,50 @@ pub async fn save_checkin(
     let _checkin =
         WeeklyCheckin::upsert(&state.db, week_id, auth.user_id, &input, &auth.crypto).await?;
 
-    Ok(hx_redirect("/dashboard"))
+    Ok(hx_redirect("/checkins"))
+}
+
+/// Renders the quarterly conversation prep as a slide-over panel.
+pub async fn quarterly_checkin_panel(
+    auth: AuthUser,
+    State(state): State<AppState>,
+    Path((quarter, year)): Path<(String, i64)>,
+) -> Result<Html<String>, AppError> {
+    let phase = BragPhase::get_active(&state.db, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::BadRequest("No active phase".to_string()))?;
+
+    let existing =
+        QuarterlyCheckin::find(&state.db, phase.id, auth.user_id, &quarter, year, &auth.crypto)
+            .await?;
+
+    let weekly_reflections = QuarterlyCheckin::weekly_reflections_for_quarter(
+        &state.db,
+        auth.user_id,
+        &quarter,
+        year,
+        &auth.crypto,
+    )
+    .await?;
+
+    let priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let checkin_sections = &crate::reflections::model::checkin_config().sections;
+    let has_ai = crate::ai::has_ai_for_user(&state, auth.user_id).await;
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("phase", &phase);
+    ctx.insert("quarter", &quarter);
+    ctx.insert("year", &year);
+    ctx.insert("checkin", &existing);
+    ctx.insert("weekly_reflections", &weekly_reflections);
+    ctx.insert("priorities", &priorities);
+    ctx.insert("checkin_sections", &checkin_sections);
+    ctx.insert("has_ai", &has_ai);
+
+    let html = state
+        .templates
+        .render("panels/quarterly_checkin_form.html", &ctx)?;
+    Ok(Html(html))
 }
 
 // ---------------------------------------------------------------------------
@@ -148,8 +193,8 @@ pub async fn quarterly_checkin_page(
     .await?;
 
     let priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
-    let checkin_sections = &crate::cycle::model::checkin_config().sections;
-    let has_ai = super::has_ai_for_user(&state, auth.user_id).await;
+    let checkin_sections = &crate::reflections::model::checkin_config().sections;
+    let has_ai = crate::ai::has_ai_for_user(&state, auth.user_id).await;
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
@@ -161,7 +206,7 @@ pub async fn quarterly_checkin_page(
     ctx.insert("priorities", &priorities);
     ctx.insert("checkin_sections", &checkin_sections);
     ctx.insert("has_ai", &has_ai);
-    ctx.insert("current_page", "checkins");
+    ctx.insert("current_page", "summary");
 
     let html = state
         .templates
@@ -169,7 +214,7 @@ pub async fn quarterly_checkin_page(
     Ok(Html(html))
 }
 
-/// Saves a quarterly check-in (upsert) and redirects to check-ins.
+/// Saves a quarterly check-in (upsert) and redirects to the review page.
 pub async fn save_quarterly_checkin(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -192,5 +237,13 @@ pub async fn save_quarterly_checkin(
     )
     .await?;
 
-    Ok(hx_redirect("/checkins"))
+    let redirect_url = format!("/review/{}", phase.id);
+    Ok((
+        [(
+            axum::http::header::HeaderName::from_static("hx-redirect"),
+            axum::http::HeaderValue::from_str(&redirect_url)
+                .unwrap_or_else(|_| axum::http::HeaderValue::from_static("/checkins")),
+        )],
+        "",
+    ))
 }

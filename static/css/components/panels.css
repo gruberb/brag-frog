@@ -100,6 +100,40 @@
     text-decoration: underline;
 }
 
+/* Collapsible details sections inside panels */
+.priority-panel-details {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-3);
+}
+
+.priority-panel-details > summary {
+    list-style: none;
+}
+
+.priority-panel-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.priority-panel-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--color-text);
+    user-select: none;
+}
+
+.priority-panel-chevron {
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.priority-panel-details[open] > .priority-panel-summary .priority-panel-chevron {
+    transform: rotate(90deg);
+}
+
 /* Mobile: full-width panel */
 @media (max-width: 768px) {
     .panel-container {

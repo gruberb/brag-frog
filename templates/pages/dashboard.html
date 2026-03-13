@@ -129,7 +129,7 @@
     </form>
 </section>
 
-<!-- Top row: Weekly Focus + Weekly Check-in at same height -->
+<!-- Top row: Weekly Focus + Weekly Reflection at same height -->
 <div class="dashboard-top-row">
     <section class="card dashboard-focus">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -267,9 +267,9 @@
             </form>
         </section>
 
-    <!-- Weekly check-in -->
+    <!-- Weekly reflection -->
     <section class="card">
-        <h2 class="section-title">Weekly Check-in</h2>
+        <h2 class="section-title">Weekly Reflection</h2>
         {% if checkin_done %}
         <div class="checkin-status">
             {% if checkin_energy or checkin_productivity %}
@@ -298,7 +298,7 @@
         {% else %}
         <div class="checkin-status">
             <p class="text-sm text-muted">Reflect on your week</p>
-            <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Start Check-in</a>
+            <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Start Reflection</a>
         </div>
         {% endif %}
     </section>
@@ -375,16 +375,16 @@
         </section>
         {% endif %}
 
-        <!-- Priorities snapshot -->
+        <!-- Priorities snapshot (active only) -->
         <section class="card">
             <h2 class="section-title">Priorities</h2>
-            {% if priorities | length == 0 %}
+            {% if dashboard_priorities | length == 0 %}
             <div style="padding:4px 0;">
-                <p class="text-sm text-muted">No priorities yet.</p>
-                <a href="/priorities" class="btn btn-text btn-sm">Set up priorities</a>
+                <p class="text-sm text-muted">No active priorities.</p>
+                <a href="/priorities" class="btn btn-text btn-sm">View all priorities</a>
             </div>
             {% else %}
-            {% for p in priorities %}
+            {% for p in dashboard_priorities %}
             {% if loop.index == 5 %}
             <div id="priorities-overflow" style="display:none;">
             {% endif %}
@@ -394,11 +394,11 @@
                 <span class="badge badge-status badge-status--{{ p.status }}" style="font-size:0.65rem;">{{ p.status | replace(from="_", to=" ") }}</span>
             </div>
             {% endfor %}
-            {% if priorities | length > 4 %}
+            {% if dashboard_priorities | length > 4 %}
             </div>
             <button type="button" id="priorities-toggle" class="btn btn-text btn-sm"
-                    onclick="var el=document.getElementById('priorities-overflow'),btn=this;if(el.style.display==='none'){el.style.display='block';btn.textContent='Show less';}else{el.style.display='none';btn.textContent='Show {{ priorities | length - 4 }} more';}">
-                Show {{ priorities | length - 4 }} more
+                    onclick="var el=document.getElementById('priorities-overflow'),btn=this;if(el.style.display==='none'){el.style.display='block';btn.textContent='Show less';}else{el.style.display='none';btn.textContent='Show {{ dashboard_priorities | length - 4 }} more';}">
+                Show {{ dashboard_priorities | length - 4 }} more
             </button>
             {% endif %}
             {% endif %}

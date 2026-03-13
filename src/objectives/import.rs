@@ -14,6 +14,8 @@ pub struct LatticeRow {
     pub status: Option<String>,
     #[serde(alias = "Start date", alias = "Start Date", default)]
     pub start_date: Option<String>,
+    #[serde(alias = "Due date", alias = "Due Date", alias = "End date", alias = "End Date", default)]
+    pub due_date: Option<String>,
     #[serde(alias = "Goal ID", alias = "Goal Id", alias = "ID", alias = "Id", default)]
     pub goal_id: Option<String>,
     #[serde(alias = "Parent ID", alias = "Parent Id", default)]
@@ -67,4 +69,28 @@ pub fn map_status_priority(lattice_status: Option<&str>) -> &'static str {
 pub fn is_department_goal(goal_type: &str) -> bool {
     let lower = goal_type.to_lowercase();
     lower.contains("department") || lower.contains("team") || lower.contains("company")
+}
+
+/// Maps a Lattice status to a tracking_status (trajectory signal).
+/// Returns `None` for statuses that don't map to a trajectory.
+pub fn map_tracking_status(lattice_status: Option<&str>) -> Option<&'static str> {
+    match lattice_status.map(|s| s.trim().to_lowercase()).as_deref() {
+        Some("on track") | Some("on-track") => Some("on_track"),
+        Some("progressing") => Some("progressing"),
+        Some("behind") | Some("at risk") | Some("at-risk") | Some("off track") | Some("off-track") => Some("off_track"),
+        Some("closed") | Some("achieved") | Some("completed") | Some("complete") => Some("complete"),
+        Some("incomplete") => Some("incomplete"),
+        Some("not started") | Some("not-started") | Some("no update") | Some("no-update") => Some("no_update"),
+        _ => None,
+    }
+}
+
+/// Maps a Lattice goal_type to a priority tier.
+pub fn map_tier(goal_type: Option<&str>) -> Option<&'static str> {
+    match goal_type.map(|s| s.trim().to_lowercase()).as_deref() {
+        Some(t) if t.contains("department") || t.contains("company") => Some("department"),
+        Some(t) if t.contains("team") => Some("team"),
+        Some(t) if t.contains("individual") || t.contains("personal") => Some("individual"),
+        _ => None,
+    }
 }

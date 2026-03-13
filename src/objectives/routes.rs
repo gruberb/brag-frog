@@ -9,8 +9,8 @@ use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
 use crate::objectives::import;
 use crate::objectives::model::{
-    CreateDepartmentGoal, CreateDepartmentGoalForm, CreatePriority, DepartmentGoal, Priority,
-    UpdateDepartmentGoal, UpdatePriority,
+    CreateDepartmentGoal, CreateDepartmentGoalForm, CreatePriority, DepartmentGoal,
+    PostPriorityUpdate, Priority, PriorityUpdate, UpdateDepartmentGoal, UpdatePriority,
 };
 use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
@@ -135,10 +135,13 @@ pub async fn priority_edit_panel(
         .ok_or_else(|| AppError::NotFound("Priority not found".to_string()))?;
 
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let updates =
+        PriorityUpdate::list_for_priority(&state.db, id, &auth.crypto).await?;
 
     let mut ctx = tera::Context::new();
     ctx.insert("priority", &priority);
     ctx.insert("dept_goals", &dept_goals);
+    ctx.insert("updates", &updates);
 
     let html = state.templates.render("panels/priority_edit.html", &ctx)?;
     Ok(Html(html))
@@ -197,6 +200,10 @@ pub async fn update_department_goal(
 ) -> Result<axum::response::Response, AppError> {
     DepartmentGoal::update(&state.db, id, auth.user_id, &input, &auth.crypto).await?;
 
+    if input.status.as_deref() == Some("completed") {
+        Priority::complete_all_for_department_goal(&state.db, id, auth.user_id).await?;
+    }
+
     Ok(([("HX-Redirect", "/priorities")], "").into_response())
 }
 
@@ -245,6 +252,23 @@ pub async fn delete_priority(
 ) -> Result<Html<String>, AppError> {
     Priority::delete(&state.db, id, auth.user_id).await?;
     Ok(Html(String::new()))
+}
+
+/// Posts a progress update on a priority (tracking status, measure value, comment).
+pub async fn post_priority_update(
+    auth: AuthUser,
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Form(input): Form<PostPriorityUpdate>,
+) -> Result<axum::response::Response, AppError> {
+    // Verify priority ownership
+    Priority::find_by_id(&state.db, id, auth.user_id, &auth.crypto)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Priority not found".to_string()))?;
+
+    PriorityUpdate::create(&state.db, id, auth.user_id, &input, &auth.crypto).await?;
+
+    Ok(([("HX-Redirect", "/priorities")], "").into_response())
 }
 
 // ---------------------------------------------------------------------------

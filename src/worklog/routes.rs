@@ -315,10 +315,13 @@ pub async fn bulk_update_entries(
     )
     .await?;
 
+    let trigger_json = serde_json::json!({
+        "bulk-update-done": { "ids": input.entry_ids, "count": count }
+    });
     let mut headers = HeaderMap::new();
     headers.insert(
         "HX-Trigger",
-        HeaderValue::from_static("bulk-update-done"),
+        HeaderValue::from_str(&trigger_json.to_string()).unwrap(),
     );
 
     Ok((

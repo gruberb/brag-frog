@@ -77,8 +77,15 @@ pub async fn dashboard(
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
     let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
 
+    // Only show active priorities in the dashboard sidebar widget
+    let dashboard_priorities: Vec<Priority> = priorities
+        .iter()
+        .filter(|p| p.status == "active")
+        .cloned()
+        .collect();
+
     // Check-in status for this week
-    let checkin = crate::cycle::model::WeeklyCheckin::find_for_week(
+    let checkin = crate::reflections::model::WeeklyCheckin::find_for_week(
         &state.db,
         current_week.id,
         auth.user_id,
@@ -143,6 +150,7 @@ pub async fn dashboard(
     ctx.insert("active_work", &active_work);
     ctx.insert("dept_goals", &dept_goals);
     ctx.insert("priorities", &priorities);
+    ctx.insert("dashboard_priorities", &dashboard_priorities);
     ctx.insert("focus_items", &focus_items);
     ctx.insert("focus_entry_ids", &focus_entry_ids);
     ctx.insert("picker_entries", &picker_entries);
