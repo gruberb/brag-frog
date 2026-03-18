@@ -10,7 +10,7 @@ use crate::AppState;
 use crate::worklog::model::{BragEntry, BulkUpdateEntries, CreateEntry, EntryType};
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::PeopleAlias;
-use crate::objectives::model::Priority;
+use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::cycle::model::{BragPhase, Week};
 use crate::kernel::error::AppError;
 use crate::kernel::serde_helpers::deserialize_optional_i64;
@@ -24,17 +24,19 @@ async fn build_entry_context(
     let user_crypto = state.crypto.for_user(user_id)?;
 
     let phase = BragPhase::get_active(&state.db, user_id).await?;
-    let (known_teams, priorities) = if let Some(ref p) = phase {
+    let (known_teams, priorities, dept_goals) = if let Some(ref p) = phase {
         let teams = BragEntry::distinct_teams_for_phase(&state.db, p.id, &user_crypto).await?;
         let pris = Priority::list_for_phase(&state.db, p.id, &user_crypto).await?;
-        (teams, pris)
+        let dgs = DepartmentGoal::list_for_phase(&state.db, p.id, &user_crypto).await?;
+        (teams, pris, dgs)
     } else {
-        (Vec::new(), Vec::new())
+        (Vec::new(), Vec::new(), Vec::new())
     };
 
     let mut ctx = tera::Context::new();
     ctx.insert("entry", entry);
     ctx.insert("priorities", &priorities);
+    ctx.insert("dept_goals", &dept_goals);
     ctx.insert("known_teams", &known_teams);
     ctx.insert("entry_types", &EntryType::as_json_options());
     ctx.insert("manual_entry_types", &EntryType::as_manual_json_options());

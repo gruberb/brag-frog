@@ -41,8 +41,23 @@
         <div class="quick-entry-meta">
             <select name="priority_id" class="form-select quick-entry-meta-field">
                 <option value="">Priority</option>
+                {% for dg in dept_goals %}
+                {% set_global has_priorities = false %}
+                {% for p in priorities %}{% if p.department_goal_id == dg.id %}{% set_global has_priorities = true %}{% endif %}{% endfor %}
+                {% if has_priorities %}
+                <optgroup label="{{ dg.title }}">
+                    {% for p in priorities %}
+                    {% if p.department_goal_id == dg.id %}
+                    <option value="{{ p.id }}">{{ p.title }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </optgroup>
+                {% endif %}
+                {% endfor %}
                 {% for p in priorities %}
+                {% if not p.department_goal_id %}
                 <option value="{{ p.id }}">{{ p.title }}</option>
+                {% endif %}
                 {% endfor %}
             </select>
 

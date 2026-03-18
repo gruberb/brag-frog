@@ -75,7 +75,7 @@ pub async fn dashboard(
 
     // Department goals + priorities for OKR snapshot
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
-    let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
+    let priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     // Only show active priorities in the dashboard sidebar widget
     let dashboard_priorities: Vec<Priority> = priorities

@@ -209,9 +209,30 @@
                             class="form-select form-select--sm"
                             name="priority_id">
                         <option value="">No priority</option>
+                        {% if dept_goals is defined %}
+                        {% for dg in dept_goals %}
+                        {% set_global has_priorities = false %}
+                        {% for p in priorities %}{% if p.department_goal_id == dg.id %}{% set_global has_priorities = true %}{% endif %}{% endfor %}
+                        {% if has_priorities %}
+                        <optgroup label="{{ dg.title }}">
+                            {% for p in priorities %}
+                            {% if p.department_goal_id == dg.id %}
+                            <option value="{{ p.id }}" {% if entry.priority_id and entry.priority_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </optgroup>
+                        {% endif %}
+                        {% endfor %}
+                        {% for p in priorities %}
+                        {% if not p.department_goal_id %}
+                        <option value="{{ p.id }}" {% if entry.priority_id and entry.priority_id == p.id %}selected{% endif %}>{{ p.title }}</option>
+                        {% endif %}
+                        {% endfor %}
+                        {% else %}
                         {% for p in priorities %}
                         <option value="{{ p.id }}" {% if entry.priority_id and entry.priority_id == p.id %}selected{% endif %}>{{ p.title }}</option>
                         {% endfor %}
+                        {% endif %}
                     </select>
                 </div>
                 {% endif %}

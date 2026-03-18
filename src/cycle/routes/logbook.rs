@@ -37,7 +37,7 @@ pub async fn logbook(
     };
 
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
-    let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
+    let priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     let today_str = chrono::Local::now().format("%Y-%m-%d").to_string();
 
@@ -240,7 +240,7 @@ pub async fn logbook_filtered_entries(
     };
     apply_in_memory_filters(&mut entries, &page_query);
 
-    let priorities = Priority::list_active_for_user(&state.db, auth.user_id, &auth.crypto).await?;
+    let priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     // Apply category filter in-memory
     if let Some(ref cat) = query.category

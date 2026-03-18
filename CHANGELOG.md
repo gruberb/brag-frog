@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [3.0.1] - 2026-03-18
+
+### Fixed
+- **Completed priorities missing from dropdowns.** Logbook filter, dashboard quick-add, and entry edit dropdowns now include all priorities regardless of status, not just active ones.
+- **Entry edit priority dropdown not grouped by goals.** The priority select when editing a logbook entry now uses `<optgroup>` headers to group priorities under their department goals, matching the logbook filter dropdown.
+
 ## [3.0.0] - 2026-03-13
 
 ### Changed
