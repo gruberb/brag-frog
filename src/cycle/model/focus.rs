@@ -16,6 +16,8 @@ pub struct WeeklyFocusRow {
     pub link_1: Option<String>,
     pub link_2: Option<String>,
     pub link_3: Option<String>,
+    pub notes: Option<Vec<u8>>,
+    pub completed: i64,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -33,6 +35,8 @@ pub struct WeeklyFocus {
     pub link_1: Option<String>,
     pub link_2: Option<String>,
     pub link_3: Option<String>,
+    pub notes: Option<String>,
+    pub completed: i64,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -50,6 +54,8 @@ impl WeeklyFocusRow {
             link_1: self.link_1,
             link_2: self.link_2,
             link_3: self.link_3,
+            notes: crypto.decrypt_opt(&self.notes)?,
+            completed: self.completed,
             created_at: self.created_at,
             updated_at: self.updated_at,
         })
@@ -67,6 +73,7 @@ pub struct CreateFocusParams<'a> {
     pub link_1: Option<&'a str>,
     pub link_2: Option<&'a str>,
     pub link_3: Option<&'a str>,
+    pub notes: Option<&'a str>,
 }
 
 /// Parameters for updating a weekly focus item.
@@ -77,6 +84,7 @@ pub struct UpdateFocusParams<'a> {
     pub link_1: Option<&'a str>,
     pub link_2: Option<&'a str>,
     pub link_3: Option<&'a str>,
+    pub notes: Option<&'a str>,
 }
 
 /// Join table linking a focus item to brag entries.

@@ -50,5 +50,8 @@ pub struct PeopleAlias {
     pub email: String,
     pub display_name: String,
     pub team: Option<String>,
+    pub relationship_type: Option<String>,
+    pub last_helped_at: Option<String>,
+    pub last_helped_by_at: Option<String>,
     pub created_at: String,
 }

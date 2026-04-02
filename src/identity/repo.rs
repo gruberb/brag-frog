@@ -136,6 +136,31 @@ impl PeopleAlias {
         Ok(())
     }
 
+    /// Returns aliases where `relationship_type` is set but the user hasn't
+    /// interacted (helped or been helped) in the given number of days.
+    pub async fn list_stale_relationships(
+        pool: &SqlitePool,
+        user_id: i64,
+        days: i64,
+    ) -> Result<Vec<Self>, AppError> {
+        let rows = sqlx::query_as::<_, PeopleAlias>(
+            r#"
+            SELECT * FROM people_aliases
+            WHERE user_id = ?
+              AND relationship_type IS NOT NULL
+              AND (last_helped_at IS NULL OR julianday('now') - julianday(last_helped_at) > ?)
+              AND (last_helped_by_at IS NULL OR julianday('now') - julianday(last_helped_by_at) > ?)
+            ORDER BY display_name
+            "#,
+        )
+        .bind(user_id)
+        .bind(days)
+        .bind(days)
+        .fetch_all(pool)
+        .await?;
+        Ok(rows)
+    }
+
     /// Builds a lookup map from lowercased email to display name.
     pub async fn alias_map(
         pool: &SqlitePool,

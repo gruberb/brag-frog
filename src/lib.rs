@@ -11,6 +11,8 @@ pub mod reflections;
 pub mod review;
 pub mod kernel;
 pub mod integrations;
+pub mod protocol;
+pub mod todos;
 
 use std::collections::HashMap;
 use std::sync::Arc;

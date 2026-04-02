@@ -93,9 +93,49 @@
         </div>
     </section>
 
+    <!-- Habit Tracker -->
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Habit Tracker</h2>
+
+        <div class="form-group">
+            <label class="form-label">Did you protect your non-negotiable blocks? (focus time, family, etc.)</label>
+            <div class="vibe-dots">
+                {% for i in [1, 2, 3, 4, 5] %}
+                <label class="vibe-dot-label">
+                    <input type="radio" name="protected_time" value="{{ i }}" {% if checkin and checkin.protected_time == i %}checked{% endif %}>
+                    <span class="vibe-dot">{{ i }}</span>
+                </label>
+                {% endfor %}
+            </div>
+            <span class="text-sm text-muted" style="margin-top:4px;display:block;">1 = not at all &middot; 5 = every day</span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Curiosity conversation — who did you talk to outside your team?</label>
+            <textarea name="curiosity_conversation" class="form-textarea" rows="2" placeholder="e.g. Had coffee with Sara from Design about the new onboarding flow">{% if checkin %}{{ checkin.curiosity_conversation | default(value="") }}{% endif %}</textarea>
+        </div>
+
+        <div class="form-row" style="gap:var(--space-8);">
+            <div class="form-group">
+                <label class="habit-check-label">
+                    <input type="hidden" name="communicated_blockers" value="0">
+                    <input type="checkbox" name="communicated_blockers" value="1" {% if checkin and checkin.communicated_blockers == 1 %}checked{% endif %}>
+                    <span>Communicated blockers as tradeoffs</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label class="habit-check-label">
+                    <input type="hidden" name="end_to_end_ownership" value="0">
+                    <input type="checkbox" name="end_to_end_ownership" value="1" {% if checkin and checkin.end_to_end_ownership == 1 %}checked{% endif %}>
+                    <span>Owned tasks end-to-end (manager didn't need to check in)</span>
+                </label>
+            </div>
+        </div>
+    </section>
+
     <div class="form-actions">
         <button type="submit" class="btn btn-primary">Save Reflection</button>
-        <a href="/checkins" class="btn btn-secondary">Cancel</a>
+        <a href="/checkins?tab=weekly" class="btn btn-secondary" onclick="window.location.href='/checkins?tab=weekly'; return false;">Cancel</a>
     </div>
 </form>
 
@@ -120,6 +160,26 @@
 }
 .vibe-dot:hover {
     border-color: var(--color-primary);
+}
+.habit-check-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+.habit-check-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+.checkin-habits-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
 }
 </style>
 {% endblock %}

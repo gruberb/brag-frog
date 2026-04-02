@@ -1,0 +1,38 @@
+<div class="panel-content">
+    <h2 class="section-title">Status Update</h2>
+    <p class="text-sm text-muted" style="margin-bottom:12px;">Draft a stakeholder update. Progress, blockers as tradeoffs, next week.</p>
+
+    <form hx-post="/status-update/{{ week_id }}/save" hx-swap="none">
+        <div class="form-group">
+            <textarea name="content" class="form-textarea" rows="16"
+                      placeholder="Generate a draft with AI, or write your own...">{% if status_update %}{{ status_update.content | default(value="") }}{% endif %}</textarea>
+        </div>
+        <div class="form-actions" style="display:flex;gap:8px;flex-wrap:wrap;">
+            {% if has_ai %}
+            <button type="button" class="btn btn-secondary btn-sm"
+                    hx-post="/status-update/{{ week_id }}/generate"
+                    hx-target="closest .panel-content"
+                    hx-swap="outerHTML"
+                    hx-indicator=".status-spinner">
+                Generate with AI
+            </button>
+            <span class="spinner hidden status-spinner"></span>
+            {% endif %}
+            <button type="submit" class="btn btn-primary btn-sm">Save Draft</button>
+            <button type="button" class="btn btn-text btn-sm" onclick="copyStatusUpdate(this)">Copy to clipboard</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function copyStatusUpdate(btn) {
+    var ta = btn.closest('.panel-content').querySelector('textarea');
+    if (ta) {
+        navigator.clipboard.writeText(ta.value).then(function() {
+            var orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(function() { btn.textContent = orig; }, 1500);
+        });
+    }
+}
+</script>

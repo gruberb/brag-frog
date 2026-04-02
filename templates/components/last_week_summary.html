@@ -1,0 +1,20 @@
+<div class="last-week-summary">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span class="text-sm text-muted">{{ week_start }} to {{ week_end }}</span>
+        <button type="button" class="btn btn-text btn-sm" onclick="copyLastWeekSummary(this)">Copy</button>
+    </div>
+    <div class="text-sm" style="white-space:pre-wrap;">{{ summary }}</div>
+</div>
+
+<script>
+function copyLastWeekSummary(btn) {
+    var el = btn.closest('.last-week-summary').querySelector('.text-sm:last-child');
+    if (el) {
+        navigator.clipboard.writeText(el.textContent.trim()).then(function() {
+            var orig = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(function() { btn.textContent = orig; }, 1500);
+        });
+    }
+}
+</script>

@@ -84,18 +84,6 @@ pub async fn dashboard(
         .cloned()
         .collect();
 
-    // Check-in status for this week
-    let checkin = crate::reflections::model::WeeklyCheckin::find_for_week(
-        &state.db,
-        current_week.id,
-        auth.user_id,
-        &auth.crypto,
-    )
-    .await?;
-    let checkin_done = checkin.is_some();
-    let checkin_energy = checkin.as_ref().and_then(|c| c.energy_level);
-    let checkin_productivity = checkin.as_ref().and_then(|c| c.productivity_rating);
-
     // Weekly focus items (up to 3)
     let focus_items = crate::cycle::model::WeeklyFocus::list_for_week(
         &state.db,
@@ -112,6 +100,19 @@ pub async fn dashboard(
             crate::cycle::model::WeeklyFocusEntry::list_for_focus(&state.db, focus.id).await?;
         focus_entry_ids.push(entries.iter().map(|e| e.entry_id).collect());
     }
+
+    // Carryover: incomplete focus items from previous week
+    let carryover_items = crate::cycle::model::WeeklyFocus::list_incomplete_for_previous_week(
+        &state.db,
+        auth.user_id,
+        current_week.id,
+        &auth.crypto,
+    )
+    .await
+    .unwrap_or_default();
+
+    // AI availability for "What did I do last week?" button
+    let has_ai = crate::ai::helpers::has_ai_for_user(&state, auth.user_id).await;
 
     // All non-deleted entries from the entire phase (for focus entry picker)
     let all_phase_entries = BragEntry::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
@@ -134,6 +135,15 @@ pub async fn dashboard(
     let has_tickets = configs.iter().any(|c| {
         (c.service == "bugzilla" || c.service == "atlassian") && c.encrypted_token.is_some()
     });
+
+    // Unresolved blocker count for priorities sidebar
+    let unresolved_blockers =
+        crate::objectives::model::PriorityUpdate::count_unresolved_blockers(
+            &state.db,
+            auth.user_id,
+        )
+        .await
+        .unwrap_or(0);
 
     // Week calendar widget with focus blocks
     let work_start = user.work_start_time.as_deref().unwrap_or("09:00");
@@ -159,9 +169,9 @@ pub async fn dashboard(
     ctx.insert("has_calendar", &has_calendar);
     ctx.insert("has_code_review", &has_code_review);
     ctx.insert("has_tickets", &has_tickets);
-    ctx.insert("checkin_done", &checkin_done);
-    ctx.insert("checkin_energy", &checkin_energy);
-    ctx.insert("checkin_productivity", &checkin_productivity);
+    ctx.insert("carryover_items", &carryover_items);
+    ctx.insert("has_ai", &has_ai);
+    ctx.insert("unresolved_blockers", &unresolved_blockers);
     ctx.insert("focus_days", &focus_days);
     ctx.insert("current_page", "dashboard");
     ctx.insert("today", &today_str);
@@ -184,6 +194,9 @@ pub struct FocusForm {
     /// Comma-separated entry IDs (from hidden input built by JS).
     #[serde(default)]
     pub entry_ids: Option<String>,
+    /// Planning notes / task breakdown for this focus item.
+    #[serde(default)]
+    pub notes: Option<String>,
 }
 
 impl FocusForm {
@@ -239,6 +252,7 @@ pub async fn create_focus(
             link_1: None,
             link_2: None,
             link_3: None,
+            notes: input.notes.as_deref(),
         },
         &auth.crypto,
     )
@@ -272,6 +286,7 @@ pub async fn update_focus(
             link_1: None,
             link_2: None,
             link_3: None,
+            notes: input.notes.as_deref(),
         },
         &auth.crypto,
     )
@@ -291,4 +306,99 @@ pub async fn delete_focus(
 ) -> Result<impl IntoResponse, AppError> {
     crate::cycle::model::WeeklyFocus::delete(&state.db, focus_id, auth.user_id).await?;
     Ok(hx_redirect("/dashboard"))
+}
+
+/// POST /focus/{focus_id}/toggle — toggle completion status.
+pub async fn toggle_focus_complete(
+    auth: AuthUser,
+    State(state): State<AppState>,
+    Path(focus_id): Path<i64>,
+) -> Result<impl IntoResponse, AppError> {
+    crate::cycle::model::WeeklyFocus::toggle_completed(&state.db, focus_id, auth.user_id).await?;
+    Ok(hx_redirect("/dashboard"))
+}
+
+/// POST /dashboard/last-week-summary — AI-generate a summary of last week's work.
+pub async fn last_week_summary(
+    auth: AuthUser,
+    State(state): State<AppState>,
+) -> Result<Html<String>, AppError> {
+    let phase = crate::cycle::model::BragPhase::get_active(&state.db, auth.user_id)
+        .await?
+        .ok_or(AppError::BadRequest("No active phase".into()))?;
+
+    let now = Local::now().naive_local().date();
+    let current_week =
+        crate::cycle::model::Week::find_or_create_for_date(&state.db, phase.id, now).await?;
+
+    // Previous week date range: go back 7 days from current week start
+    let prev_start = chrono::NaiveDate::parse_from_str(&current_week.start_date, "%Y-%m-%d")
+        .map(|d| d - chrono::Duration::days(7))
+        .map(|d| d.format("%Y-%m-%d").to_string())
+        .unwrap_or_else(|_| current_week.start_date.clone());
+    let prev_end = chrono::NaiveDate::parse_from_str(&current_week.start_date, "%Y-%m-%d")
+        .map(|d| d - chrono::Duration::days(1))
+        .map(|d| d.format("%Y-%m-%d").to_string())
+        .unwrap_or_else(|_| current_week.start_date.clone());
+
+    // Fetch previous week's data
+    let entries = BragEntry::list_for_phase_in_range(
+        &state.db,
+        phase.id,
+        &prev_start,
+        &prev_end,
+        &auth.crypto,
+    )
+    .await?;
+
+    // Previous week's focus items (find by date)
+    let prev_week = crate::cycle::model::Week::find_or_create_for_date(
+        &state.db,
+        phase.id,
+        chrono::NaiveDate::parse_from_str(&prev_start, "%Y-%m-%d")
+            .unwrap_or(now - chrono::Duration::days(7)),
+    )
+    .await?;
+
+    let focus_items = crate::cycle::model::WeeklyFocus::list_for_week(
+        &state.db,
+        prev_week.id,
+        auth.user_id,
+        &auth.crypto,
+    )
+    .await?;
+
+    let priorities =
+        crate::objectives::model::Priority::list_for_phase(&state.db, phase.id, &auth.crypto)
+            .await?;
+
+    let checkin = crate::reflections::model::WeeklyCheckin::find_for_week(
+        &state.db,
+        prev_week.id,
+        auth.user_id,
+        &auth.crypto,
+    )
+    .await?;
+
+    let prompt = crate::ai::prompts::build_last_week_summary_prompt(
+        &entries,
+        &focus_items,
+        &priorities,
+        checkin.as_ref(),
+        &prev_start,
+        &prev_end,
+    );
+
+    let ai = crate::ai::helpers::get_ai_client(&state, auth.user_id).await?;
+    let generated = ai.generate(&prompt).await?;
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("summary", &generated);
+    ctx.insert("week_start", &prev_start);
+    ctx.insert("week_end", &prev_end);
+
+    let html = state
+        .templates
+        .render("components/last_week_summary.html", &ctx)?;
+    Ok(Html(html))
 }

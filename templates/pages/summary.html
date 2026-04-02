@@ -29,31 +29,70 @@
     <h3 class="section-title" style="margin:0 0 12px 0;">Cycle Timeline</h3>
     <div class="cycle-quarters-grid">
         {% for q in quarters %}
-        {% if q.is_review %}
-        <div class="cycle-quarter-card cycle-quarter-card--review" style="cursor:pointer;" onclick="document.getElementById('self-review-sections').scrollIntoView({behavior:'smooth'})">
+        <div class="cycle-quarter-card {% if q.is_review %}cycle-quarter-card--review{% endif %}"
+             style="cursor:pointer;"
+             onclick="selectQuarter(this, {{ q.is_review }}, '{{ q.quarter }}', '{{ q.year }}')">
             <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
                 <h4 style="margin:0;white-space:nowrap;">{{ q.quarter }} {{ q.year }}</h4>
-            </div>
-            <p class="text-sm" style="margin:0;font-weight:600;">{{ q.label }}</p>
-        </div>
-        {% else %}
-        <div class="cycle-quarter-card" style="cursor:pointer;"
-             onclick="openPanelFromUrl('{{ q.quarter }} {{ q.year }} Conversation Prep', '/quarterly-checkin/{{ q.quarter }}/{{ q.year }}/panel')">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
-                <h4 style="margin:0;white-space:nowrap;">{{ q.quarter }} {{ q.year }}</h4>
+                {% if not q.is_review %}
                 {% if q.has_data %}
                 <span class="badge" style="background:var(--color-success);color:#fff;font-size:0.65rem;white-space:nowrap;">Completed</span>
                 {% else %}
                 <span class="badge" style="font-size:0.65rem;white-space:nowrap;">Not started</span>
                 {% endif %}
+                {% endif %}
             </div>
-            <p class="text-sm text-muted" style="margin:0;">Conversation prep</p>
+            <p class="text-sm {% if not q.is_review %}text-muted{% endif %}" style="margin:0;{% if q.is_review %}font-weight:600;{% endif %}">{{ q.label }}</p>
         </div>
-        {% endif %}
         {% endfor %}
     </div>
 </div>
 {% endif %}
+
+<!-- Inline quarterly conversation prep (loaded via HTMX when a prep quarter is clicked) -->
+<div id="quarterly-prep-content" class="card" style="margin-bottom:16px;display:none;"></div>
+
+<script>
+var _initialLoad = true;
+function selectQuarter(card, isReview, quarter, year) {
+    // Update active state on all cards
+    document.querySelectorAll('.cycle-quarter-card').forEach(function(c) {
+        c.classList.remove('cycle-quarter-card--active');
+    });
+    card.classList.add('cycle-quarter-card--active');
+
+    var prepEl = document.getElementById('quarterly-prep-content');
+    var reviewEl = document.getElementById('review-content');
+    var shouldScroll = !_initialLoad;
+    _initialLoad = false;
+
+    if (isReview) {
+        // Review quarter: hide prep, show review sections
+        prepEl.innerHTML = '';
+        prepEl.style.display = 'none';
+        reviewEl.style.display = '';
+        if (shouldScroll) reviewEl.scrollIntoView({behavior: 'smooth'});
+    } else {
+        // Conversation prep quarter: hide review, load form inline
+        reviewEl.style.display = 'none';
+        prepEl.style.display = '';
+        htmx.ajax('GET', '/quarterly-checkin/' + quarter + '/' + year + '/panel', {
+            target: '#quarterly-prep-content',
+            swap: 'innerHTML'
+        }).then(function() {
+            if (shouldScroll) prepEl.scrollIntoView({behavior: 'smooth', block: 'start'});
+        });
+    }
+}
+// Auto-select the first quarter card on page load
+document.addEventListener('DOMContentLoaded', function() {
+    var first = document.querySelector('.cycle-quarter-card');
+    if (first) first.click();
+});
+</script>
+
+<!-- Review content (contribution examples + narrative sections) — hidden until a review quarter is selected -->
+<div id="review-content" style="display:none;">
 
 <!-- Contribution Examples -->
 <div id="self-review-sections" class="card" style="margin-bottom:16px;">
@@ -127,6 +166,8 @@
     {% endfor %}
 </div>
 
+</div><!-- end #review-content -->
+
 <script>
 function copyExampleToClipboard(exampleId) {
     var card = document.getElementById('example-' + exampleId);
@@ -172,6 +213,9 @@ function copyExampleToClipboard(exampleId) {
     border-color: var(--color-primary);
 }
 .cycle-quarter-card--review {
+    border-color: var(--color-gray-30);
+}
+.cycle-quarter-card--active {
     border-color: var(--color-primary);
     background: var(--color-secondary-bg);
 }

@@ -9,6 +9,9 @@ pub struct CheckinSection {
     pub title: String,
     pub weekly_question: String,
     pub quarterly_question: String,
+    /// Title override for quarterly context (falls back to `title` if absent).
+    #[serde(default)]
+    pub quarterly_title: Option<String>,
     #[serde(default)]
     pub quarterly_optional: Option<String>,
     #[serde(default)]

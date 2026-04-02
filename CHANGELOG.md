@@ -2,6 +2,31 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [4.0.0] - 2026-04-02
+
+### Added
+- **10x Engineer habits framework.** Weekly reflection reworded around ownership, blockers-as-tradeoffs, relationships, giving, and weekly planning. Habit tracker added (boundary protection, curiosity conversations, blocker communication, end-to-end ownership).
+- **Enhanced weekly focus.** Focus items now support planning notes (task breakdown), completion toggles with strikethrough, and carryover suggestions from the previous week's incomplete items.
+- **Tradeoff-framed blocker log.** Priority updates can be flagged as blockers with a structured tradeoff template ("We can [A] if [sacrifice], or [B] but [consequence]"). Unresolved blocker count shown on dashboard.
+- **"What did I do last week?" AI summary.** Button on dashboard generates a structured summary (What Shipped, What Progressed, Key Meetings, Help Given) from last week's entries, focus items, and priorities.
+- **Stakeholder status update composer.** Slide-over panel with AI-generated or manual status updates (Progress, Blockers as Tradeoffs, Next Week). Drafts saved per week, copy-to-clipboard for Slack/email.
+- **Relationship health tracking.** People aliases now track relationship type (peer, cross-team, PM, designer, stakeholder) and last interaction dates. Stale relationships (30+ days) surfaced in monthly check-ins.
+- **Monthly growth check-in.** New monthly reflection with four sections: Learning or Coasting, Reconnect List (auto-populated from stale relationships), Energy & Sustainability (trend from recent weeks), What Can You Let Go.
+- **10x Protocol page.** Standalone page with article summary and 14-item weekly checklist grouped by Monday/Daily/Mid-week/Friday/Monthly. Persisted per week with clear-all reset.
+- **Todos page.** Personal task list with encrypted titles, completion toggle, and delete. Completed items shown in collapsible section.
+- **Reflections page tabs.** Weekly and Monthly reflections in one tabbed view with full CRUD for both.
+
+### Changed
+- **Dashboard simplified.** Removed weekly reflection card and monthly check-in prompt. Focus section is now standalone with Status Update and Last Week buttons in header.
+- **Review page quarter cards.** All quarter cards now behave consistently — clicking loads content inline (conversation prep or review sections). First quarter auto-selected on page load.
+- **Quarterly prep section titles.** New `quarterly_title` field in config prevents weekly titles ("Next Week") from appearing in quarterly context. Quarterly titles: Impact & Outcomes, Lessons & Adjustments, Growth & Relationships, Contributions & Collaboration, Looking Ahead.
+- **Sidebar navigation.** Added 10x Protocol (clipboard-check icon) and Todos (checkmark icon) between Priorities and Reflections. Reflections icon changed to book.
+
+### Fixed
+- **Select dropdown arrows missing.** Added explicit `appearance: auto` to `.form-select`.
+- **Cancel buttons on reflection forms.** Now use direct navigation to bypass HTMX form interception.
+- **Nudge bar dismiss.** Removed nudges from dashboard entirely; guidance moved to 10x Protocol checklist.
+
 ## [3.0.1] - 2026-03-18
 
 ### Fixed

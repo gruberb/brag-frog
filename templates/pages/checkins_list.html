@@ -4,19 +4,29 @@
 <div class="page-header">
     <div class="page-header-inner">
         <h1>Reflections</h1>
-        <p class="page-subtitle">Your weekly reflections</p>
+        <p class="page-subtitle">Weekly and monthly reflections</p>
         <div class="page-header-actions">
-            {% if current_week %}
-            <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm">Add Reflection</a>
+            {% if tab == "monthly" %}
+            <a href="/monthly-checkin/{{ current_month }}/{{ current_year }}" class="btn btn-primary btn-sm">Add Monthly Check-in</a>
+            {% elif current_week %}
+            <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm">Add Weekly Reflection</a>
             {% endif %}
         </div>
     </div>
 </div>
 
+<!-- Tabs -->
+<div class="tab-bar">
+    <a href="/checkins?tab=weekly" class="tab-item {% if tab == 'weekly' %}tab-item--active{% endif %}">Weekly</a>
+    <a href="/checkins?tab=monthly" class="tab-item {% if tab == 'monthly' %}tab-item--active{% endif %}">Monthly</a>
+</div>
+
+{% if tab == "weekly" %}
+<!-- Weekly reflections list -->
 {% if checkins | length == 0 %}
 <div class="card empty-state">
     <div class="pixel-frog-watermark"></div>
-    <h2>No reflections yet</h2>
+    <h2>No weekly reflections yet</h2>
     <p>Add your first weekly reflection to see it here.</p>
     {% if current_week %}
     <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm" style="margin-top:12px;">Add Reflection</a>
@@ -48,32 +58,43 @@
         <div class="checkin-card-body">
             {% if checkin.highlights_impact %}
             <div class="checkin-field">
-                <label class="form-label">Highlights & Impact</label>
+                <label class="form-label">Ownership & Impact</label>
                 <p class="text-sm">{{ checkin.highlights_impact }}</p>
             </div>
             {% endif %}
             {% if checkin.learnings_adjustments %}
             <div class="checkin-field">
-                <label class="form-label">Learnings & Adjustments</label>
+                <label class="form-label">Blockers & Tradeoffs</label>
                 <p class="text-sm">{{ checkin.learnings_adjustments }}</p>
             </div>
             {% endif %}
             {% if checkin.growth_development %}
             <div class="checkin-field">
-                <label class="form-label">Growth & Development</label>
+                <label class="form-label">Relationships & Curiosity</label>
                 <p class="text-sm">{{ checkin.growth_development }}</p>
             </div>
             {% endif %}
             {% if checkin.support_feedback %}
             <div class="checkin-field">
-                <label class="form-label">Support & Feedback</label>
+                <label class="form-label">Giving & Helping</label>
                 <p class="text-sm">{{ checkin.support_feedback }}</p>
             </div>
             {% endif %}
             {% if checkin.looking_ahead %}
             <div class="checkin-field">
-                <label class="form-label">Looking Ahead</label>
+                <label class="form-label">Next Week</label>
                 <p class="text-sm">{{ checkin.looking_ahead }}</p>
+            </div>
+            {% endif %}
+            {% if checkin.protected_time or checkin.curiosity_conversation or checkin.communicated_blockers == 1 or checkin.end_to_end_ownership == 1 %}
+            <div class="checkin-field">
+                <label class="form-label">Habit Tracker</label>
+                <div class="checkin-habits-summary">
+                    {% if checkin.protected_time %}<span class="badge badge-type">Boundaries: {{ checkin.protected_time }}/5</span>{% endif %}
+                    {% if checkin.curiosity_conversation %}<span class="badge badge-type">Curiosity: {{ checkin.curiosity_conversation }}</span>{% endif %}
+                    {% if checkin.communicated_blockers == 1 %}<span class="badge badge-status badge-status--completed">Communicated blockers</span>{% endif %}
+                    {% if checkin.end_to_end_ownership == 1 %}<span class="badge badge-status badge-status--completed">Owned E2E</span>{% endif %}
+                </div>
             </div>
             {% endif %}
             <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
@@ -88,7 +109,94 @@
 </div>
 {% endif %}
 
+{% elif tab == "monthly" %}
+<!-- Monthly check-ins list -->
+{% if monthly_checkins | length == 0 %}
+<div class="card empty-state">
+    <div class="pixel-frog-watermark"></div>
+    <h2>No monthly check-ins yet</h2>
+    <p>Monthly check-ins help you reflect on the bigger picture.</p>
+    <a href="/monthly-checkin/{{ current_month }}/{{ current_year }}" class="btn btn-primary btn-sm" style="margin-top:12px;">Add Monthly Check-in</a>
+</div>
+{% else %}
+<div class="checkins-list">
+    {% for mc in monthly_checkins %}
+    <details class="card checkin-card">
+        <summary class="checkin-card-summary">
+            <div class="checkin-card-info">
+                <span class="checkin-card-week">
+                    {% if mc.month == 1 %}January{% elif mc.month == 2 %}February{% elif mc.month == 3 %}March{% elif mc.month == 4 %}April{% elif mc.month == 5 %}May{% elif mc.month == 6 %}June{% elif mc.month == 7 %}July{% elif mc.month == 8 %}August{% elif mc.month == 9 %}September{% elif mc.month == 10 %}October{% elif mc.month == 11 %}November{% elif mc.month == 12 %}December{% endif %} {{ mc.year }}
+                </span>
+            </div>
+            <div class="checkin-card-meta">
+                {% if mc.learning_or_coasting %}
+                <span class="text-sm text-muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ mc.learning_or_coasting | truncate(length=60) }}</span>
+                {% endif %}
+                <span class="intg-card-chevron">&#9656;</span>
+            </div>
+        </summary>
+        <div class="checkin-card-body">
+            {% if mc.learning_or_coasting %}
+            <div class="checkin-field">
+                <label class="form-label">Learning or Coasting?</label>
+                <p class="text-sm">{{ mc.learning_or_coasting }}</p>
+            </div>
+            {% endif %}
+            {% if mc.reconnect_list %}
+            <div class="checkin-field">
+                <label class="form-label">Reconnect List</label>
+                <p class="text-sm">{{ mc.reconnect_list }}</p>
+            </div>
+            {% endif %}
+            {% if mc.energy_trend_note %}
+            <div class="checkin-field">
+                <label class="form-label">Energy & Sustainability</label>
+                <p class="text-sm">{{ mc.energy_trend_note }}</p>
+            </div>
+            {% endif %}
+            {% if mc.letting_go %}
+            <div class="checkin-field">
+                <label class="form-label">What Can You Let Go?</label>
+                <p class="text-sm">{{ mc.letting_go }}</p>
+            </div>
+            {% endif %}
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                <a href="/monthly-checkin/{{ mc.month }}/{{ mc.year }}" class="btn btn-text btn-sm">Edit</a>
+                <button class="btn btn-text btn-sm" style="color:var(--color-danger);"
+                        hx-delete="/monthly-checkin/{{ mc.month }}/{{ mc.year }}"
+                        hx-confirm="Delete this monthly check-in? This cannot be undone.">Delete</button>
+            </div>
+        </div>
+    </details>
+    {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+
 <style>
+.tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--color-border);
+    margin-bottom: 16px;
+}
+.tab-item {
+    padding: 8px 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all var(--transition-fast);
+}
+.tab-item:hover {
+    color: var(--color-text);
+}
+.tab-item--active {
+    color: var(--color-text);
+    border-bottom-color: var(--color-primary);
+}
 .checkins-list {
     display: flex;
     flex-direction: column;
@@ -138,6 +246,12 @@
 .checkin-field p {
     margin: 0;
     white-space: pre-wrap;
+}
+.checkin-habits-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
 }
 </style>
 {% endblock %}

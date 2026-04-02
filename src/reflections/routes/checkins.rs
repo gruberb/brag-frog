@@ -1,6 +1,6 @@
 use axum::{
     Form,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::{Html, IntoResponse},
 };
 
@@ -10,10 +10,12 @@ use crate::identity::model::User;
 use crate::objectives::model::Priority;
 use crate::cycle::model::{BragPhase, Week};
 use crate::reflections::model::{
-    QuarterlyCheckin, SaveCheckin, SaveQuarterlyCheckin, WeeklyCheckin,
+    MonthlyCheckin, QuarterlyCheckin, SaveCheckin, SaveQuarterlyCheckin, WeeklyCheckin,
 };
 use crate::kernel::error::AppError;
 use crate::kernel::render::hx_redirect;
+
+use chrono::Datelike;
 
 /// Renders the weekly check-in page for a specific week.
 pub async fn checkin_page(
@@ -53,10 +55,17 @@ pub async fn checkin_page(
     Ok(Html(html))
 }
 
-/// Weekly reflections history page.
+#[derive(Debug, serde::Deserialize)]
+pub struct CheckinsQuery {
+    #[serde(default)]
+    pub tab: Option<String>,
+}
+
+/// Weekly and monthly reflections history page with tabs.
 pub async fn checkins_list(
     auth: AuthUser,
     State(state): State<AppState>,
+    Query(query): Query<CheckinsQuery>,
 ) -> Result<Html<String>, AppError> {
     let user = User::find_by_id(&state.db, auth.user_id)
         .await?
@@ -73,11 +82,23 @@ pub async fn checkins_list(
         None
     };
 
+    let tab = query.tab.as_deref().unwrap_or("weekly");
+    let monthly_checkins =
+        MonthlyCheckin::list_for_user(&state.db, auth.user_id, &auth.crypto).await?;
+
+    let now = chrono::Local::now();
+    let current_month = now.month() as i64;
+    let current_year = now.year() as i64;
+
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
     ctx.insert("checkins", &checkins);
     ctx.insert("current_week", &current_week);
+    ctx.insert("tab", tab);
+    ctx.insert("monthly_checkins", &monthly_checkins);
+    ctx.insert("current_month", &current_month);
+    ctx.insert("current_year", &current_year);
     ctx.insert("current_page", "checkins");
 
     let html = state.templates.render("pages/checkins_list.html", &ctx)?;

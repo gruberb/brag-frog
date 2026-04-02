@@ -1,58 +1,63 @@
-# Check-in section configuration.
-# Same sections used for weekly (lightweight) and quarterly (synthesized).
+# Check-in section configuration — 10x Engineer Habits framework.
+# Same slugs used for weekly (lightweight) and quarterly (synthesized).
 # Override via custom/checkin_sections.toml.
 
 [[sections]]
 slug = "highlights_impact"
-title = "Highlights & Impact"
-weekly_question = "What outcomes or progress are you most proud of this week?"
-quarterly_question = "What outcomes or progress are you most proud of this quarter, and how did your work contribute to team or organizational outcomes? Which skills or behaviors supported that impact?"
-ai_prompt = """Synthesize the weekly highlights into a quarterly narrative. Focus on:
-- Concrete outcomes and their impact on team/org goals
-- Behaviors and skills demonstrated
-- Instances of elevating others' work
+title = "Ownership & Impact"
+quarterly_title = "Impact & Outcomes"
+weekly_question = "What did you own end-to-end this week? What outcomes moved the needle?"
+quarterly_question = "What did you own end-to-end this quarter? Which outcomes had the greatest impact on team or organizational goals, and what did your ownership look like in practice?"
+ai_prompt = """Synthesize the weekly ownership and impact entries into a quarterly narrative. Focus on:
+- Concrete outcomes owned end-to-end and their impact on team/org goals
+- Evidence of proactive ownership (finding blockers, resolving dependencies, keeping stakeholders informed)
+- Instances where the user drove results without needing management oversight
 Use first person. Be specific and evidence-based."""
 
 [[sections]]
 slug = "learnings_adjustments"
-title = "Learnings & Adjustments"
-weekly_question = "What have you learned or observed this week?"
-quarterly_question = "What have you learned or observed recently—from feedback, results, or experiences—and how might that shape what you continue, start, or adjust next quarter?"
-ai_prompt = """Synthesize weekly learnings into quarterly themes. Focus on:
-- Patterns in feedback received or observations made
-- Concrete adjustments made in response to learnings
-- How these learnings connect to broader growth
-Use first person. Be reflective and forward-looking."""
+title = "Blockers & Tradeoffs"
+quarterly_title = "Lessons & Adjustments"
+weekly_question = "What blockers did you hit? How did you frame them for stakeholders?"
+quarterly_question = "What were the biggest blockers or tradeoffs you navigated this quarter? How did you communicate constraints and options to stakeholders?"
+ai_prompt = """Synthesize weekly blockers and tradeoff entries into quarterly themes. Focus on:
+- Patterns in how the user communicated constraints and options
+- Evidence of framing delays as tradeoffs rather than surprises
+- Proactive stakeholder communication and expectation management
+Use first person. Be reflective about communication growth."""
 
 [[sections]]
 slug = "growth_development"
-title = "Growth & Development"
-weekly_question = "What skills or areas did you stretch this week?"
-quarterly_question = "Looking at the skills most relevant to your role, what experiences, projects, or responsibilities would stretch or strengthen your growth next quarter?"
-ai_prompt = """Synthesize weekly growth moments into a quarterly development narrative. Focus on:
-- Skills that were stretched or strengthened
-- Specific projects or experiences that drove growth
-- Connection to role expectations and career goals
-Use first person. Be specific about growth areas."""
+title = "Relationships & Curiosity"
+quarterly_title = "Growth & Relationships"
+weekly_question = "Who did you talk to outside your team? What did you learn from a PM, designer, or engineer?"
+quarterly_question = "What cross-team relationships did you build or strengthen this quarter? What did you learn by engaging with people outside your immediate team?"
+ai_prompt = """Synthesize weekly relationship and curiosity entries into a quarterly narrative. Focus on:
+- Cross-team relationships built or strengthened
+- Insights gained from PMs, designers, or engineers on other teams
+- How curiosity-driven conversations influenced work or decisions
+Use first person. Highlight the value of cross-functional engagement."""
 
 [[sections]]
 slug = "support_feedback"
-title = "Support & Feedback"
-weekly_question = "What support or feedback would help you have greater impact?"
-quarterly_question = "What support, feedback, or resources would help you have a greater impact next quarter? Are there ways we could improve how we collaborate or communicate as a team?"
-ai_prompt = """Synthesize weekly support needs into quarterly themes. Focus on:
-- Recurring patterns in what support would help
-- Collaboration or communication improvements
-- Resource or tooling needs
-Use first person. Be constructive and specific."""
+title = "Giving & Helping"
+quarterly_title = "Contributions & Collaboration"
+weekly_question = "Who did you help this week? How did you invest in professional relationships?"
+quarterly_question = "How did you help others this quarter? What professional relationships did you invest in, and how did that give-and-take shape your effectiveness?"
+ai_prompt = """Synthesize weekly helping and relationship entries into quarterly themes. Focus on:
+- Patterns of helping others (unblocking, mentoring, reviewing, collaborating)
+- Give-and-take dynamics in professional relationships
+- How investing in others amplified the user's own effectiveness
+Use first person. Be specific about contributions to others."""
 
 [[sections]]
 slug = "looking_ahead"
-title = "Looking Ahead"
-weekly_question = "What are you most focused on next week?"
-quarterly_question = "What areas or initiatives are you most energized to focus on next quarter? Where would alignment with your manager or team be most valuable?"
-ai_prompt = """Synthesize weekly focus areas into a quarterly forward look. Focus on:
-- Key initiatives and why they matter
-- Areas where manager/team alignment would help
-- Connection to team or organizational priorities
+title = "Next Week"
+quarterly_title = "Looking Ahead"
+weekly_question = "What are your #1, #2, #3 for next week? What do stakeholders need to know?"
+quarterly_question = "What are your top priorities for next quarter? What do stakeholders need to know about your focus and any upcoming tradeoffs?"
+ai_prompt = """Synthesize weekly planning entries into a quarterly forward look. Focus on:
+- Key priorities and why they matter to the team and organization
+- Stakeholder communication needs and upcoming tradeoffs
+- Connection between weekly focus areas and larger strategic goals
 Use first person. Be energized and strategic."""

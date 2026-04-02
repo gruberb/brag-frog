@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Monthly Growth Check-in — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Monthly Growth Check-in</h1>
+    <p class="page-subtitle">
+        {% if month == 1 %}January{% elif month == 2 %}February{% elif month == 3 %}March{% elif month == 4 %}April{% elif month == 5 %}May{% elif month == 6 %}June{% elif month == 7 %}July{% elif month == 8 %}August{% elif month == 9 %}September{% elif month == 10 %}October{% elif month == 11 %}November{% elif month == 12 %}December{% endif %} {{ year }}
+    </p>
+</div>
+
+<form hx-post="/monthly-checkin/{{ month }}/{{ year }}" hx-swap="none">
+    <!-- Energy Trend -->
+    {% if energy_trend | length > 0 %}
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Energy Trend</h2>
+        <div style="display:flex;gap:16px;align-items:flex-end;">
+            {% for week in energy_trend %}
+            <div style="text-align:center;">
+                <div style="font-size:1.5rem;font-weight:700;color:{% if week.energy %}{% if week.energy >= 4 %}var(--color-success){% elif week.energy >= 3 %}var(--color-warning){% else %}var(--color-primary){% endif %}{% else %}var(--color-text-secondary){% endif %};">
+                    {% if week.energy %}{{ week.energy }}/5{% else %}&mdash;{% endif %}
+                </div>
+                <div class="text-sm text-muted">W{{ week.week }}</div>
+                {% if week.productivity %}
+                <div class="text-sm text-muted" style="font-size:0.65rem;">prod: {{ week.productivity }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% if energy_trend | length < 2 %}
+        <p class="text-sm text-muted" style="margin-top:8px;">Complete more weekly reflections to see your energy trend over time.</p>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- Learning or Coasting? -->
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Learning or Coasting?</h2>
+        <div class="form-group">
+            <label class="form-label">Am I learning something new, or coasting? What would help me grow?</label>
+            <textarea name="learning_or_coasting" class="form-textarea" rows="4"
+                      placeholder="Reflect on your growth this month...">{% if checkin %}{{ checkin.learning_or_coasting | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <!-- Reconnect List -->
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Reconnect List</h2>
+        {% if stale_relationships | length > 0 %}
+        <div style="margin-bottom:12px;">
+            <span class="text-sm text-muted">People you haven't interacted with in 30+ days:</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                {% for person in stale_relationships %}
+                <span class="badge badge-type">{{ person.display_name }}{% if person.relationship_type %} ({{ person.relationship_type }}){% endif %}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="form-group">
+            <label class="form-label">Who should you reconnect with? Any relationships to invest in?</label>
+            <textarea name="reconnect_list" class="form-textarea" rows="3"
+                      placeholder="List people you want to reach out to...">{% if checkin %}{{ checkin.reconnect_list | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <!-- Energy Trend Note -->
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">Energy & Sustainability</h2>
+        <div class="form-group">
+            <label class="form-label">How is your energy trending? Are your boundaries working? Anything to adjust?</label>
+            <textarea name="energy_trend_note" class="form-textarea" rows="3"
+                      placeholder="Reflect on your energy and sustainability...">{% if checkin %}{{ checkin.energy_trend_note | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <!-- Letting Go -->
+    <section class="card" style="margin-bottom:16px;">
+        <h2 class="section-title">What Can You Let Go?</h2>
+        <div class="form-group">
+            <label class="form-label">Any ongoing conflicts, frustrations, or commitments that aren't serving you? Time to let go?</label>
+            <textarea name="letting_go" class="form-textarea" rows="3"
+                      placeholder="What should you stop doing or worrying about?">{% if checkin %}{{ checkin.letting_go | default(value="") }}{% endif %}</textarea>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Monthly Check-in</button>
+        <a href="/checkins?tab=monthly" class="btn btn-secondary" onclick="window.location.href='/checkins?tab=monthly'; return false;">Cancel</a>
+    </div>
+</form>
+{% endblock %}

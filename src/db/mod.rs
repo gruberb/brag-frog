@@ -119,6 +119,30 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "014_priority_updates",
         include_str!("../../migrations/014_priority_updates.sql"),
     ),
+    (
+        "015_checkin_habit_fields",
+        include_str!("../../migrations/015_checkin_habit_fields.sql"),
+    ),
+    (
+        "016_focus_enhancements",
+        include_str!("../../migrations/016_focus_enhancements.sql"),
+    ),
+    (
+        "017_priority_update_blockers",
+        include_str!("../../migrations/017_priority_update_blockers.sql"),
+    ),
+    (
+        "018_status_updates",
+        include_str!("../../migrations/018_status_updates.sql"),
+    ),
+    (
+        "019_relationship_and_monthly",
+        include_str!("../../migrations/019_relationship_and_monthly.sql"),
+    ),
+    (
+        "020_protocol_and_todos",
+        include_str!("../../migrations/020_protocol_and_todos.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.

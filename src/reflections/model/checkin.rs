@@ -17,6 +17,11 @@ pub struct WeeklyCheckinRow {
     pub looking_ahead: Option<Vec<u8>>,
     pub energy_level: Option<i64>,
     pub productivity_rating: Option<i64>,
+    // Habit tracker fields (migration 015)
+    pub protected_time: Option<i64>,
+    pub curiosity_conversation: Option<Vec<u8>>,
+    pub communicated_blockers: Option<i64>,
+    pub end_to_end_ownership: Option<i64>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -34,6 +39,10 @@ impl WeeklyCheckinRow {
             looking_ahead: crypto.decrypt_opt(&self.looking_ahead)?,
             energy_level: self.energy_level,
             productivity_rating: self.productivity_rating,
+            protected_time: self.protected_time,
+            curiosity_conversation: crypto.decrypt_opt(&self.curiosity_conversation)?,
+            communicated_blockers: self.communicated_blockers,
+            end_to_end_ownership: self.end_to_end_ownership,
             created_at: self.created_at,
             updated_at: self.updated_at,
         })
@@ -55,6 +64,14 @@ pub struct WeeklyCheckin {
     pub energy_level: Option<i64>,
     /// 1-5 productivity rating.
     pub productivity_rating: Option<i64>,
+    /// 1-5 boundary protection rating.
+    pub protected_time: Option<i64>,
+    /// Who did you have a curiosity conversation with?
+    pub curiosity_conversation: Option<String>,
+    /// Did you communicate blockers as tradeoffs? (0/1)
+    pub communicated_blockers: Option<i64>,
+    /// Did you own tasks end-to-end without manager check-in? (0/1)
+    pub end_to_end_ownership: Option<i64>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -76,6 +93,14 @@ pub struct SaveCheckin {
     pub energy_level: Option<i64>,
     #[serde(default)]
     pub productivity_rating: Option<i64>,
+    #[serde(default)]
+    pub protected_time: Option<i64>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub curiosity_conversation: Option<String>,
+    #[serde(default)]
+    pub communicated_blockers: Option<i64>,
+    #[serde(default)]
+    pub end_to_end_ownership: Option<i64>,
 }
 
 /// Raw DB row for checkin + week join.
@@ -91,6 +116,10 @@ pub struct CheckinWithWeekRow {
     pub looking_ahead: Option<Vec<u8>>,
     pub energy_level: Option<i64>,
     pub productivity_rating: Option<i64>,
+    pub protected_time: Option<i64>,
+    pub curiosity_conversation: Option<Vec<u8>>,
+    pub communicated_blockers: Option<i64>,
+    pub end_to_end_ownership: Option<i64>,
     pub created_at: String,
     pub updated_at: String,
     pub iso_week: i64,
@@ -112,6 +141,10 @@ pub struct CheckinWithWeek {
     pub looking_ahead: Option<String>,
     pub energy_level: Option<i64>,
     pub productivity_rating: Option<i64>,
+    pub protected_time: Option<i64>,
+    pub curiosity_conversation: Option<String>,
+    pub communicated_blockers: Option<i64>,
+    pub end_to_end_ownership: Option<i64>,
     pub created_at: String,
     pub iso_week: i64,
     pub year: i64,
@@ -132,6 +165,10 @@ impl CheckinWithWeekRow {
             looking_ahead: crypto.decrypt_opt(&self.looking_ahead)?,
             energy_level: self.energy_level,
             productivity_rating: self.productivity_rating,
+            protected_time: self.protected_time,
+            curiosity_conversation: crypto.decrypt_opt(&self.curiosity_conversation)?,
+            communicated_blockers: self.communicated_blockers,
+            end_to_end_ownership: self.end_to_end_ownership,
             created_at: self.created_at,
             iso_week: self.iso_week,
             year: self.year,

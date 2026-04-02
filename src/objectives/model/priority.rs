@@ -172,6 +172,10 @@ pub struct PostPriorityUpdate {
     pub measure_value: Option<f64>,
     #[serde(default, deserialize_with = "deserialize_optional_string")]
     pub comment: Option<String>,
+    #[serde(default)]
+    pub is_blocker: Option<i64>,
+    #[serde(default, deserialize_with = "deserialize_optional_string")]
+    pub tradeoff_text: Option<String>,
 }
 
 /// A single priority update log entry.
@@ -183,10 +187,12 @@ pub struct PriorityUpdate {
     pub tracking_status: Option<String>,
     pub measure_value: Option<f64>,
     pub comment: Option<String>,
+    pub is_blocker: i64,
+    pub tradeoff_text: Option<String>,
     pub created_at: String,
 }
 
-/// Raw database row for priority updates (comment is encrypted BLOB).
+/// Raw database row for priority updates (comment and tradeoff_text are encrypted BLOBs).
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct PriorityUpdateRow {
     pub id: i64,
@@ -195,6 +201,8 @@ pub struct PriorityUpdateRow {
     pub tracking_status: Option<String>,
     pub measure_value: Option<f64>,
     pub comment: Option<Vec<u8>>,
+    pub is_blocker: i64,
+    pub tradeoff_text: Option<Vec<u8>>,
     pub created_at: String,
 }
 
@@ -207,6 +215,8 @@ impl PriorityUpdateRow {
             tracking_status: self.tracking_status,
             measure_value: self.measure_value,
             comment: crypto.decrypt_opt(&self.comment)?,
+            is_blocker: self.is_blocker,
+            tradeoff_text: crypto.decrypt_opt(&self.tradeoff_text)?,
             created_at: self.created_at,
         })
     }

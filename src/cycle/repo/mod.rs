@@ -3,6 +3,7 @@
 
 mod focus;
 mod meeting;
+pub mod status_update;
 
 use chrono::{Datelike, NaiveDate};
 use sqlx::SqlitePool;
@@ -134,6 +135,14 @@ impl BragPhase {
         .execute(&mut *tx)
         .await?;
 
+        // Delete status updates for weeks in this phase
+        sqlx::query(
+            "DELETE FROM status_updates WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+
         // Delete weeks
         sqlx::query("DELETE FROM weeks WHERE phase_id = ?")
             .bind(id)
@@ -221,6 +230,16 @@ impl BragPhase {
 // ---------------------------------------------------------------------------
 
 impl Week {
+    /// Fetches a single week by ID.
+    pub async fn find_by_id(pool: &SqlitePool, week_id: i64) -> Result<Option<Self>, AppError> {
+        let week =
+            sqlx::query_as::<_, Week>("SELECT * FROM weeks WHERE id = ?")
+                .bind(week_id)
+                .fetch_optional(pool)
+                .await?;
+        Ok(week)
+    }
+
     /// All weeks in a phase, ordered chronologically.
     pub async fn list_for_phase(pool: &SqlitePool, phase_id: i64) -> Result<Vec<Self>, AppError> {
         let weeks = sqlx::query_as::<_, Week>(

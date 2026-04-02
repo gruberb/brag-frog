@@ -1,5 +1,5 @@
 use crate::worklog::model::BragEntry;
-use crate::objectives::model::{DepartmentGoal, Priority};
+use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
 use crate::identity::clg::ClgLevel;
 use crate::cycle::model::{MeetingPrepNote, WeeklyFocus};
 use crate::reflections::model::WeeklyCheckin;
@@ -663,4 +663,183 @@ Keep talking points concise (1-2 sentences each) so they can be directly pasted 
         thin_context_guidance = thin_context_guidance,
         role_hint = role_hint,
     )
+}
+
+/// Builds an AI prompt for a "What did I do last week?" summary.
+pub fn build_last_week_summary_prompt(
+    entries: &[BragEntry],
+    focus_items: &[WeeklyFocus],
+    priorities: &[Priority],
+    checkin: Option<&WeeklyCheckin>,
+    week_start: &str,
+    week_end: &str,
+) -> String {
+    let mut ctx = String::new();
+    ctx.push_str(&format!("Week: {} to {}\n\n", week_start, week_end));
+
+    // Focus items
+    if !focus_items.is_empty() {
+        ctx.push_str("## Weekly Focus Items\n");
+        for f in focus_items {
+            let status = if f.completed == 1 { "DONE" } else { "In progress" };
+            ctx.push_str(&format!("- {} [{}]\n", f.title, status));
+            if let Some(ref notes) = f.notes {
+                ctx.push_str(&format!("  Notes: {}\n", notes));
+            }
+        }
+        ctx.push('\n');
+    }
+
+    // Priorities
+    if !priorities.is_empty() {
+        ctx.push_str("## Priorities\n");
+        for p in priorities {
+            if p.status == "active" || p.status == "completed" {
+                let tracking = p.tracking_status.as_deref().unwrap_or("no update");
+                ctx.push_str(&format!("- {} [status: {}, tracking: {}]\n", p.title, p.status, tracking));
+            }
+        }
+        ctx.push('\n');
+    }
+
+    // Check-in highlights
+    if let Some(ci) = checkin {
+        ctx.push_str("## Weekly Reflection\n");
+        if let Some(ref h) = ci.highlights_impact {
+            ctx.push_str(&format!("Ownership & Impact: {}\n", h));
+        }
+        if let Some(ref l) = ci.learnings_adjustments {
+            ctx.push_str(&format!("Blockers & Tradeoffs: {}\n", l));
+        }
+        if let Some(ref g) = ci.growth_development {
+            ctx.push_str(&format!("Relationships & Curiosity: {}\n", g));
+        }
+        if let Some(ref s) = ci.support_feedback {
+            ctx.push_str(&format!("Giving & Helping: {}\n", s));
+        }
+        ctx.push('\n');
+    }
+
+    // Entries grouped by type
+    if !entries.is_empty() {
+        ctx.push_str("## Entries\n");
+        for e in entries.iter().take(50) {
+            ctx.push_str(&format!("- [{}] {}", e.entry_type, e.title));
+            if let Some(ref status) = e.status {
+                ctx.push_str(&format!(" ({})", status));
+            }
+            ctx.push('\n');
+        }
+        if entries.len() > 50 {
+            ctx.push_str(&format!("... and {} more entries\n", entries.len() - 50));
+        }
+        ctx.push('\n');
+    }
+
+    ctx.push_str("---\n\n");
+    ctx.push_str(
+        "Generate a concise summary of last week. Structure:\n\n\
+         ## What Shipped\n\
+         Bullet points of completed work, merged code, delivered outcomes.\n\n\
+         ## What Progressed\n\
+         Work in progress, key milestones hit, priorities advanced.\n\n\
+         ## Key Meetings & Conversations\n\
+         Important meetings, cross-team conversations, decisions made.\n\n\
+         ## Help Given\n\
+         Who you helped, reviews done, unblocking work.\n\n\
+         Rules: First person. Bullet points. Be specific and evidence-based. \
+         Pull from the entries and reflection data. Keep it scannable — \
+         a manager should be able to read this in 60 seconds.",
+    );
+
+    ctx
+}
+
+/// Builds an AI prompt for generating a stakeholder status update.
+pub fn build_status_update_prompt(
+    entries: &[BragEntry],
+    focus_items: &[WeeklyFocus],
+    priorities: &[Priority],
+    blocker_updates: &[PriorityUpdate],
+    week_start: &str,
+    week_end: &str,
+) -> String {
+    let mut ctx = String::new();
+    ctx.push_str(&format!("Week: {} to {}\n\n", week_start, week_end));
+
+    // Focus items
+    if !focus_items.is_empty() {
+        ctx.push_str("## Weekly Focus Items\n");
+        for f in focus_items {
+            let status = if f.completed == 1 {
+                "DONE"
+            } else {
+                "In progress"
+            };
+            ctx.push_str(&format!("- {} [{}]\n", f.title, status));
+        }
+        ctx.push('\n');
+    }
+
+    // Priorities
+    if !priorities.is_empty() {
+        ctx.push_str("## Active Priorities\n");
+        for p in priorities {
+            if p.status == "active" {
+                let tracking = p.tracking_status.as_deref().unwrap_or("no update");
+                ctx.push_str(&format!("- {} (tracking: {})\n", p.title, tracking));
+            }
+        }
+        ctx.push('\n');
+    }
+
+    // Blockers
+    if !blocker_updates.is_empty() {
+        ctx.push_str("## Active Blockers\n");
+        for b in blocker_updates {
+            if let Some(ref comment) = b.comment {
+                ctx.push_str(&format!("- {}\n", comment));
+            }
+            if let Some(ref tradeoff) = b.tradeoff_text {
+                ctx.push_str(&format!("  Tradeoff: {}\n", tradeoff));
+            }
+        }
+        ctx.push('\n');
+    }
+
+    // Entries summary
+    if !entries.is_empty() {
+        ctx.push_str("## Work Done This Week\n");
+        for e in entries.iter().take(40) {
+            ctx.push_str(&format!("- [{}] {}", e.entry_type, e.title));
+            if let Some(ref status) = e.status {
+                ctx.push_str(&format!(" ({})", status));
+            }
+            ctx.push('\n');
+        }
+        if entries.len() > 40 {
+            ctx.push_str(&format!(
+                "... and {} more entries\n",
+                entries.len() - 40
+            ));
+        }
+        ctx.push('\n');
+    }
+
+    ctx.push_str("---\n\n");
+    ctx.push_str(
+        "Generate a concise stakeholder status update from the context above. Format:\n\n\
+         ## Progress\n\
+         Bullet points of what shipped, what progressed, key outcomes. Be specific.\n\n\
+         ## Blockers & Tradeoffs\n\
+         For each blocker, frame it as a decision for stakeholders:\n\
+         \"We can [option A] if we [sacrifice], or [option B] but [consequence]\"\n\
+         If no blockers, say \"No blockers this week.\"\n\n\
+         ## Next Week\n\
+         Top 3 focus areas for next week.\n\n\
+         Rules: First person, concise, professional. Stakeholders should be able to scan this in 30 seconds. \
+         Never say \"we're behind\" — frame delays as tradeoffs with options.",
+    );
+
+    ctx
 }

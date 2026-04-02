@@ -43,11 +43,17 @@ impl WeeklyCheckin {
         let enc_growth = crypto.encrypt_opt(&input.growth_development)?;
         let enc_support = crypto.encrypt_opt(&input.support_feedback)?;
         let enc_ahead = crypto.encrypt_opt(&input.looking_ahead)?;
+        let enc_curiosity = crypto.encrypt_opt(&input.curiosity_conversation)?;
 
         let row = sqlx::query_as::<_, WeeklyCheckinRow>(
             r#"
-            INSERT INTO weekly_checkins (week_id, user_id, highlights_impact, learnings_adjustments, growth_development, support_feedback, looking_ahead, energy_level, productivity_rating)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO weekly_checkins (
+                week_id, user_id, highlights_impact, learnings_adjustments,
+                growth_development, support_feedback, looking_ahead,
+                energy_level, productivity_rating,
+                protected_time, curiosity_conversation, communicated_blockers, end_to_end_ownership
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(week_id, user_id) DO UPDATE SET
                 highlights_impact = excluded.highlights_impact,
                 learnings_adjustments = excluded.learnings_adjustments,
@@ -56,6 +62,10 @@ impl WeeklyCheckin {
                 looking_ahead = excluded.looking_ahead,
                 energy_level = excluded.energy_level,
                 productivity_rating = excluded.productivity_rating,
+                protected_time = excluded.protected_time,
+                curiosity_conversation = excluded.curiosity_conversation,
+                communicated_blockers = excluded.communicated_blockers,
+                end_to_end_ownership = excluded.end_to_end_ownership,
                 updated_at = datetime('now')
             RETURNING *
             "#,
@@ -69,6 +79,10 @@ impl WeeklyCheckin {
         .bind(&enc_ahead)
         .bind(input.energy_level)
         .bind(input.productivity_rating)
+        .bind(input.protected_time)
+        .bind(&enc_curiosity)
+        .bind(input.communicated_blockers)
+        .bind(input.end_to_end_ownership)
         .fetch_one(pool)
         .await?;
 

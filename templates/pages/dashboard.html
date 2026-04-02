@@ -144,24 +144,57 @@
     </form>
 </section>
 
-<!-- Top row: Weekly Focus + Weekly Reflection at same height -->
-<div class="dashboard-top-row">
-    <section class="card dashboard-focus">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Weekly Focus</h2>
-                <button class="btn btn-text btn-sm" id="focus-add-btn" onclick="handleFocusAddClick()"
-                        {% if focus_items | length >= 3 %}disabled{% endif %}>+ Add</button>
-            </div>
+<!-- Weekly Focus -->
+<section class="card" style="margin-top:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Weekly Focus</h2>
+        <div style="display:flex;gap:8px;align-items:center;">
+            {% if has_ai %}
+            <button class="btn btn-text btn-sm"
+                    hx-post="/dashboard/last-week-summary"
+                    hx-target="#last-week-content"
+                    hx-indicator="#last-week-spinner">Last week</button>
+            {% endif %}
+            <button class="btn btn-text btn-sm"
+                    onclick="openPanelFromUrl('Status Update', '/status-update/{{ current_week.id }}')">Status Update</button>
+            <button class="btn btn-text btn-sm" id="focus-add-btn" onclick="handleFocusAddClick()"
+                    {% if focus_items | length >= 3 %}disabled{% endif %}>+ Add</button>
+        </div>
+    </div>
+    <span class="spinner hidden" id="last-week-spinner"></span>
+    <div id="last-week-content"></div>
 
             {% if focus_items | length == 0 %}
-            <p class="text-sm text-muted">What are your top priorities this week? Add up to 3.</p>
+            <p class="text-sm text-muted">Plan your week — what are your top 3 priorities? Break them down at a high level.</p>
+            {% if carryover_items | length > 0 %}
+            <div class="carryover-section" style="margin-top:8px;">
+                <span class="text-sm" style="font-weight:600;">Carry over from last week:</span>
+                {% for item in carryover_items %}
+                <form class="carryover-item" hx-post="/focus/week/{{ current_week.id }}" hx-swap="none" style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+                    <input type="hidden" name="title" value="{{ item.title }}">
+                    {% if item.linked_type and item.linked_id %}
+                    <input type="hidden" name="linked_ref" value="{{ item.linked_type }}:{{ item.linked_id }}">
+                    {% endif %}
+                    {% if item.notes %}
+                    <input type="hidden" name="notes" value="{{ item.notes }}">
+                    {% endif %}
+                    <span class="text-sm">{{ item.title }}</span>
+                    <button type="submit" class="btn btn-text btn-sm">+ Add</button>
+                </form>
+                {% endfor %}
+            </div>
+            {% endif %}
             {% endif %}
 
             {% for focus in focus_items %}
-            <div class="focus-card" id="focus-card-{{ focus.id }}">
-                <div class="focus-card-header" onclick="toggleFocusExpand({{ focus.id }})">
-                    <span class="focus-card-title">{{ focus.title }}</span>
-                    <div class="focus-card-badges">
+            <div class="focus-card {% if focus.completed == 1 %}focus-card--completed{% endif %}" id="focus-card-{{ focus.id }}">
+                <div class="focus-card-header">
+                    <label class="focus-complete-toggle" onclick="event.stopPropagation();">
+                        <input type="checkbox" {% if focus.completed == 1 %}checked{% endif %}
+                               hx-post="/focus/{{ focus.id }}/toggle" hx-swap="none">
+                    </label>
+                    <span class="focus-card-title" onclick="toggleFocusExpand({{ focus.id }})" style="cursor:pointer;flex:1;">{{ focus.title }}</span>
+                    <div class="focus-card-badges" onclick="toggleFocusExpand({{ focus.id }})" style="cursor:pointer;">
                         {% if focus.linked_type == "priority" %}
                             {% for p in priorities %}{% if p.id == focus.linked_id %}
                             <span class="badge badge-type" style="background:{{ p.color | default(value='#888') }};color:#fff;font-size:0.65rem;">{{ p.title }}</span>
@@ -175,6 +208,12 @@
                     </div>
                 </div>
                 <div class="focus-card-body hidden" id="focus-body-{{ focus.id }}">
+                    {% if focus.notes %}
+                    <div class="focus-notes" style="margin-bottom:8px;">
+                        <span class="text-sm text-muted" style="font-weight:600;">Breakdown:</span>
+                        <p class="text-sm" style="margin:4px 0 0;white-space:pre-wrap;">{{ focus.notes }}</p>
+                    </div>
+                    {% endif %}
                     {% set entry_ids = focus_entry_ids[loop.index0] %}
                     {% if entry_ids | length > 0 %}
                     <div class="focus-linked-entries">
@@ -206,6 +245,7 @@
                     <form class="focus-edit-form hidden" id="focus-edit-{{ focus.id }}"
                           hx-put="/focus/{{ focus.id }}" hx-swap="none" style="margin-top:8px;">
                         <input type="text" name="title" class="form-input" value="{{ focus.title }}" required placeholder="Focus title" />
+                        <textarea name="notes" class="form-textarea" rows="2" style="margin-top:6px;" placeholder="Break this down — what are the key steps?">{{ focus.notes | default(value="") }}</textarea>
                         <select name="linked_ref" class="form-select" style="margin-top:6px;">
                             <option value="">Link to...</option>
                             {% for dg in dept_goals %}
@@ -249,6 +289,7 @@
             <form class="focus-add-form hidden" id="focus-add-form"
                   hx-post="/focus/week/{{ current_week.id }}" hx-swap="none" style="margin-top:8px;">
                 <input type="text" name="title" class="form-input" required placeholder="What's your focus?" autocomplete="off" />
+                <textarea name="notes" class="form-textarea" rows="2" style="margin-top:6px;" placeholder="Break this down — what are the key steps?"></textarea>
                 <select name="linked_ref" class="form-select" style="margin-top:6px;">
                     <option value="">Link to...</option>
                     {% for dg in dept_goals %}
@@ -280,44 +321,7 @@
                     <button type="button" class="btn btn-secondary btn-sm" onclick="cancelFocusAdd()">Cancel</button>
                 </div>
             </form>
-        </section>
-
-    <!-- Weekly reflection -->
-    <section class="card">
-        <h2 class="section-title">Weekly Reflection</h2>
-        {% if checkin_done %}
-        <div class="checkin-status">
-            {% if checkin_energy or checkin_productivity %}
-            <div class="checkin-highlights">
-                {% if checkin_energy %}
-                <div class="checkin-highlight">
-                    <span class="checkin-highlight-value">{{ checkin_energy }}/5</span>
-                    <span class="checkin-highlight-label">Energy</span>
-                </div>
-                {% endif %}
-                {% if checkin_productivity %}
-                <div class="checkin-highlight">
-                    <span class="checkin-highlight-value">{{ checkin_productivity }}/5</span>
-                    <span class="checkin-highlight-label">Productivity</span>
-                </div>
-                {% endif %}
-            </div>
-            {% else %}
-            <p class="text-sm text-muted" style="padding:4px 0;">Completed</p>
-            {% endif %}
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px;">
-            <a href="/checkin/{{ current_week.id }}" class="btn btn-text btn-sm">Edit</a>
-            <a href="/checkins" class="btn btn-text btn-sm">View history</a>
-        </div>
-        {% else %}
-        <div class="checkin-status">
-            <p class="text-sm text-muted">Reflect on your week</p>
-            <a href="/checkin/{{ current_week.id }}" class="btn btn-primary btn-sm" style="margin-top:8px;">Start Reflection</a>
-        </div>
-        {% endif %}
     </section>
-</div>
 
 <!-- Two-column layout: Meetings + sidebar -->
 <div class="dashboard-layout">
@@ -392,7 +396,12 @@
 
         <!-- Priorities snapshot (active only) -->
         <section class="card">
-            <h2 class="section-title">Priorities</h2>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h2 class="section-title" style="margin-bottom:0;border:none;padding:0;">Priorities</h2>
+                {% if unresolved_blockers > 0 %}
+                <span class="badge badge-tracking badge-tracking--off_track" style="font-size:0.65rem;">{{ unresolved_blockers }} blocker{{ unresolved_blockers | pluralize }}</span>
+                {% endif %}
+            </div>
             {% if dashboard_priorities | length == 0 %}
             <div style="padding:4px 0;">
                 <p class="text-sm text-muted">No active priorities.</p>

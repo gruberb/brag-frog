@@ -29,6 +29,8 @@ use crate::reflections::routes as reflections_routes;
 use crate::review::routes as review_routes;
 use crate::integrations::integrations_routes;
 use crate::integrations::sync_routes;
+use crate::protocol::routes as protocol_routes;
+use crate::todos::routes as todos_routes;
 
 /// Resolves a config file path: checks `custom/` first, falls back to `config/`.
 /// This allows organizations to override default config files by placing their
@@ -163,6 +165,14 @@ pub fn create_router() -> Router<AppState> {
             put(cycle_routes::dashboard::update_focus)
                 .delete(cycle_routes::dashboard::delete_focus),
         )
+        .route(
+            "/focus/{focus_id}/toggle",
+            post(cycle_routes::dashboard::toggle_focus_complete),
+        )
+        .route(
+            "/dashboard/last-week-summary",
+            post(cycle_routes::dashboard::last_week_summary),
+        )
         // Logbook
         .route("/logbook", get(cycle_routes::logbook::logbook))
         // Entries
@@ -196,6 +206,19 @@ pub fn create_router() -> Router<AppState> {
             "/meeting-prep/panel/{entry_id}/ai-draft",
             post(cycle_routes::meeting_prep::ai_draft_meeting_prep),
         )
+        // Status Update
+        .route(
+            "/status-update/{week_id}",
+            get(cycle_routes::status_update::status_update_panel),
+        )
+        .route(
+            "/status-update/{week_id}/generate",
+            post(cycle_routes::status_update::generate_status_update),
+        )
+        .route(
+            "/status-update/{week_id}/save",
+            post(cycle_routes::status_update::save_status_update),
+        )
         // Check-ins
         .route("/checkins", get(reflections_routes::checkins::checkins_list))
         .route(
@@ -219,6 +242,13 @@ pub fn create_router() -> Router<AppState> {
             "/contribution-examples/{example_id}/entries/{entry_id}",
             post(review_routes::contribution_examples::link_entry_to_example)
                 .delete(review_routes::contribution_examples::unlink_entry_from_example),
+        )
+        // Monthly Check-ins
+        .route(
+            "/monthly-checkin/{month}/{year}",
+            get(reflections_routes::monthly::monthly_checkin_page)
+                .post(reflections_routes::monthly::save_monthly_checkin)
+                .delete(reflections_routes::monthly::delete_monthly_checkin),
         )
         // Quarterly Check-ins
         .route(
@@ -259,6 +289,29 @@ pub fn create_router() -> Router<AppState> {
         .route(
             "/priorities/{id}/updates",
             post(objectives_routes::post_priority_update),
+        )
+        // 10x Protocol
+        .route("/protocol", get(protocol_routes::protocol_page))
+        .route(
+            "/protocol/{slug}/toggle",
+            post(protocol_routes::toggle_protocol_check),
+        )
+        .route(
+            "/protocol/clear",
+            post(protocol_routes::clear_protocol_checks),
+        )
+        // Todos
+        .route(
+            "/todos",
+            get(todos_routes::todos_page).post(todos_routes::create_todo),
+        )
+        .route(
+            "/todos/{id}/toggle",
+            post(todos_routes::toggle_todo),
+        )
+        .route(
+            "/todos/{id}",
+            delete(todos_routes::delete_todo),
         )
         // Phases (Performance Cycle)
         .route("/phases", post(cycle_routes::phases::create_phase))

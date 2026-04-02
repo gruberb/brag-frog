@@ -293,10 +293,61 @@ impl PriorityUpdate {
         crypto: &UserCrypto,
     ) -> Result<Vec<Self>, AppError> {
         let rows = sqlx::query_as::<_, PriorityUpdateRow>(
-            "SELECT id, priority_id, user_id, tracking_status, measure_value, comment, created_at
-             FROM priority_updates WHERE priority_id = ? ORDER BY created_at DESC",
+            "SELECT * FROM priority_updates WHERE priority_id = ? ORDER BY created_at DESC",
         )
         .bind(priority_id)
+        .fetch_all(pool)
+        .await?;
+        rows.into_iter().map(|r| r.decrypt(crypto)).collect()
+    }
+
+    /// Count unresolved blockers across all active priorities for a user.
+    pub async fn count_unresolved_blockers(
+        pool: &SqlitePool,
+        user_id: i64,
+    ) -> Result<i64, AppError> {
+        let count: i64 = sqlx::query_scalar(
+            r#"
+            SELECT COUNT(DISTINCT pu.priority_id) FROM priority_updates pu
+            JOIN priorities p ON p.id = pu.priority_id
+            JOIN brag_phases bp ON bp.id = p.phase_id
+            WHERE bp.user_id = ? AND bp.is_active = 1 AND pu.is_blocker = 1
+              AND NOT EXISTS (
+                  SELECT 1 FROM priority_updates pu2
+                  WHERE pu2.priority_id = pu.priority_id
+                    AND pu2.created_at > pu.created_at
+                    AND pu2.is_blocker = 0
+              )
+            "#,
+        )
+        .bind(user_id)
+        .fetch_one(pool)
+        .await?;
+        Ok(count)
+    }
+
+    /// Lists blocker updates for active priorities (for status update composer).
+    pub async fn list_active_blockers(
+        pool: &SqlitePool,
+        user_id: i64,
+        crypto: &UserCrypto,
+    ) -> Result<Vec<Self>, AppError> {
+        let rows = sqlx::query_as::<_, PriorityUpdateRow>(
+            r#"
+            SELECT pu.* FROM priority_updates pu
+            JOIN priorities p ON p.id = pu.priority_id
+            JOIN brag_phases bp ON bp.id = p.phase_id
+            WHERE bp.user_id = ? AND bp.is_active = 1 AND pu.is_blocker = 1
+              AND NOT EXISTS (
+                  SELECT 1 FROM priority_updates pu2
+                  WHERE pu2.priority_id = pu.priority_id
+                    AND pu2.created_at > pu.created_at
+                    AND pu2.is_blocker = 0
+              )
+            ORDER BY pu.created_at DESC
+            "#,
+        )
+        .bind(user_id)
         .fetch_all(pool)
         .await?;
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
@@ -312,12 +363,13 @@ impl PriorityUpdate {
         crypto: &UserCrypto,
     ) -> Result<Self, AppError> {
         let enc_comment = crypto.encrypt_opt(&input.comment)?;
+        let enc_tradeoff = crypto.encrypt_opt(&input.tradeoff_text)?;
 
         let row = sqlx::query_as::<_, PriorityUpdateRow>(
             r#"
-            INSERT INTO priority_updates (priority_id, user_id, tracking_status, measure_value, comment)
-            VALUES (?, ?, ?, ?, ?)
-            RETURNING id, priority_id, user_id, tracking_status, measure_value, comment, created_at
+            INSERT INTO priority_updates (priority_id, user_id, tracking_status, measure_value, comment, is_blocker, tradeoff_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            RETURNING *
             "#,
         )
         .bind(priority_id)
@@ -325,6 +377,8 @@ impl PriorityUpdate {
         .bind(&input.tracking_status)
         .bind(input.measure_value)
         .bind(&enc_comment)
+        .bind(input.is_blocker.unwrap_or(0))
+        .bind(&enc_tradeoff)
         .fetch_one(pool)
         .await?;
 

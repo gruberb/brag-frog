@@ -160,6 +160,20 @@
                 <textarea name="comment" class="form-textarea" rows="3"
                           placeholder="What progress was made? Any blockers?"></textarea>
             </div>
+            <div class="form-group">
+                <label class="habit-check-label">
+                    <input type="hidden" name="is_blocker" value="0">
+                    <input type="checkbox" name="is_blocker" value="1"
+                           onchange="document.getElementById('tradeoff-field').classList.toggle('hidden', !this.checked)">
+                    <span>This is a blocker</span>
+                </label>
+            </div>
+            <div class="form-group hidden" id="tradeoff-field">
+                <label class="form-label">Frame as tradeoff</label>
+                <textarea name="tradeoff_text" class="form-textarea" rows="3"
+                          placeholder="We can [option A] if we [sacrifice], or [option B] but [consequence]"></textarea>
+                <span class="text-sm text-muted" style="margin-top:2px;display:block;">Stakeholders don't mind delays — they mind surprises. Frame this as a decision.</span>
+            </div>
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary btn-sm">Post Update</button>
             </div>
@@ -184,7 +198,13 @@
                     {% if update.measure_value %}
                     <span class="text-sm" style="font-weight:600;">{{ update.measure_value }}{% if priority.measure_type == "percent" %}%{% endif %}</span>
                     {% endif %}
+                    {% if update.is_blocker == 1 %}
+                    <span class="badge badge-tracking badge-tracking--off_track">Blocker</span>
+                    {% endif %}
                 </div>
+                {% if update.tradeoff_text %}
+                <div class="text-sm" style="margin-top:4px;padding:6px 8px;background:rgba(255,69,63,0.06);border-radius:var(--radius-sm);white-space:pre-wrap;">{{ update.tradeoff_text }}</div>
+                {% endif %}
                 {% if update.comment %}
                 <div class="text-sm" style="margin-top:4px;white-space:pre-wrap;">{{ update.comment }}</div>
                 <button type="button" class="btn-icon btn-icon--sm" title="Copy update" style="margin-top:4px;"
