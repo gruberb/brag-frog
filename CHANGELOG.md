@@ -15,6 +15,7 @@ All notable changes to Brag Frog will be documented in this file.
 - **Status Update moved from slide-over panel to inline section.** `status_update_panel` handler removed; `generate_status_update` and `save_status_update` now render the shared `components/status_update_section.html` fragment so HTMX can swap it in-place on the Reports page.
 - **Meeting prep prompt no longer injects focus items.** Focus section removed from `build_meeting_prep_prompt` inputs and output.
 - **Sidebar navigation.** Todos link replaced with Reports (document icon). Reflections keeps its current position.
+- **Priorities page sinks completed department goals.** On `/priorities`, department goals with `status = "completed"` are now stable-sorted to the bottom of the list and render pre-collapsed, so the top of the page focuses on active work. Users can still expand a completed group manually and the choice is remembered via localStorage (explicit overrides always win over the status-based default).
 
 ### Removed
 - **Weekly Focus.** Dashboard focus card, carryover suggestions, focus-entry linking, completion toggles, and Last Week button on the dashboard are gone. Handlers (`create_focus`, `update_focus`, `delete_focus`, `toggle_focus_complete`, `last_week_summary`), model (`src/cycle/model/focus.rs`), and repo (`src/cycle/repo/focus.rs`) deleted. The Last Week summary now lives on the Reports page and reads directly from the logbook.

@@ -42,7 +42,10 @@ pub async fn priorities_page(
         }
     };
 
-    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let mut dept_goals = DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    // Sink completed goals to the bottom while preserving the manual
+    // `sort_order` within each bucket. `sort_by_key` is stable.
+    dept_goals.sort_by_key(|g| g.status == "completed");
     let mut priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
 
     crate::objectives::service::sort_priorities(&mut priorities);

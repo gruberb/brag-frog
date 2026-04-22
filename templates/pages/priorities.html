@@ -82,7 +82,8 @@
 
     {% for dg in dept_goals %}
     {% set dg_key = dg.id ~ "" %}
-    <div class="cycle-goal-group" id="dept-goal-{{ dg.id }}" data-goal-id="dg-{{ dg.id }}">
+    {% set dg_completed = dg.status == "completed" %}
+    <div class="cycle-goal-group{% if dg_completed %} cycle-goal-group--completed{% endif %}" id="dept-goal-{{ dg.id }}" data-goal-id="dg-{{ dg.id }}" data-status="{{ dg.status }}">
         <!-- Department goal header (clickable to collapse or open panel) -->
         <div class="cycle-item-row cycle-item-row--goal" style="cursor:pointer;" onclick="openPanelFromUrl('Edit Department Goal', '/priorities/goals/{{ dg.id }}/edit-panel')">
             <div class="cycle-item-view" id="dept-goal-view-{{ dg.id }}">
@@ -108,8 +109,11 @@
             {% endif %}
         </div>
 
-        <!-- Priorities nested under this department goal (collapsible) -->
-        <div class="cycle-key-results" id="dept-goal-priorities-{{ dg.id }}" style="margin-left: var(--space-5); padding-left: var(--space-3); border-left: 2px solid var(--color-border); margin-top: var(--space-1);">
+        <!-- Priorities nested under this department goal (collapsible).
+             Completed goals render pre-collapsed so the page lands quiet;
+             the client-side init below may re-expand if the user has an
+             explicit localStorage override. -->
+        <div class="cycle-key-results" id="dept-goal-priorities-{{ dg.id }}" style="margin-left: var(--space-5); padding-left: var(--space-3); border-left: 2px solid var(--color-border); margin-top: var(--space-1);{% if dg_completed %}display:none;{% endif %}">
             {% if goal_priorities[dg_key] %}
             {% for priority in goal_priorities[dg_key] %}
             <div class="cycle-item-row priority-row" id="priority-{{ priority.id }}" data-status="{{ priority.status }}" data-title="{{ priority.title | lower }}" style="margin-bottom: var(--space-1); cursor:pointer;"
@@ -312,13 +316,22 @@ function toggleGoalKRs(id, goalRow) {
     }
 }
 
-// Initialize collapse state from localStorage
+// Initialize collapse state.
+// Precedence: explicit localStorage value > status-based default.
+// Completed department goals default to collapsed so the top of the
+// page shows active work. The user can still expand them manually and
+// that choice is remembered via localStorage.
 document.querySelectorAll('.cycle-goal-group').forEach(function(group) {
     var goalId = group.dataset.goalId;
     var saved = getCollapseState(goalId);
     var krsEl = group.querySelector('.cycle-key-results');
     var chevron = group.querySelector('.goal-chevron');
-    var collapsed = saved === '1';
+    var collapsed;
+    if (saved === '0' || saved === '1') {
+        collapsed = saved === '1';
+    } else {
+        collapsed = group.dataset.status === 'completed';
+    }
     if (collapsed) {
         if (krsEl) krsEl.style.display = 'none';
         if (chevron) chevron.style.transform = '';
