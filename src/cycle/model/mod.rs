@@ -1,7 +1,6 @@
 //! Domain types and pure logic for the cycle bounded context.
-//! Phases, weeks, focus items, meetings.
+//! Phases, weeks, meetings, status updates.
 
-mod focus;
 mod meeting;
 pub mod status_update;
 
@@ -9,7 +8,6 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-pub use focus::*;
 pub use meeting::*;
 pub use status_update::*;
 

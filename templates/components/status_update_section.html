@@ -1,0 +1,75 @@
+{% set has_content = status_update and status_update.content %}
+<section class="report-section" id="report-latest-updates" data-mode="{% if has_content %}view{% else %}empty{% endif %}">
+    <header class="report-section-header">
+        <div class="report-section-heading">
+            <h2 class="report-section-title">Latest updates</h2>
+            <p class="report-section-subtitle">
+                Where your ongoing priorities stand — for stakeholders and 1:1s.
+            </p>
+        </div>
+        <div class="report-section-actions">
+            {% if has_ai %}
+            <button type="button"
+                    class="btn btn-primary btn-sm report-generate-btn"
+                    hx-post="/status-update/{{ week_id }}/generate"
+                    hx-target="#report-latest-updates"
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this"
+                    hx-indicator="#report-latest-updates">
+                <span class="report-btn-idle">
+                    {% if has_content %}Regenerate{% else %}Generate with AI{% endif %}
+                </span>
+                <span class="report-btn-busy">
+                    <span class="report-btn-spinner"></span>
+                    Generating…
+                </span>
+            </button>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="report-section-busy-overlay" aria-hidden="true">
+        <div class="report-section-busy-inner">
+            <span class="report-btn-spinner report-btn-spinner--lg"></span>
+            <span>Generating your update…</span>
+        </div>
+    </div>
+
+    <div class="report-section-body">
+        {% if has_content %}
+        <div class="report-section-markdown markdown-body" data-role="view">{{ status_update.content | markdown | safe }}</div>
+        {% elif not has_ai %}
+        <p class="report-empty-state">
+            Connect an AI key in <a href="/integrations">Integrations</a> to generate a draft,
+            or click <strong>Write manually</strong> below to draft one yourself.
+        </p>
+        {% else %}
+        <p class="report-empty-state">
+            Click <strong>Generate with AI</strong> for a draft narrative of your ongoing priorities,
+            or <strong>Write manually</strong> below to draft one yourself.
+        </p>
+        {% endif %}
+
+        <form class="report-section-editor"
+              data-role="editor"
+              hx-post="/status-update/{{ week_id }}/save"
+              hx-target="#report-latest-updates"
+              hx-swap="outerHTML">
+            <textarea name="content" class="form-textarea report-editor-textarea" rows="14"
+                      placeholder="Progress, blockers framed as tradeoffs, next steps…">{% if status_update %}{{ status_update.content | default(value="") }}{% endif %}</textarea>
+            <div class="report-editor-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-action="cancel-edit">Cancel</button>
+            </div>
+        </form>
+    </div>
+
+    <footer class="report-section-footer">
+        <button type="button" class="btn btn-text btn-sm" data-action="toggle-edit">
+            {% if has_content %}Edit{% else %}Write manually{% endif %}
+        </button>
+        {% if has_content %}
+        <button type="button" class="btn btn-text btn-sm" onclick="copyReportMarkdown(this)">Copy</button>
+        {% endif %}
+    </footer>
+</section>

@@ -1,7 +1,6 @@
 //! Persistence layer for the cycle bounded context.
 //! All SQL queries live here — `model.rs` contains no SQL.
 
-mod focus;
 mod meeting;
 pub mod status_update;
 
@@ -115,21 +114,6 @@ impl BragPhase {
         // Delete weekly_checkins for weeks in this phase
         sqlx::query(
             "DELETE FROM weekly_checkins WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-
-        // Delete weekly focus entries and focus items
-        sqlx::query(
-            "DELETE FROM weekly_focus_entries WHERE focus_id IN (SELECT f.id FROM weekly_focus f JOIN weeks w ON f.week_id = w.id WHERE w.phase_id = ?)",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query(
-            "DELETE FROM weekly_focus WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
         )
         .bind(id)
         .execute(&mut *tx)

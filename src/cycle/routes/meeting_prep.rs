@@ -12,7 +12,7 @@ use crate::worklog::model::BragEntry;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::cycle::model::{BragPhase, MeetingPrepNote, Week, WeeklyFocus};
+use crate::cycle::model::{BragPhase, MeetingPrepNote, Week};
 use crate::reflections::model::WeeklyCheckin;
 use crate::review::model::AiDocument;
 use crate::kernel::error::AppError;
@@ -244,9 +244,6 @@ pub async fn ai_draft_meeting_prep(
         .flatten()
         .collect();
 
-    // Load current week's focus items
-    let focus_items = WeeklyFocus::list_for_week(&state.db, current_week.id, auth.user_id, &auth.crypto).await?;
-
     let context_text = input
         .context_snippets
         .as_deref()
@@ -286,7 +283,6 @@ pub async fn ai_draft_meeting_prep(
         &recent_entries,
         &other_recent_entries,
         &checkins,
-        &focus_items,
         context_text,
         prep_note.as_ref(),
         meeting_goal,

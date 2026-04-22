@@ -1,0 +1,284 @@
+/* Reports page — AI-generated narrative views.
+   Both tabs share `.report-section` so they render with identical geometry.
+   Diverging markup (textarea vs rendered markdown) is scoped to the body,
+   the frame stays the same. */
+
+.reports-page {
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────── */
+.reports-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--color-gray-15);
+    margin-bottom: 20px;
+}
+.reports-tab {
+    background: none;
+    border: none;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 150ms ease, border-color 150ms ease;
+    font-family: inherit;
+}
+.reports-tab:hover {
+    color: var(--color-text-primary);
+}
+.reports-tab--active {
+    color: var(--color-primary);
+    border-bottom-color: var(--color-primary);
+}
+.reports-panel {
+    display: none;
+}
+.reports-panel--active {
+    display: block;
+}
+
+/* ── Shared section shell ───────────────────────────────────── */
+.report-section {
+    position: relative;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-gray-15);
+    border-radius: var(--radius-md);
+    min-height: 520px;
+    display: flex;
+    flex-direction: column;
+}
+
+.report-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 24px 12px;
+    border-bottom: 1px solid var(--color-gray-10);
+}
+.report-section-heading {
+    min-width: 0;
+}
+.report-section-title {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.report-section-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+}
+.report-section-meta {
+    color: var(--color-text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+.report-section-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.report-section-body {
+    padding: 20px 24px;
+    flex: 1;
+    min-height: 0;
+}
+
+.report-section-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 24px 20px;
+    border-top: 1px solid var(--color-gray-10);
+    flex-wrap: wrap;
+}
+
+/* ── Empty state ────────────────────────────────────────────── */
+.report-empty-state {
+    margin: 40px 0;
+    text-align: center;
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* ── Rendered markdown body ─────────────────────────────────── */
+.report-section-markdown {
+    font-size: 0.92rem;
+    line-height: 1.6;
+}
+.report-section-markdown h1,
+.report-section-markdown h2,
+.report-section-markdown h3,
+.report-section-markdown h4 {
+    margin: 18px 0 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+.report-section-markdown h2 {
+    font-size: 1rem;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--color-gray-10);
+}
+.report-section-markdown h1:first-child,
+.report-section-markdown h2:first-child,
+.report-section-markdown h3:first-child {
+    margin-top: 0;
+}
+.report-section-markdown ul,
+.report-section-markdown ol {
+    margin: 6px 0;
+    padding-left: 22px;
+}
+.report-section-markdown li {
+    margin-bottom: 4px;
+}
+.report-section-markdown p {
+    margin: 6px 0;
+}
+.report-section-markdown code {
+    background: var(--color-gray-10);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+/* ── Evidence (Last Week underlying entries) ────────────────── */
+.report-section-evidence {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--color-gray-10);
+    font-size: 0.85rem;
+}
+.report-section-evidence summary {
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 4px 0;
+}
+.report-evidence-group {
+    margin-top: 10px;
+}
+.report-evidence-heading {
+    margin: 8px 0 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.report-evidence-entries {
+    margin: 0;
+    padding-left: 4px;
+    list-style: none;
+}
+.report-evidence-entries li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+}
+.report-evidence-title {
+    font-weight: 500;
+}
+
+/* ── Latest Updates: view/edit modes ────────────────────────── */
+/* Default is view mode — editor hidden. Edit mode flips them. */
+.report-section-editor {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+}
+.report-section[data-mode="edit"] .report-section-markdown,
+.report-section[data-mode="edit"] .report-empty-state {
+    display: none;
+}
+.report-section[data-mode="edit"] .report-section-editor {
+    display: flex;
+}
+/* Empty mode: editor hidden, placeholder copy shown. Toggle-edit reveals the editor. */
+.report-editor-textarea {
+    width: 100%;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 240px;
+}
+.report-editor-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ── Loading state: button + body dim while HTMX is in flight ─ */
+.report-section .report-btn-idle { display: inline-flex; align-items: center; gap: 6px; }
+.report-section .report-btn-busy { display: none; align-items: center; gap: 6px; }
+.report-section.htmx-request .report-btn-idle { display: none; }
+.report-section.htmx-request .report-btn-busy { display: inline-flex; }
+
+.report-generate-btn[disabled] {
+    opacity: 0.75;
+    cursor: wait;
+}
+
+.report-btn-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: report-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+.report-btn-spinner--lg {
+    width: 28px;
+    height: 28px;
+    border-width: 3px;
+}
+@keyframes report-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Busy overlay on the section while a request is in flight. Pulls the
+   section body out of focus (semi-transparent) and floats a centred
+   spinner so the user sees unambiguous progress feedback. */
+.report-section-busy-overlay {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--color-bg-primary) 82%, transparent);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    border-radius: var(--radius-md);
+    pointer-events: none;
+}
+.report-section-busy-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-primary);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+.report-section.htmx-request .report-section-busy-overlay {
+    display: flex;
+}
+
+/* Mobile: actions wrap below the heading. */
+@media (max-width: 640px) {
+    .report-section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    .report-section-actions {
+        justify-content: flex-end;
+    }
+}

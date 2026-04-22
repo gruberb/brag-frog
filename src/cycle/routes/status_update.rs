@@ -1,37 +1,17 @@
-use axum::extract::{Path, State};
-use axum::response::{Html, IntoResponse};
 use axum::Form;
+use axum::extract::{Path, State};
+use axum::response::Html;
 
-use crate::cycle::model::{BragPhase, SaveStatusUpdate, StatusUpdate, Week, WeeklyFocus};
+use crate::AppState;
+use crate::cycle::model::{BragPhase, SaveStatusUpdate, StatusUpdate, Week};
 use crate::identity::auth::middleware::AuthUser;
 use crate::kernel::error::AppError;
-use crate::kernel::render::hx_redirect;
 use crate::objectives::model::{Priority, PriorityUpdate};
 use crate::worklog::model::BragEntry;
-use crate::AppState;
 
-/// GET /status-update/{week_id} — show status update panel.
-pub async fn status_update_panel(
-    auth: AuthUser,
-    State(state): State<AppState>,
-    Path(week_id): Path<i64>,
-) -> Result<Html<String>, AppError> {
-    let existing =
-        StatusUpdate::find_for_week(&state.db, week_id, auth.user_id, &auth.crypto).await?;
-    let has_ai = crate::ai::helpers::has_ai_for_user(&state, auth.user_id).await;
-
-    let mut ctx = tera::Context::new();
-    ctx.insert("week_id", &week_id);
-    ctx.insert("status_update", &existing);
-    ctx.insert("has_ai", &has_ai);
-
-    let html = state
-        .templates
-        .render("panels/status_update.html", &ctx)?;
-    Ok(Html(html))
-}
-
-/// POST /status-update/{week_id}/generate — AI-generate a status update.
+/// POST /status-update/{week_id}/generate — AI-generate a stakeholder-facing
+/// status update for the week and auto-save the draft. Renders the Reports
+/// "Latest Updates" section so HTMX can swap it in place.
 pub async fn generate_status_update(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -54,15 +34,12 @@ pub async fn generate_status_update(
     )
     .await?;
 
-    let focus_items =
-        WeeklyFocus::list_for_week(&state.db, week_id, auth.user_id, &auth.crypto).await?;
     let priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
     let blocker_updates =
         PriorityUpdate::list_active_blockers(&state.db, auth.user_id, &auth.crypto).await?;
 
     let prompt = crate::ai::prompts::build_status_update_prompt(
         &entries,
-        &focus_items,
         &priorities,
         &blocker_updates,
         &week.start_date,
@@ -72,7 +49,7 @@ pub async fn generate_status_update(
     let ai = crate::ai::helpers::get_ai_client(&state, auth.user_id).await?;
     let generated = ai.generate(&prompt).await?;
 
-    // Auto-save the generated content
+    // Auto-save the generated content so the draft survives page reload.
     let input = SaveStatusUpdate {
         content: Some(generated.clone()),
     };
@@ -86,35 +63,17 @@ pub async fn generate_status_update(
     )
     .await?;
 
-    let mut ctx = tera::Context::new();
-    ctx.insert("week_id", &week_id);
-    ctx.insert(
-        "status_update",
-        &StatusUpdate {
-            id: 0,
-            week_id,
-            phase_id: phase.id,
-            user_id: auth.user_id,
-            content: Some(generated),
-            created_at: String::new(),
-            updated_at: String::new(),
-        },
-    );
-    ctx.insert("has_ai", &true);
-
-    let html = state
-        .templates
-        .render("panels/status_update.html", &ctx)?;
-    Ok(Html(html))
+    render_section(&state, week_id, phase.id, auth.user_id, Some(generated)).await
 }
 
-/// POST /status-update/{week_id}/save — save edited status update.
+/// POST /status-update/{week_id}/save — persist the edited status update
+/// and re-render the section in view mode.
 pub async fn save_status_update(
     auth: AuthUser,
     State(state): State<AppState>,
     Path(week_id): Path<i64>,
     Form(input): Form<SaveStatusUpdate>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Html<String>, AppError> {
     let phase = BragPhase::get_active(&state.db, auth.user_id)
         .await?
         .ok_or(AppError::BadRequest("No active phase".into()))?;
@@ -129,5 +88,38 @@ pub async fn save_status_update(
     )
     .await?;
 
-    Ok(hx_redirect("/dashboard"))
+    render_section(&state, week_id, phase.id, auth.user_id, input.content).await
+}
+
+/// Renders the Latest Updates section partial with the current saved content
+/// and AI availability. `content` is what was just generated/saved; when
+/// present we use it directly to avoid a redundant DB round-trip.
+async fn render_section(
+    state: &AppState,
+    week_id: i64,
+    phase_id: i64,
+    user_id: i64,
+    content: Option<String>,
+) -> Result<Html<String>, AppError> {
+    let has_ai = crate::ai::helpers::has_ai_for_user(state, user_id).await;
+
+    let status_update = content.map(|c| StatusUpdate {
+        id: 0,
+        week_id,
+        phase_id,
+        user_id,
+        content: Some(c),
+        created_at: String::new(),
+        updated_at: String::new(),
+    });
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("week_id", &week_id);
+    ctx.insert("status_update", &status_update);
+    ctx.insert("has_ai", &has_ai);
+
+    let html = state
+        .templates
+        .render("components/status_update_section.html", &ctx)?;
+    Ok(Html(html))
 }

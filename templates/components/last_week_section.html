@@ -1,0 +1,79 @@
+<section class="report-section" id="report-last-week">
+    <header class="report-section-header">
+        <div class="report-section-heading">
+            <h2 class="report-section-title">Last week</h2>
+            <p class="report-section-subtitle">
+                Logbook entries from last Monday through today, grouped by priority.
+                {% if summary %}<span class="report-section-meta">· {{ window_start }} → {{ window_end }}</span>{% endif %}
+            </p>
+        </div>
+        <div class="report-section-actions">
+            {% if has_ai %}
+            <button type="button"
+                    class="btn btn-primary btn-sm report-generate-btn"
+                    hx-post="/reports/last-week/generate"
+                    hx-target="#report-last-week"
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this"
+                    hx-indicator="#report-last-week">
+                <span class="report-btn-idle">
+                    {% if summary %}Regenerate{% else %}Generate with AI{% endif %}
+                </span>
+                <span class="report-btn-busy">
+                    <span class="report-btn-spinner"></span>
+                    Generating…
+                </span>
+            </button>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="report-section-busy-overlay" aria-hidden="true">
+        <div class="report-section-busy-inner">
+            <span class="report-btn-spinner report-btn-spinner--lg"></span>
+            <span>Generating your report…</span>
+        </div>
+    </div>
+
+    <div class="report-section-body">
+        {% if not has_ai %}
+        <p class="report-empty-state">
+            Connect an AI key in <a href="/integrations">Integrations</a> to generate summaries.
+        </p>
+        {% elif not summary %}
+        <p class="report-empty-state">
+            Click <strong>Generate with AI</strong> to summarise what you've shipped since last Monday.
+            Entries are grouped by the priority they roll up to.
+        </p>
+        {% else %}
+        <div class="report-section-markdown markdown-body">{{ summary | markdown | safe }}</div>
+
+        {% if groups | length > 0 %}
+        <details class="report-section-evidence">
+            <summary>Show underlying entries ({{ groups | length }} group{{ groups | length | pluralize }})</summary>
+            {% for group in groups %}
+            <div class="report-evidence-group">
+                <h4 class="report-evidence-heading">{{ group.heading }}</h4>
+                <ul class="report-evidence-entries">
+                    {% for e in group.entries %}
+                    <li>
+                        <span class="badge badge-type">{{ e.entry_type }}</span>
+                        <span class="report-evidence-title">{{ e.title }}</span>
+                        {% if e.status %}<span class="text-sm text-muted">({{ e.status }})</span>{% endif %}
+                        <span class="text-sm text-muted">· {{ e.occurred_at }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endfor %}
+        </details>
+        {% endif %}
+        {% endif %}
+    </div>
+
+    {% if summary %}
+    <footer class="report-section-footer">
+        <button type="button" class="btn btn-text btn-sm" onclick="copyReportMarkdown(this)">Copy</button>
+    </footer>
+    {% endif %}
+</section>

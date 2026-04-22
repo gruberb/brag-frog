@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Reports — Brag Frog{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Reports</h1>
+    <p class="page-subtitle">AI-assisted narratives of your recent work.</p>
+</div>
+
+<div class="reports-page" data-default-tab="last-week">
+    <div class="reports-tabs" role="tablist">
+        <button type="button" class="reports-tab" role="tab" data-tab="last-week">Last week</button>
+        <button type="button" class="reports-tab" role="tab" data-tab="latest-updates">Latest updates</button>
+    </div>
+
+    <div class="reports-panels">
+        <div class="reports-panel" id="panel-last-week" role="tabpanel">
+            {% include "components/last_week_section.html" %}
+        </div>
+        <div class="reports-panel" id="panel-latest-updates" role="tabpanel">
+            {% include "components/status_update_section.html" %}
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var page = document.querySelector('.reports-page');
+    if (!page) return;
+    var tabs = page.querySelectorAll('.reports-tab');
+    var panels = page.querySelectorAll('.reports-panel');
+
+    function activate(name) {
+        tabs.forEach(function (t) {
+            var active = t.getAttribute('data-tab') === name;
+            t.classList.toggle('reports-tab--active', active);
+            t.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        panels.forEach(function (p) {
+            p.classList.toggle('reports-panel--active', p.id === 'panel-' + name);
+        });
+    }
+
+    // Restore tab from URL hash (#last-week / #latest-updates) on load.
+    var initial = (window.location.hash || '').replace('#', '') || page.getAttribute('data-default-tab');
+    if (!document.getElementById('panel-' + initial)) {
+        initial = page.getAttribute('data-default-tab');
+    }
+    activate(initial);
+
+    tabs.forEach(function (t) {
+        t.addEventListener('click', function () {
+            var name = t.getAttribute('data-tab');
+            activate(name);
+            if (history.replaceState) history.replaceState(null, '', '#' + name);
+        });
+    });
+})();
+</script>
+{% endblock %}

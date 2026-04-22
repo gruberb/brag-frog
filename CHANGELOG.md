@@ -2,6 +2,28 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.0.0] - 2026-04-22
+
+### Added
+- **Reports page.** New top-level page (`/reports`) with two tabs sharing a consistent shell:
+  - *Last Week* — rolling AI-generated summary of logbook entries from Monday of the previous ISO week through today. Grouped by linked priority (and its parent department goal), with an `Unassigned` bucket for un-linked work. Read-only, regenerated on demand, never persisted; the logbook remains the source of truth.
+  - *Latest Updates* — stakeholder-facing status narrative, editable and persisted per week. Markdown preview with an Edit toggle.
+- **Migration 021 — `remove_focus_and_todos`.** Drops `weekly_focus`, `weekly_focus_entries`, and `todos` tables. Phase-delete cascade updated to match.
+
+### Changed
+- **Last Week summary prompt restructured.** Now takes pre-grouped `EntryGroup` slices keyed by priority/department goal and emits one `## [priority title]` section per bucket, rather than the previous type-grouped "What Shipped / What Progressed / Key Meetings / Help Given" layout. Reflects how stakeholders actually read progress.
+- **Status Update moved from slide-over panel to inline section.** `status_update_panel` handler removed; `generate_status_update` and `save_status_update` now render the shared `components/status_update_section.html` fragment so HTMX can swap it in-place on the Reports page.
+- **Meeting prep prompt no longer injects focus items.** Focus section removed from `build_meeting_prep_prompt` inputs and output.
+- **Sidebar navigation.** Todos link replaced with Reports (document icon). Reflections keeps its current position.
+
+### Removed
+- **Weekly Focus.** Dashboard focus card, carryover suggestions, focus-entry linking, completion toggles, and Last Week button on the dashboard are gone. Handlers (`create_focus`, `update_focus`, `delete_focus`, `toggle_focus_complete`, `last_week_summary`), model (`src/cycle/model/focus.rs`), and repo (`src/cycle/repo/focus.rs`) deleted. The Last Week summary now lives on the Reports page and reads directly from the logbook.
+- **Todos feature.** Standalone `/todos` page, encrypted todo titles, toggle/delete handlers, and the `src/todos/` module are removed. The lightweight planning use-case is better served by the logbook plus the Reports "Latest Updates" tab.
+- Dashboard template simplified: removed focus card, carryover section, focus entry picker autocomplete, and the `has_ai` / `focus_items` / `picker_entries` / `carryover_items` context keys that fed them. Associated CSS blocks in `static/css/components/dashboard.css` and JS in `static/js/dashboard.js` removed.
+
+### Migration Notes
+Existing Weekly Focus and Todos data is dropped by migration 021. Export anything worth keeping before upgrading — there is no in-app export path for these tables.
+
 ## [4.0.0] - 2026-04-02
 
 ### Added

@@ -1,7 +1,7 @@
 use crate::worklog::model::BragEntry;
 use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
 use crate::identity::clg::ClgLevel;
-use crate::cycle::model::{MeetingPrepNote, WeeklyFocus};
+use crate::cycle::model::MeetingPrepNote;
 use crate::reflections::model::WeeklyCheckin;
 use crate::review::model::{AiDocument, get_section};
 
@@ -392,7 +392,6 @@ pub fn build_meeting_prep_prompt(
     recent_entries: &[BragEntry],
     other_recent_entries: &[BragEntry],
     checkins: &[&WeeklyCheckin],
-    focus_items: &[WeeklyFocus],
     context_text: &str,
     existing_note: Option<&MeetingPrepNote>,
     meeting_goal: Option<&str>,
@@ -469,18 +468,6 @@ pub fn build_meeting_prep_prompt(
         } else {
             format!("\n## Recent Work (Last 3 Weeks)\n{}\n", items.join("\n"))
         }
-    };
-
-    // Current week's focus items
-    let focus_section = if focus_items.is_empty() {
-        String::new()
-    } else {
-        let items: String = focus_items
-            .iter()
-            .map(|f| format!("- {}", f.title))
-            .collect::<Vec<_>>()
-            .join("\n");
-        format!("\n## This Week's Focus\n{}\n", items)
     };
 
     // Recent check-in highlights (most recent only, non-empty fields, truncated)
@@ -563,7 +550,7 @@ Priority: {} — status: {}
         });
 
     // Thin context: no user context, no goal, no existing notes, no linked priority,
-    // no calendar description, no prior preps, no recent work/checkins/focus
+    // no calendar description, no prior preps, no recent work/checkins
     let has_thin_context = context_text.is_empty()
         && meeting_goal.is_none_or(|g| g.is_empty())
         && existing_text.is_empty()
@@ -571,7 +558,6 @@ Priority: {} — status: {}
         && entry.description.as_ref().is_none_or(|d| d.is_empty())
         && prior_preps.is_empty()
         && recent_work_section.is_empty()
-        && focus_section.is_empty()
         && checkin_section.is_empty();
 
     let link_caveat = if has_only_links {
@@ -622,7 +608,7 @@ Priority: {} — status: {}
 - Time: {time_range}
 - Role: {role}
 - Series: {recurring}
-{goal_section}{calendar_desc_section}{context_section}{prior_preps_section}{recent_work_section}{focus_section}{checkin_section}{existing_text}{priority_context}{link_caveat}{thin_context_guidance}
+{goal_section}{calendar_desc_section}{context_section}{prior_preps_section}{recent_work_section}{checkin_section}{existing_text}{priority_context}{link_caveat}{thin_context_guidance}
 ## Role Guidance
 {role_hint}
 
@@ -655,7 +641,6 @@ Keep talking points concise (1-2 sentences each) so they can be directly pasted 
         context_section = context_section,
         prior_preps_section = prior_preps_section,
         recent_work_section = recent_work_section,
-        focus_section = focus_section,
         checkin_section = checkin_section,
         existing_text = existing_text,
         priority_context = priority_context,
@@ -665,91 +650,74 @@ Keep talking points concise (1-2 sentences each) so they can be directly pasted 
     )
 }
 
-/// Builds an AI prompt for a "What did I do last week?" summary.
+/// A slice of entries all rolled up under the same priority (or `None` for
+/// un-linked work). Passed to the last-week summary prompt so the model can
+/// narrate progress per priority rather than per entry-type.
+pub struct EntryGroup<'a> {
+    pub priority: Option<&'a Priority>,
+    pub dept_goal: Option<&'a DepartmentGoal>,
+    pub entries: Vec<&'a BragEntry>,
+}
+
+/// Builds an AI prompt for a "What did I do last week?" summary, grouped
+/// by the priority / department goal each entry rolls up to. The caller is
+/// responsible for pre-grouping entries — the prompt reflects that grouping
+/// directly so the model can emit one narrative per priority.
 pub fn build_last_week_summary_prompt(
-    entries: &[BragEntry],
-    focus_items: &[WeeklyFocus],
-    priorities: &[Priority],
-    checkin: Option<&WeeklyCheckin>,
+    groups: &[EntryGroup<'_>],
     week_start: &str,
     week_end: &str,
 ) -> String {
     let mut ctx = String::new();
-    ctx.push_str(&format!("Week: {} to {}\n\n", week_start, week_end));
+    ctx.push_str(&format!("Window: {} to {}\n\n", week_start, week_end));
 
-    // Focus items
-    if !focus_items.is_empty() {
-        ctx.push_str("## Weekly Focus Items\n");
-        for f in focus_items {
-            let status = if f.completed == 1 { "DONE" } else { "In progress" };
-            ctx.push_str(&format!("- {} [{}]\n", f.title, status));
-            if let Some(ref notes) = f.notes {
-                ctx.push_str(&format!("  Notes: {}\n", notes));
-            }
+    // Emit each priority bucket with its entries. Un-linked work falls under
+    // "Unassigned" so the model still has somewhere to report it.
+    for group in groups {
+        if group.entries.is_empty() {
+            continue;
         }
+        let heading = match (group.dept_goal, group.priority) {
+            (Some(dg), Some(p)) => format!("## {} — {}", dg.title, p.title),
+            (None, Some(p)) => format!("## {}", p.title),
+            _ => "## Unassigned".to_string(),
+        };
+        ctx.push_str(&heading);
         ctx.push('\n');
-    }
-
-    // Priorities
-    if !priorities.is_empty() {
-        ctx.push_str("## Priorities\n");
-        for p in priorities {
-            if p.status == "active" || p.status == "completed" {
-                let tracking = p.tracking_status.as_deref().unwrap_or("no update");
-                ctx.push_str(&format!("- {} [status: {}, tracking: {}]\n", p.title, p.status, tracking));
-            }
+        if let Some(p) = group.priority {
+            let tracking = p.tracking_status.as_deref().unwrap_or("no update");
+            ctx.push_str(&format!(
+                "_Priority status: {} · tracking: {}_\n",
+                p.status, tracking
+            ));
         }
-        ctx.push('\n');
-    }
-
-    // Check-in highlights
-    if let Some(ci) = checkin {
-        ctx.push_str("## Weekly Reflection\n");
-        if let Some(ref h) = ci.highlights_impact {
-            ctx.push_str(&format!("Ownership & Impact: {}\n", h));
-        }
-        if let Some(ref l) = ci.learnings_adjustments {
-            ctx.push_str(&format!("Blockers & Tradeoffs: {}\n", l));
-        }
-        if let Some(ref g) = ci.growth_development {
-            ctx.push_str(&format!("Relationships & Curiosity: {}\n", g));
-        }
-        if let Some(ref s) = ci.support_feedback {
-            ctx.push_str(&format!("Giving & Helping: {}\n", s));
-        }
-        ctx.push('\n');
-    }
-
-    // Entries grouped by type
-    if !entries.is_empty() {
-        ctx.push_str("## Entries\n");
-        for e in entries.iter().take(50) {
+        for e in group.entries.iter().take(30) {
             ctx.push_str(&format!("- [{}] {}", e.entry_type, e.title));
             if let Some(ref status) = e.status {
                 ctx.push_str(&format!(" ({})", status));
             }
             ctx.push('\n');
         }
-        if entries.len() > 50 {
-            ctx.push_str(&format!("... and {} more entries\n", entries.len() - 50));
+        if group.entries.len() > 30 {
+            ctx.push_str(&format!(
+                "... and {} more entries in this group\n",
+                group.entries.len() - 30
+            ));
         }
         ctx.push('\n');
     }
 
     ctx.push_str("---\n\n");
     ctx.push_str(
-        "Generate a concise summary of last week. Structure:\n\n\
-         ## What Shipped\n\
-         Bullet points of completed work, merged code, delivered outcomes.\n\n\
-         ## What Progressed\n\
-         Work in progress, key milestones hit, priorities advanced.\n\n\
-         ## Key Meetings & Conversations\n\
-         Important meetings, cross-team conversations, decisions made.\n\n\
-         ## Help Given\n\
-         Who you helped, reviews done, unblocking work.\n\n\
-         Rules: First person. Bullet points. Be specific and evidence-based. \
-         Pull from the entries and reflection data. Keep it scannable — \
-         a manager should be able to read this in 60 seconds.",
+        "Generate a summary of work since the window start, organised by priority.\n\n\
+         For each priority heading above, emit a matching `## [priority title]` section \
+         with 2–4 first-person bullet points answering: what shipped, what progressed, \
+         and any key meetings or help given tied to that priority. For the Unassigned \
+         group, surface anything notable (reviews, cross-team work, interrupts) under \
+         an `## Unassigned` heading.\n\n\
+         Rules: First person. Bullet points. Be specific and evidence-based — cite \
+         entries rather than inventing context. Skip priorities with no real activity. \
+         Keep it scannable — a manager should read this in 60 seconds.",
     );
 
     ctx
@@ -758,7 +726,6 @@ pub fn build_last_week_summary_prompt(
 /// Builds an AI prompt for generating a stakeholder status update.
 pub fn build_status_update_prompt(
     entries: &[BragEntry],
-    focus_items: &[WeeklyFocus],
     priorities: &[Priority],
     blocker_updates: &[PriorityUpdate],
     week_start: &str,
@@ -766,20 +733,6 @@ pub fn build_status_update_prompt(
 ) -> String {
     let mut ctx = String::new();
     ctx.push_str(&format!("Week: {} to {}\n\n", week_start, week_end));
-
-    // Focus items
-    if !focus_items.is_empty() {
-        ctx.push_str("## Weekly Focus Items\n");
-        for f in focus_items {
-            let status = if f.completed == 1 {
-                "DONE"
-            } else {
-                "In progress"
-            };
-            ctx.push_str(&format!("- {} [{}]\n", f.title, status));
-        }
-        ctx.push('\n');
-    }
 
     // Priorities
     if !priorities.is_empty() {

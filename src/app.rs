@@ -30,7 +30,6 @@ use crate::review::routes as review_routes;
 use crate::integrations::integrations_routes;
 use crate::integrations::sync_routes;
 use crate::protocol::routes as protocol_routes;
-use crate::todos::routes as todos_routes;
 
 /// Resolves a config file path: checks `custom/` first, falls back to `config/`.
 /// This allows organizations to override default config files by placing their
@@ -156,22 +155,11 @@ pub fn create_router() -> Router<AppState> {
     let protected_routes = Router::new()
         // Dashboard
         .route("/dashboard", get(cycle_routes::dashboard::dashboard))
+        // Reports — AI-generated Last Week summary and Latest Updates
+        .route("/reports", get(cycle_routes::reports::reports_page))
         .route(
-            "/focus/week/{week_id}",
-            post(cycle_routes::dashboard::create_focus),
-        )
-        .route(
-            "/focus/{focus_id}",
-            put(cycle_routes::dashboard::update_focus)
-                .delete(cycle_routes::dashboard::delete_focus),
-        )
-        .route(
-            "/focus/{focus_id}/toggle",
-            post(cycle_routes::dashboard::toggle_focus_complete),
-        )
-        .route(
-            "/dashboard/last-week-summary",
-            post(cycle_routes::dashboard::last_week_summary),
+            "/reports/last-week/generate",
+            post(cycle_routes::reports::last_week_generate),
         )
         // Logbook
         .route("/logbook", get(cycle_routes::logbook::logbook))
@@ -206,11 +194,7 @@ pub fn create_router() -> Router<AppState> {
             "/meeting-prep/panel/{entry_id}/ai-draft",
             post(cycle_routes::meeting_prep::ai_draft_meeting_prep),
         )
-        // Status Update
-        .route(
-            "/status-update/{week_id}",
-            get(cycle_routes::status_update::status_update_panel),
-        )
+        // Status Update (inline on dashboard — generate + save only)
         .route(
             "/status-update/{week_id}/generate",
             post(cycle_routes::status_update::generate_status_update),
@@ -299,19 +283,6 @@ pub fn create_router() -> Router<AppState> {
         .route(
             "/protocol/clear",
             post(protocol_routes::clear_protocol_checks),
-        )
-        // Todos
-        .route(
-            "/todos",
-            get(todos_routes::todos_page).post(todos_routes::create_todo),
-        )
-        .route(
-            "/todos/{id}/toggle",
-            post(todos_routes::toggle_todo),
-        )
-        .route(
-            "/todos/{id}",
-            delete(todos_routes::delete_todo),
         )
         // Phases (Performance Cycle)
         .route("/phases", post(cycle_routes::phases::create_phase))
