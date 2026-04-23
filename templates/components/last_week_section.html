@@ -5,6 +5,7 @@
             <p class="report-section-subtitle">
                 Logbook entries from last Monday through today, grouped by priority.
                 {% if summary %}<span class="report-section-meta">· {{ window_start }} → {{ window_end }}</span>{% endif %}
+                {% if saved_at %}<span class="report-section-meta">· Saved {{ saved_at | truncate(length=16, end="") }}</span>{% endif %}
             </p>
         </div>
         <div class="report-section-actions">

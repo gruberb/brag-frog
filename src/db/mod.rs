@@ -147,6 +147,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "021_remove_focus_and_todos",
         include_str!("../../migrations/021_remove_focus_and_todos.sql"),
     ),
+    (
+        "022_last_week_reports",
+        include_str!("../../migrations/022_last_week_reports.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.

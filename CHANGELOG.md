@@ -2,6 +2,15 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.1.0] - 2026-04-23
+
+### Added
+- **Persisted Last Week reports.** The AI-generated Last Week summary on `/reports` is now saved per current-week and survives navigation — no more regenerating every time you switch tabs or pages. Content, the date window it narrates, and an `updated_at` timestamp are stored together in the new `last_week_reports` table. Regenerate overwrites in place; revisiting a week still shows the report you generated earlier with the dates it actually refers to.
+- **Migration 022 — `last_week_reports`.** New encrypted table keyed on `(week_id, user_id)` with `content` (AES-256-GCM), `window_start`, `window_end`. Phase-delete cascade updated to include it.
+
+### Changed
+- **Reports page subtitle shows a "Saved …" timestamp** alongside the window range when a stored report is displayed, so it's obvious at a glance when the text was last generated.
+
 ## [5.0.0] - 2026-04-22
 
 ### Added

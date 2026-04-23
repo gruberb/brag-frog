@@ -1,6 +1,7 @@
 //! Persistence layer for the cycle bounded context.
 //! All SQL queries live here — `model.rs` contains no SQL.
 
+pub mod last_week_report;
 mod meeting;
 pub mod status_update;
 
@@ -122,6 +123,14 @@ impl BragPhase {
         // Delete status updates for weeks in this phase
         sqlx::query(
             "DELETE FROM status_updates WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
+        )
+        .bind(id)
+        .execute(&mut *tx)
+        .await?;
+
+        // Delete last-week reports for weeks in this phase
+        sqlx::query(
+            "DELETE FROM last_week_reports WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
         )
         .bind(id)
         .execute(&mut *tx)
