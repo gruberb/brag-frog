@@ -9,13 +9,11 @@ use tower_sessions::Session;
 use crate::AppState;
 use crate::identity::auth::{self, middleware as auth_mw};
 use crate::identity::model::{PeopleAlias, ProfileUpdate, User};
+use crate::identity::oauth_state::{self, OAuthFlow};
 use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
 
 // ── Auth routes ──
-
-/// Session key for the OAuth CSRF state token.
-const OAUTH_STATE_KEY: &str = "oauth_state";
 
 /// Query parameters returned by Google OAuth redirect.
 #[derive(serde::Deserialize)]
@@ -27,15 +25,8 @@ pub struct CallbackParams {
 /// Renders the login page with a Google OAuth sign-in URL.
 pub async fn login_page(
     State(state): State<AppState>,
-    session: Session,
 ) -> Result<Html<String>, AppError> {
-    // Generate random state token for CSRF protection (login: prefix for routing)
-    let state_token = format!("login:{}", uuid::Uuid::new_v4());
-    session
-        .insert(OAUTH_STATE_KEY, &state_token)
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to set OAuth state: {}", e)))?;
-
+    let state_token = oauth_state::mint(&state.crypto, OAuthFlow::Login)?;
     let google_auth_url = crate::identity::auth::google_auth_url(&state.config, &state_token);
     let mut ctx = tera::Context::new();
     ctx.insert("google_auth_url", &google_auth_url);
@@ -44,33 +35,25 @@ pub async fn login_page(
 }
 
 /// Google OAuth callback: validates state, exchanges code for token, creates/finds user, sets session.
-/// Uses state prefix routing: `login:` for normal login, `drive:` for Google Drive OAuth.
+///
+/// The CSRF `state` parameter is a stateless HMAC-signed token (see
+/// `identity::oauth_state`); the embedded flow tag selects which branch runs
+/// here — login vs. Drive vs. Calendar consent.
 pub async fn callback(
     State(state): State<AppState>,
     session: Session,
     Query(params): Query<CallbackParams>,
 ) -> Result<Redirect, AppError> {
-    // Validate OAuth state parameter
-    let expected_state: Option<String> = session
-        .get(OAUTH_STATE_KEY)
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to read OAuth state: {}", e)))?;
+    let received_state = params.state.as_deref().ok_or_else(|| {
+        tracing::warn!("OAuth callback missing state parameter");
+        AppError::BadRequest("Invalid OAuth state".to_string())
+    })?;
+    let flow = oauth_state::verify(&state.crypto, received_state).inspect_err(|_| {
+        tracing::warn!("OAuth state verification failed");
+    })?;
 
-    // Remove state from session (one-time use)
-    session.remove::<String>(OAUTH_STATE_KEY).await.ok();
-
-    match (&expected_state, &params.state) {
-        (Some(expected), Some(received)) if expected == received => {}
-        _ => {
-            tracing::warn!("OAuth state mismatch or missing");
-            return Err(AppError::BadRequest("Invalid OAuth state".to_string()));
-        }
-    }
-
-    // Determine flow from state prefix
-    let received_state = params.state.as_deref().unwrap_or("");
-    let is_drive_flow = received_state.starts_with("drive:");
-    let is_calendar_flow = received_state.starts_with("calendar:");
+    let is_drive_flow = flow == OAuthFlow::Drive;
+    let is_calendar_flow = flow == OAuthFlow::Calendar;
 
     tracing::info!("OAuth callback received, exchanging code...");
 
@@ -146,15 +129,9 @@ pub async fn callback(
 pub async fn connect_google_drive(
     auth: auth::middleware::AuthUser,
     State(state): State<AppState>,
-    session: Session,
 ) -> Result<Redirect, AppError> {
     let _ = auth; // ensure user is logged in
-    let state_token = format!("drive:{}", uuid::Uuid::new_v4());
-    session
-        .insert(OAUTH_STATE_KEY, &state_token)
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to set OAuth state: {}", e)))?;
-
+    let state_token = oauth_state::mint(&state.crypto, OAuthFlow::Drive)?;
     let url = crate::identity::auth::google_drive_auth_url(&state.config, &state_token);
     Ok(Redirect::to(&url))
 }
@@ -163,15 +140,9 @@ pub async fn connect_google_drive(
 pub async fn connect_google_calendar(
     auth: auth::middleware::AuthUser,
     State(state): State<AppState>,
-    session: Session,
 ) -> Result<Redirect, AppError> {
     let _ = auth; // ensure user is logged in
-    let state_token = format!("calendar:{}", uuid::Uuid::new_v4());
-    session
-        .insert(OAUTH_STATE_KEY, &state_token)
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to set OAuth state: {}", e)))?;
-
+    let state_token = oauth_state::mint(&state.crypto, OAuthFlow::Calendar)?;
     let url = crate::identity::auth::google_calendar_auth_url(&state.config, &state_token);
     Ok(Redirect::to(&url))
 }

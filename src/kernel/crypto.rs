@@ -63,6 +63,17 @@ impl Crypto {
         Ok(UserCrypto { cipher })
     }
 
+    /// Derive a 32-byte HMAC-SHA256 key from the master, used for signing
+    /// short-lived OAuth CSRF state tokens. Domain-separated from per-user
+    /// keys via a distinct HKDF `info` string.
+    pub fn oauth_state_key(&self) -> Result<[u8; 32], AppError> {
+        let hk = Hkdf::<Sha256>::new(None, &self.master_key);
+        let mut key = [0u8; 32];
+        hk.expand(b"brag-frog:oauth-state-hmac", &mut key)
+            .map_err(|e| AppError::Internal(format!("HKDF expand failed: {}", e)))?;
+        Ok(key)
+    }
+
     /// Generate a new random 32-byte key, base64-encoded (for initial setup).
     pub fn generate_key() -> String {
         use aes_gcm::aead::rand_core::RngCore;

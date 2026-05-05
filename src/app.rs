@@ -122,12 +122,8 @@ async fn landing_page(
 
     let mut ctx = tera::Context::new();
 
-    let state_token = format!("login:{}", uuid::Uuid::new_v4());
-    session
-        .insert("oauth_state", &state_token)
-        .await
-        .map_err(|e| AppError::Internal(format!("Failed to set OAuth state: {}", e)))?;
-
+    let state_token =
+        crate::identity::oauth_state::mint(&state.crypto, crate::identity::oauth_state::OAuthFlow::Login)?;
     let google_auth_url = crate::identity::auth::google_auth_url(&state.config, &state_token);
     ctx.insert("google_auth_url", &google_auth_url);
     ctx.insert("instance_name", &state.config.instance_name);

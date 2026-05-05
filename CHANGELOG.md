@@ -2,6 +2,19 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.1.1] - 2026-05-05
+
+### Fixed
+- **"Invalid OAuth state" after Google sign-in.** The CSRF state token used during the OAuth round-trip was kept in a single session-keyed slot. Any second render of the landing/login page — a duplicate tab, a refresh, the back button after starting OAuth, a link prefetcher hitting `/` — overwrote the in-flight token, so the callback's comparison failed even though the user did nothing wrong. The token is now a stateless HMAC-signed value (`<flow>:<nonce>:<ts>:<sig>`, 10-minute validity) verified locally against an HKDF-derived key from `BRAGFROG_ENCRYPTION_KEY`. No session writes on the initiator path; concurrent tabs and reloads can no longer invalidate each other.
+
+### Added
+- **`identity::oauth_state` module.** `mint(crypto, flow)` / `verify(crypto, token) → OAuthFlow`. Domain-separated HMAC-SHA256 key (HKDF info `brag-frog:oauth-state-hmac`), constant-time signature check via `hmac::Mac::verify_slice`, freshness window enforced on verify. Eight unit tests cover roundtrip, flow tampering, signature tampering, wrong-key rejection, malformed input, and expiry.
+- **`hmac` dependency** (0.12) for state-token signing.
+
+### Changed
+- `landing_page`, `login_page`, `connect_google_drive`, `connect_google_calendar` mint signed tokens instead of writing to the session. The `Session` extractor was removed from the three initiator handlers (it had no other purpose).
+- `callback` derives the OAuth flow (login/drive/calendar) from the verified token's flow tag rather than a `starts_with` check, so the routing decision is always integrity-protected.
+
 ## [5.1.0] - 2026-04-23
 
 ### Added
