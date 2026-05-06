@@ -24,8 +24,14 @@
             <textarea id="qc-{{ section.slug }}" name="{{ section.slug }}" class="form-textarea" rows="6">{% if section.slug == "highlights_impact" %}{% if checkin %}{{ checkin.highlights_impact | default(value="") }}{% endif %}{% elif section.slug == "learnings_adjustments" %}{% if checkin %}{{ checkin.learnings_adjustments | default(value="") }}{% endif %}{% elif section.slug == "growth_development" %}{% if checkin %}{{ checkin.growth_development | default(value="") }}{% endif %}{% elif section.slug == "support_feedback" %}{% if checkin %}{{ checkin.support_feedback | default(value="") }}{% endif %}{% elif section.slug == "looking_ahead" %}{% if checkin %}{{ checkin.looking_ahead | default(value="") }}{% endif %}{% endif %}</textarea>
         </div>
         {% if has_ai %}
-        <div style="margin-top:8px;">
-            <button type="button" class="btn btn-secondary btn-sm" disabled title="AI Draft coming soon">AI Draft</button>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+            <button type="button"
+                    class="btn btn-secondary btn-sm"
+                    id="qc-ai-btn-{{ section.slug }}"
+                    onclick="fetchQuarterlyAiDraft('{{ section.slug }}', '{{ quarter }}', {{ year }})">
+                AI Draft
+            </button>
+            <span id="qc-ai-status-{{ section.slug }}" style="font-size:var(--text-xs);color:var(--color-text-secondary);"></span>
         </div>
         {% endif %}
     </section>
@@ -124,6 +130,42 @@ function copyCheckinSection(slug) {
     navigator.clipboard.writeText(text).then(function() {
         var status = document.getElementById('qc-copy-status-' + slug);
         if (status) { status.style.display = 'inline'; setTimeout(function() { status.style.display = 'none'; }, 1500); }
+    });
+}
+
+// Drops an AI-generated draft into the matching section textarea. The handler
+// returns plain text — no persistence — so the user reviews and saves via the
+// form's Save button.
+function fetchQuarterlyAiDraft(slug, quarter, year) {
+    var textarea = document.getElementById('qc-' + slug);
+    var btn = document.getElementById('qc-ai-btn-' + slug);
+    var status = document.getElementById('qc-ai-status-' + slug);
+    if (!textarea || !btn) return;
+
+    btn.disabled = true;
+    if (status) { status.textContent = 'Generating draft...'; status.style.color = 'var(--color-text-secondary)'; }
+
+    fetch('/quarterly-checkin/' + quarter + '/' + year + '/ai-draft/' + slug, {
+        method: 'POST',
+        headers: { 'HX-Request': 'true' }
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('AI generation failed (' + response.status + ')');
+        return response.text();
+    })
+    .then(function(text) {
+        textarea.value = text;
+        textarea.focus();
+        if (status) { status.textContent = ''; }
+    })
+    .catch(function(err) {
+        if (status) {
+            status.textContent = err.message || 'AI draft failed. Try again.';
+            status.style.color = 'var(--color-error)';
+        }
+    })
+    .finally(function() {
+        btn.disabled = false;
     });
 }
 </script>

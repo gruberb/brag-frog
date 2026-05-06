@@ -5,13 +5,17 @@ use axum::{
 };
 
 use crate::AppState;
+use crate::ai::get_ai_client;
+use crate::ai::prompts::build_quarterly_checkin_prompt;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
 use crate::objectives::model::Priority;
 use crate::cycle::model::{BragPhase, Week};
 use crate::reflections::model::{
     MonthlyCheckin, QuarterlyCheckin, SaveCheckin, SaveQuarterlyCheckin, WeeklyCheckin,
+    checkin_config,
 };
+use crate::worklog::model::BragEntry;
 use crate::kernel::error::AppError;
 use crate::kernel::render::hx_redirect;
 
@@ -233,6 +237,85 @@ pub async fn quarterly_checkin_page(
         .templates
         .render("pages/quarterly_checkin.html", &ctx)?;
     Ok(Html(html))
+}
+
+/// HTMX handler: AI-generates a draft for a single quarterly check-in section.
+///
+/// Returns plain text only — the caller's JS drops the result into the matching
+/// textarea and the user explicitly saves via the form. The prompt is assembled
+/// from the section's instruction in `checkin_sections.toml`, the relevant slice
+/// of each weekly reflection in the quarter, and any brag entries logged during
+/// the quarter for concrete anchoring.
+pub async fn ai_draft_quarterly_section(
+    auth: AuthUser,
+    State(state): State<AppState>,
+    Path((quarter, year, section)): Path<(String, i64, String)>,
+) -> Result<String, AppError> {
+    let ai_client = get_ai_client(&state, auth.user_id).await?;
+
+    let phase = BragPhase::get_active(&state.db, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::BadRequest("No active phase".to_string()))?;
+
+    // Look up the section definition by slug. An unknown slug is a bug, not a
+    // user error — fail loudly so we catch any drift between template and config.
+    let section_cfg = checkin_config()
+        .sections
+        .iter()
+        .find(|s| s.slug == section)
+        .ok_or_else(|| AppError::BadRequest(format!("Unknown check-in section: {}", section)))?;
+
+    let weekly_reflections = QuarterlyCheckin::weekly_reflections_for_quarter(
+        &state.db,
+        auth.user_id,
+        &quarter,
+        year,
+        &auth.crypto,
+    )
+    .await?;
+
+    // Bound entries to the quarter's calendar dates so the model only sees work
+    // logged inside the conversation window.
+    let (start_date, end_date) = quarter_date_range(&quarter, year);
+    let entries = BragEntry::list_for_phase_in_range(
+        &state.db,
+        phase.id,
+        &start_date,
+        &end_date,
+        &auth.crypto,
+    )
+    .await?;
+
+    let prompt = build_quarterly_checkin_prompt(
+        &section_cfg.slug,
+        &section_cfg.quarterly_question,
+        &section_cfg.ai_prompt,
+        &weekly_reflections,
+        &entries,
+        &quarter,
+        year,
+    );
+
+    let content = ai_client.generate(&prompt).await?;
+    Ok(content)
+}
+
+/// Maps a quarter label to its inclusive `[start, end]` calendar date range
+/// (`YYYY-MM-DD`). Used to slice phase data down to the quarterly window.
+fn quarter_date_range(quarter: &str, year: i64) -> (String, String) {
+    let (start_month, end_month, end_day) = match quarter {
+        "Q1" => (1, 3, 31),
+        "Q2" => (4, 6, 30),
+        "Q3" => (7, 9, 30),
+        "Q4" => (10, 12, 31),
+        // Defensive: an unknown quarter falls back to the whole year so the AI
+        // still has data to chew on instead of silently empty input.
+        _ => (1, 12, 31),
+    };
+    (
+        format!("{:04}-{:02}-01", year, start_month),
+        format!("{:04}-{:02}-{:02}", year, end_month, end_day),
+    )
 }
 
 /// Saves a quarterly check-in (upsert) and redirects to the review page.

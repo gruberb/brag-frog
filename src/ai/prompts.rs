@@ -2,7 +2,7 @@ use crate::worklog::model::BragEntry;
 use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
 use crate::identity::clg::ClgLevel;
 use crate::cycle::model::MeetingPrepNote;
-use crate::reflections::model::WeeklyCheckin;
+use crate::reflections::model::{CheckinWithWeek, WeeklyCheckin};
 use crate::review::model::{AiDocument, get_section};
 
 /// Assembles a complete prompt for one self-review section.
@@ -793,6 +793,98 @@ pub fn build_status_update_prompt(
          Rules: First person, concise, professional. Stakeholders should be able to scan this in 30 seconds. \
          Never say \"we're behind\" — frame delays as tradeoffs with options.",
     );
+
+    ctx
+}
+
+/// Builds the AI prompt for a single quarterly check-in section.
+///
+/// The quarterly check-in is a synthesis of weekly reflections rolled up across the
+/// quarter. The model gets the section's question and instruction (from
+/// `checkin_sections.toml`), the relevant slice of each weekly reflection, and any
+/// brag entries logged during the quarter as supplementary context. Returns plain
+/// text that the caller can drop into the textarea — no persistence happens here.
+pub fn build_quarterly_checkin_prompt(
+    section_slug: &str,
+    section_question: &str,
+    section_instruction: &str,
+    weekly_reflections: &[CheckinWithWeek],
+    entries: &[BragEntry],
+    quarter: &str,
+    year: i64,
+) -> String {
+    let mut ctx = String::new();
+    ctx.push_str(&format!(
+        "You are helping a software engineer prepare for their {} {} quarterly conversation with their manager.\n\n",
+        quarter, year
+    ));
+    ctx.push_str(&format!("## Question\n{}\n\n", section_question));
+
+    // Pull the field this section synthesises from each weekly reflection.
+    fn pick<'a>(slug: &str, r: &'a CheckinWithWeek) -> Option<&'a str> {
+        let v = match slug {
+            "highlights_impact" => r.highlights_impact.as_deref(),
+            "learnings_adjustments" => r.learnings_adjustments.as_deref(),
+            "growth_development" => r.growth_development.as_deref(),
+            "support_feedback" => r.support_feedback.as_deref(),
+            "looking_ahead" => r.looking_ahead.as_deref(),
+            _ => None,
+        };
+        v.map(str::trim).filter(|s| !s.is_empty())
+    }
+
+    let with_content: Vec<&CheckinWithWeek> = weekly_reflections
+        .iter()
+        .filter(|r| pick(section_slug, r).is_some())
+        .collect();
+
+    if with_content.is_empty() {
+        ctx.push_str(
+            "## Weekly Reflections\n_No relevant weekly reflections recorded for this section._\n\n",
+        );
+    } else {
+        ctx.push_str(&format!(
+            "## Weekly Reflections ({} weeks with content)\n\n",
+            with_content.len()
+        ));
+        for r in with_content {
+            ctx.push_str(&format!(
+                "### Week {} ({} → {})\n",
+                r.iso_week, r.week_start, r.week_end
+            ));
+            if let Some(text) = pick(section_slug, r) {
+                ctx.push_str(text);
+                ctx.push_str("\n\n");
+            }
+        }
+    }
+
+    // Brag entries from the quarter give the model concrete artefacts to anchor the
+    // narrative. Cap the list so we do not blow past the model's context window on
+    // active quarters.
+    if !entries.is_empty() {
+        ctx.push_str(&format!(
+            "## Work Logged This Quarter ({} entries)\n",
+            entries.len()
+        ));
+        for e in entries.iter().take(60) {
+            ctx.push_str(&format!("- [{}] {}", e.entry_type, e.title));
+            if let Some(ref status) = e.status {
+                ctx.push_str(&format!(" ({})", status));
+            }
+            ctx.push('\n');
+        }
+        if entries.len() > 60 {
+            ctx.push_str(&format!(
+                "... and {} more entries\n",
+                entries.len() - 60
+            ));
+        }
+        ctx.push('\n');
+    }
+
+    ctx.push_str("---\n\n");
+    ctx.push_str(section_instruction);
 
     ctx
 }

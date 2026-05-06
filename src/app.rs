@@ -240,6 +240,10 @@ pub fn create_router() -> Router<AppState> {
             "/quarterly-checkin/{quarter}/{year}/panel",
             get(reflections_routes::checkins::quarterly_checkin_panel),
         )
+        .route(
+            "/quarterly-checkin/{quarter}/{year}/ai-draft/{section}",
+            post(reflections_routes::checkins::ai_draft_quarterly_section),
+        )
         // Logbook filtered entries (HTMX)
         .route(
             "/logbook/entries",

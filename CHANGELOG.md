@@ -2,6 +2,16 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.0] - 2026-05-06
+
+### Added
+- **AI Draft for quarterly check-ins.** The "AI Draft" button on each section of the quarterly conversation prep was a stub (`disabled`, "AI Draft coming soon"). Now wired end-to-end: a per-section synthesis pulls the matching slice of every weekly reflection in the quarter plus brag entries inside the quarter's calendar window, runs them through the section's `ai_prompt` instruction from `checkin_sections.toml`, and drops the plain-text result into the textarea for the user to edit and save. Same no-persistence pattern as the Self Review's `ai_draft_section` — the draft only sticks if the user clicks Save.
+- **`POST /quarterly-checkin/{quarter}/{year}/ai-draft/{section}`.** New route handled by `reflections::routes::checkins::ai_draft_quarterly_section`. Path params drive section/quarter selection; CSRF-gated by the standard `HX-Request` header check.
+- **`build_quarterly_checkin_prompt` in `ai::prompts`.** Assembles the per-section prompt: question, weekly reflections (filtered to the field this section synthesises), and a capped list of brag entries from the quarter date range for concrete anchoring.
+
+### Changed
+- `templates/panels/quarterly_checkin_form.html` and `templates/pages/quarterly_checkin.html` enable the AI Draft button when the user has Claude configured. A small `fetchQuarterlyAiDraft` helper handles the fetch, button-disable-during-request, and inline status text on error.
+
 ## [5.1.2] - 2026-05-06
 
 ### Fixed
