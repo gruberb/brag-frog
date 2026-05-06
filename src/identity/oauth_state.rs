@@ -56,10 +56,16 @@ impl OAuthFlow {
     }
 }
 
-/// Maximum age accepted for an OAuth state token, in seconds. Longer than the
-/// time it takes to click through Google's consent screen, short enough that a
-/// leaked or replayed token expires quickly.
-const MAX_AGE_SECS: u64 = 600;
+/// Maximum age accepted for an OAuth state token, in seconds.
+///
+/// Sized to absorb realistic user delays inside Google's consent flow: account
+/// picker, 2FA prompts, reading the scopes, switching accounts, network stalls.
+/// 10 minutes was too tight in practice — users hit "expired" mid-consent.
+///
+/// The replay-window argument for going lower doesn't really apply: Google's
+/// authorization code is single-use and itself expires within ~10 minutes, so a
+/// leaked state token without a matching fresh code is inert.
+const MAX_AGE_SECS: u64 = 30 * 60;
 
 /// Mint a signed state token for `flow`. Pass the result as the OAuth `state`
 /// query parameter in the consent-screen URL.

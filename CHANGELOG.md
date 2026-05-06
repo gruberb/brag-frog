@@ -2,6 +2,11 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.1.2] - 2026-05-06
+
+### Fixed
+- **OAuth state expiring during Google consent screen.** The 10-minute freshness window introduced in v5.1.1 was too tight for real users — anyone slow on the account picker, prompted for 2FA, reading the scopes carefully, or hitting a network stall got "OAuth state token expired". Window raised to 30 minutes. The CSRF posture is unchanged: Google's authorization `code` is itself single-use and expires within ~10 minutes, so a leaked state token without a matching fresh code is inert.
+
 ## [5.1.1] - 2026-05-05
 
 ### Fixed
