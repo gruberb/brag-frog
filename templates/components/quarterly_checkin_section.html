@@ -1,0 +1,92 @@
+<section id="quarterly-section-{{ section.key }}" class="summary-section">
+    <div class="summary-section-header">
+        <div>
+            <h3 class="summary-section-title">{{ section.title }}</h3>
+            <p class="summary-section-question">{{ section.question }}</p>
+        </div>
+        <button type="button"
+                class="btn-icon"
+                onclick="toggleQuarterlyEdit('{{ section.key }}')"
+                id="quarterly-toggle-btn-{{ section.key }}"
+                title="Edit section">
+            <svg id="quarterly-pencil-{{ section.key }}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11.333 2A1.886 1.886 0 0 1 14 4.667L5.333 13.333 2 14l.667-3.333L11.333 2z"/>
+            </svg>
+            <svg id="quarterly-close-{{ section.key }}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                <line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>
+            </svg>
+        </button>
+    </div>
+
+    <div id="quarterly-view-{{ section.key }}">
+        {% if section.content %}
+        <div class="summary-content markdown-content" id="quarterly-text-{{ section.key }}">{{ section.content | markdown | safe }}</div>
+        <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-2);">
+            {% if section.updated_at %}
+            <span class="summary-meta">Saved {{ section.updated_at }}</span>
+            {% endif %}
+            <button type="button" class="btn-icon btn-icon--sm" title="Copy to clipboard"
+                    onclick="copyQuarterlySection('{{ section.key }}')">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
+            </button>
+            <span id="quarterly-copy-status-{{ section.key }}" style="font-size:var(--text-xs);color:var(--color-success);display:none;">Copied!</span>
+        </div>
+        {% else %}
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">No content yet. Click the pencil to start writing.</p>
+        {% endif %}
+    </div>
+
+    <div id="quarterly-editor-{{ section.key }}" style="display:none;">
+        <textarea id="quarterly-textarea-{{ section.key }}"
+                  name="content"
+                  class="summary-textarea"
+                  rows="12"
+                  placeholder="Write your quarterly reflection for this section...">{% if section.content %}{{ section.content }}{% endif %}</textarea>
+
+        <div style="display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-3); flex-wrap:wrap;">
+            {% if has_ai %}
+            <button type="button"
+                    class="btn btn-sm btn-secondary"
+                    id="quarterly-ai-btn-{{ section.key }}"
+                    onclick="fetchQuarterlyAiDraft('{{ section.key }}', '{{ quarter }}', {{ year }})"
+                    style="display:inline-flex; align-items:center; gap:6px;">
+                {% if section.content %}
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 4v4h4"/><path d="M3.51 10a5 5 0 1 0 .49-5.32L1 8"/>
+                </svg>
+                Regenerate
+                {% else %}
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 1v2M8 13v2M3.05 3.05l1.414 1.414M11.536 11.536l1.414 1.414M1 8h2M13 8h2M3.05 12.95l1.414-1.414M11.536 4.464l1.414-1.414"/>
+                </svg>
+                AI Draft
+                {% endif %}
+            </button>
+            {% else %}
+            <span style="font-size:var(--text-xs); color:var(--color-text-secondary);">
+                <a href="/integrations" style="color:var(--color-primary);">Set up Claude AI in Integrations</a> for AI help
+            </span>
+            {% endif %}
+
+            <div style="flex:1;"></div>
+
+            <span id="quarterly-save-status-{{ section.key }}" style="font-size:var(--text-xs);"></span>
+
+            <button type="button"
+                    class="btn btn-sm btn-secondary"
+                    onclick="cancelQuarterlyEdit('{{ section.key }}')">
+                Cancel
+            </button>
+            <button type="button"
+                    class="btn btn-sm btn-primary"
+                    onclick="saveQuarterlySection('{{ section.key }}', '{{ quarter }}', {{ year }})">
+                Save
+            </button>
+        </div>
+
+        <div id="quarterly-ai-loading-{{ section.key }}" style="display:none; margin-top:var(--space-2); font-size:var(--text-xs); color:var(--color-text-secondary);">
+            <span class="spinner" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:6px;"></span>
+            Generating AI draft...
+        </div>
+    </div>
+</section>

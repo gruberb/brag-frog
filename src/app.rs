@@ -244,6 +244,10 @@ pub fn create_router() -> Router<AppState> {
             "/quarterly-checkin/{quarter}/{year}/ai-draft/{section}",
             post(reflections_routes::checkins::ai_draft_quarterly_section),
         )
+        .route(
+            "/quarterly-checkin/{quarter}/{year}/save/{section}",
+            post(reflections_routes::checkins::save_quarterly_checkin_section),
+        )
         // Logbook filtered entries (HTMX)
         .route(
             "/logbook/entries",
