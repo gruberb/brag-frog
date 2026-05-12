@@ -5,6 +5,30 @@
 review_platform = "Lattice"
 
 [[sections]]
+slug = "impact_examples"
+title = "Contribution & Impact Examples"
+question = "Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
+prompt = """Write a single paste-ready answer for this Lattice self-review question:
+"Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
+
+For each example, summarize:
+- The outcome or progress made, including impact still in progress
+- The CLG behaviors needed for success and how they were demonstrated
+- What was learned, what will carry forward, and what to do next for continued development
+
+Select the strongest 1-2 examples from contribution examples first, then priorities and logbook evidence. Prefer examples with linked evidence, clear ownership, stakeholder or team impact, and demonstrated CLG behaviors. Use first person. Be concise and evidence-based. Name what changed, who was impacted, and how the work was approached. Do not invent metrics; if quantitative evidence is absent, use concrete qualitative outcomes."""
+prompt_with_clg = """Write a single paste-ready answer for this Lattice self-review question:
+"Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
+
+For each example, summarize:
+- The outcome or progress made, including impact still in progress
+- The CLG behaviors needed for success and how they were demonstrated
+- What was learned, what will carry forward, and what to do next for continued development
+
+Select the strongest 1-2 examples from contribution examples first, then priorities and logbook evidence. Use the CLG context to name the most relevant level behaviors, especially Problems and People expectations, but avoid turning the answer into a rubric dump. Prefer examples with linked evidence, clear ownership, stakeholder or team impact, and demonstrated CLG behaviors. Use first person. Be concise and evidence-based. Name what changed, who was impacted, and how the work was approached. Do not invent metrics; if quantitative evidence is absent, use concrete qualitative outcomes."""
+promotion_addendum = "The engineer is targeting promotion. Emphasize scope, complexity, ownership, and cross-team influence that credibly demonstrate next-level readiness without overclaiming."
+
+[[sections]]
 slug = "goal_outcomes"
 title = "Goal Outcomes"
 question = "Describe measurable progress or outcomes of your priorities"

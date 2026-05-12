@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{
     Form,
     extract::{Path, State},
@@ -6,19 +8,19 @@ use axum::{
 
 use crate::AppState;
 use crate::ai::prompts::build_self_reflection_prompt;
-use crate::worklog::model::BragEntry;
+use crate::ai::{get_ai_client, has_ai_for_user};
+use crate::cycle::model::BragPhase;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::clg::ClgLevel;
 use crate::identity::model::User;
-use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::cycle::model::BragPhase;
-use crate::review::model::{
-    ContributionExample, Summary, assessment_config,
-    rating_scale_config, section_question, section_title,
-};
-use crate::reflections::model::QuarterlyCheckin;
-use crate::ai::{get_ai_client, has_ai_for_user};
 use crate::kernel::error::AppError;
+use crate::objectives::model::{DepartmentGoal, Priority};
+use crate::reflections::model::QuarterlyCheckin;
+use crate::review::model::{
+    ContributionExample, Summary, assessment_config, rating_scale_config, section_question,
+    section_title,
+};
+use crate::worklog::model::BragEntry;
 
 // Cycle overview card for a quarter within the phase.
 #[derive(serde::Serialize)]
@@ -40,7 +42,12 @@ fn quarters_for_phase(phase: &BragPhase, checkins: &[QuarterlyCheckin]) -> Vec<Q
     let mut quarters = Vec::new();
 
     for year in start_year..=end_year {
-        for (q_name, q_start, q_end) in [("Q1", 1u32, 3u32), ("Q2", 4, 6), ("Q3", 7, 9), ("Q4", 10, 12)] {
+        for (q_name, q_start, q_end) in [
+            ("Q1", 1u32, 3u32),
+            ("Q2", 4, 6),
+            ("Q3", 7, 9),
+            ("Q4", 10, 12),
+        ] {
             // Quarter is in-scope if its months overlap with the phase date range
             let phase_start = (start_year, start_month);
             let phase_end = (end_year, end_month);
@@ -101,6 +108,8 @@ struct SummaryData {
     entries: Vec<BragEntry>,
     dept_goals: Vec<DepartmentGoal>,
     priorities: Vec<Priority>,
+    contribution_examples: Vec<ContributionExample>,
+    example_entry_ids: HashMap<i64, Vec<i64>>,
     clg_level: Option<&'static ClgLevel>,
     wants_promotion: bool,
 }
@@ -115,6 +124,13 @@ async fn load_summary_data(
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &user_crypto).await?;
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &user_crypto).await?;
     let priorities = Priority::list_active_for_user(&state.db, user_id, &user_crypto).await?;
+    let contribution_examples =
+        ContributionExample::list_for_phase(&state.db, phase_id, &user_crypto).await?;
+    let mut example_entry_ids = HashMap::new();
+    for example in &contribution_examples {
+        let linked_ids = ContributionExample::linked_entry_ids(&state.db, example.id).await?;
+        example_entry_ids.insert(example.id, linked_ids);
+    }
 
     let user = User::find_by_id(&state.db, user_id)
         .await?
@@ -128,6 +144,8 @@ async fn load_summary_data(
         entries,
         dept_goals,
         priorities,
+        contribution_examples,
+        example_entry_ids,
         clg_level,
         wants_promotion: user.wants_promotion,
     })
@@ -149,8 +167,7 @@ pub async fn summary_page(
 
     let summaries = Summary::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
-    let examples =
-        ContributionExample::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let examples = ContributionExample::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
     // Cycle overview: compute in-scope quarters for this phase
@@ -162,7 +179,10 @@ pub async fn summary_page(
     let mut example_entries: Vec<serde_json::Value> = Vec::new();
     for ex in &examples {
         let linked_ids = ContributionExample::linked_entry_ids(&state.db, ex.id).await?;
-        let linked: Vec<&BragEntry> = entries.iter().filter(|e| linked_ids.contains(&e.id)).collect();
+        let linked: Vec<&BragEntry> = entries
+            .iter()
+            .filter(|e| linked_ids.contains(&e.id))
+            .collect();
         example_entries.push(serde_json::json!({
             "example_id": ex.id,
             "linked_entries": linked,
@@ -211,7 +231,7 @@ pub async fn review_guide_page(
     Ok(Html(html))
 }
 
-/// HTMX handler: AI-generates all four summary sections and re-renders the full page.
+/// HTMX handler: AI-generates all configured summary sections and re-renders the full page.
 pub async fn generate_all(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -231,6 +251,8 @@ pub async fn generate_all(
             &data.dept_goals,
             &data.entries,
             &data.priorities,
+            &data.contribution_examples,
+            &data.example_entry_ids,
             &phase.name,
             data.clg_level,
             data.wants_promotion,
@@ -283,6 +305,8 @@ pub async fn ai_draft_section(
         &data.dept_goals,
         &data.entries,
         &data.priorities,
+        &data.contribution_examples,
+        &data.example_entry_ids,
         &phase.name,
         data.clg_level,
         data.wants_promotion,
@@ -346,7 +370,7 @@ pub async fn save_section(
     Ok(Html(html))
 }
 
-// Builds the template-ready JSON array for all four CultureAmp sections, merging saved content.
+// Builds the template-ready JSON array for configured review sections, merging saved content.
 fn build_sections_json(summaries: &[Summary]) -> Vec<serde_json::Value> {
     crate::review::model::section_slugs()
         .iter()

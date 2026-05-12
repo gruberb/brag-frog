@@ -1,9 +1,11 @@
-use crate::worklog::model::BragEntry;
-use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
-use crate::identity::clg::ClgLevel;
+use std::collections::HashMap;
+
 use crate::cycle::model::MeetingPrepNote;
+use crate::identity::clg::ClgLevel;
+use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
 use crate::reflections::model::{CheckinWithWeek, WeeklyCheckin};
-use crate::review::model::{AiDocument, get_section};
+use crate::review::model::{AiDocument, ContributionExample, get_section};
+use crate::worklog::model::BragEntry;
 
 /// Assembles a complete prompt for one self-review section.
 ///
@@ -16,12 +18,16 @@ pub fn build_self_reflection_prompt(
     dept_goals: &[DepartmentGoal],
     entries: &[BragEntry],
     priorities: &[Priority],
+    contribution_examples: &[ContributionExample],
+    example_entry_ids: &HashMap<i64, Vec<i64>>,
     phase_name: &str,
     clg_level: Option<&ClgLevel>,
     wants_promotion: bool,
 ) -> String {
     let stats = compute_stats(entries);
     let entries_by_priority = group_entries_by_priority(entries, dept_goals, priorities);
+    let contribution_examples_text =
+        format_contribution_examples(contribution_examples, example_entry_ids, entries);
 
     let clg_context = if let Some(level) = clg_level {
         let mut ctx = format!(
@@ -118,6 +124,9 @@ Phase: {phase_name}
 ## Entries grouped by priority
 {entries_text}
 
+## Contribution examples
+{contribution_examples_text}
+
 ## Unlinked entries (no priority assigned)
 {unlinked_text}
 {clg_context}
@@ -127,12 +136,13 @@ Phase: {phase_name}
         stats = stats,
         goals_text = format_dept_goals_with_priorities(dept_goals, priorities),
         entries_text = entries_by_priority.0,
+        contribution_examples_text = contribution_examples_text,
         unlinked_text = entries_by_priority.1,
         clg_context = clg_context,
     );
 
     let instruction = if let Some(sec) = get_section(section) {
-        let base_prompt = if section == "clg_alignment" && clg_level.is_some() {
+        let base_prompt = if clg_level.is_some() {
             sec.prompt_with_clg.as_deref().unwrap_or(&sec.prompt)
         } else {
             &sec.prompt
@@ -377,6 +387,120 @@ fn group_entries_by_priority(
         .join("\n");
 
     (full_grouped, unlinked_text)
+}
+
+fn format_contribution_examples(
+    examples: &[ContributionExample],
+    example_entry_ids: &HashMap<i64, Vec<i64>>,
+    entries: &[BragEntry],
+) -> String {
+    if examples.is_empty() {
+        return "(none recorded)".to_string();
+    }
+
+    let entries_by_id: HashMap<i64, &BragEntry> =
+        entries.iter().map(|entry| (entry.id, entry)).collect();
+
+    examples
+        .iter()
+        .map(|example| {
+            let mut lines = vec![format!("### {}", example.title)];
+
+            let mut metadata = Vec::new();
+            metadata.push(format!("status: {}", example.status));
+            if let Some(assessment_type) = &example.assessment_type {
+                metadata.push(format!("assessment: {}", assessment_type.replace('_', " ")));
+            }
+            if let Some(impact_level) = &example.impact_level {
+                metadata.push(format!("impact level: {}", impact_level.replace('_', " ")));
+            }
+            lines.push(format!("Metadata: {}", metadata.join("; ")));
+
+            if let Some(outcome) = example.outcome.as_deref().filter(|s| !s.trim().is_empty()) {
+                lines.push(format!("Outcome: {}", outcome));
+            }
+            if let Some(behaviors) = example
+                .behaviors
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+            {
+                lines.push(format!("Behaviors: {}", behaviors));
+            }
+            if let Some(learnings) = example
+                .learnings
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+            {
+                lines.push(format!("Learnings: {}", learnings));
+            }
+
+            let linked_entries: Vec<String> = example_entry_ids
+                .get(&example.id)
+                .into_iter()
+                .flatten()
+                .filter_map(|entry_id| entries_by_id.get(entry_id))
+                .map(|entry| format_entry_evidence(entry))
+                .collect();
+
+            if !linked_entries.is_empty() {
+                lines.push(format!("Linked evidence:\n{}", linked_entries.join("\n")));
+            }
+
+            lines.join("\n")
+        })
+        .collect::<Vec<_>>()
+        .join("\n\n")
+}
+
+fn format_entry_evidence(entry: &BragEntry) -> String {
+    let mut details = Vec::new();
+    if let Some(repository) = entry.repository.as_deref().filter(|s| !s.trim().is_empty()) {
+        details.push(format!("repo: {}", repository));
+    }
+    if let Some(status) = entry.status.as_deref().filter(|s| !s.trim().is_empty()) {
+        details.push(format!("status: {}", status));
+    }
+    if let Some(outcome) = entry
+        .outcome_statement
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+    {
+        details.push(format!("outcome: {}", outcome));
+    }
+    if let Some(reach) = entry.reach.as_deref().filter(|s| !s.trim().is_empty()) {
+        details.push(format!("reach: {}", reach));
+    }
+    if let Some(complexity) = entry.complexity.as_deref().filter(|s| !s.trim().is_empty()) {
+        details.push(format!("complexity: {}", complexity));
+    }
+    if let Some(role) = entry.role.as_deref().filter(|s| !s.trim().is_empty()) {
+        details.push(format!("role: {}", role));
+    }
+    if let Some(collaborators) = entry
+        .collaborators
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+    {
+        details.push(format!("collaborators: {}", collaborators));
+    }
+    if let Some(url) = entry.source_url.as_deref().filter(|s| !s.trim().is_empty()) {
+        details.push(format!("url: {}", url));
+    }
+
+    if details.is_empty() {
+        format!(
+            "- [{} on {}] {}",
+            entry.entry_type, entry.occurred_at, entry.title
+        )
+    } else {
+        format!(
+            "- [{} on {}] {} ({})",
+            entry.entry_type,
+            entry.occurred_at,
+            entry.title,
+            details.join("; ")
+        )
+    }
 }
 
 /// Assembles a context-first prompt for AI-generated meeting prep notes.

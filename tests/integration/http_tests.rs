@@ -47,6 +47,28 @@ async fn test_logbook_no_phase_shows_no_phase_page() {
     );
 }
 
+#[tokio::test]
+async fn test_review_page_shows_lattice_examples_and_prefers_review_quarter() {
+    let app = common::TestApp::new().await;
+    let user_id = common::create_test_user(&app.pool).await;
+    let phase_id: i64 = sqlx::query_scalar(
+        "INSERT INTO brag_phases (user_id, name, start_date, end_date, is_active) VALUES (?, '2026 H1', '2026-01-01', '2026-06-30', 1) RETURNING id",
+    )
+    .bind(user_id)
+    .fetch_one(&app.pool)
+    .await
+    .unwrap();
+    let cookie = app.login(user_id).await;
+
+    let resp = app
+        .get(&format!("/review/{}", phase_id), Some(&cookie))
+        .await;
+    assert_eq!(resp.status, StatusCode::OK);
+    assert!(resp.body.contains("Contribution &amp; Impact Examples"));
+    assert!(resp.body.contains("Describe 1-2 examples of your work so far this year"));
+    assert!(resp.body.contains("var firstReview = document.querySelector"));
+}
+
 // ── Quick-add entry ──
 
 #[tokio::test]

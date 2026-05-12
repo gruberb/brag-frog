@@ -86,7 +86,8 @@ function selectQuarter(card, isReview, quarter, year) {
 }
 // Auto-select the first quarter card on page load
 document.addEventListener('DOMContentLoaded', function() {
-    var first = document.querySelector('.cycle-quarter-card');
+    var firstReview = document.querySelector('.cycle-quarter-card--review');
+    var first = firstReview || document.querySelector('.cycle-quarter-card');
     if (first) first.click();
 });
 </script>

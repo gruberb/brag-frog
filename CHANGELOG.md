@@ -2,6 +2,15 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.2] - 2026-05-12
+
+### Added
+- **Lattice contribution and impact prompt.** Self Review now includes a dedicated "Contribution & Impact Examples" section for Lattice's 1-2 example question, with prompt guidance for outcomes, CLG behaviors, learnings, and next development steps.
+- **Contribution example context in AI drafts.** Self Review AI generation now includes saved contribution examples, impact metadata, learnings, and linked logbook evidence so generated drafts can prioritize the strongest examples instead of relying only on raw entries and priorities.
+
+### Changed
+- Review pages now auto-select the first review quarter when the cycle includes both check-in and review quarters, so users land on the self-review sections instead of Q1 conversation prep.
+
 ## [5.2.0] - 2026-05-06
 
 ### Added
