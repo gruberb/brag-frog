@@ -51,6 +51,28 @@ pub struct ReviewSection {
     pub slug: String,
     pub title: String,
     pub question: String,
+    /// Optional form-style rendering metadata for review platforms with
+    /// explicit prompts, bullets, and required-answer placeholders.
+    #[serde(default)]
+    pub form_question_number: Option<String>,
+    #[serde(default)]
+    pub form_required: bool,
+    #[serde(default)]
+    pub form_question: Option<String>,
+    #[serde(default)]
+    pub form_guidance: Option<String>,
+    #[serde(default)]
+    pub form_bullets: Vec<String>,
+    #[serde(default)]
+    pub form_tip: Option<String>,
+    #[serde(default)]
+    pub form_placeholder: Option<String>,
+    /// When true, the review UI lets the user pick priorities to emphasize
+    /// for this section's AI draft.
+    #[serde(default)]
+    pub focus_priorities: bool,
+    #[serde(default)]
+    pub focus_priority_help: Option<String>,
     pub prompt: String,
     /// Optional alternate prompt used when CLG level information is available.
     #[serde(default)]

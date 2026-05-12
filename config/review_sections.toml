@@ -8,6 +8,19 @@ review_platform = "Lattice"
 slug = "impact_examples"
 title = "Contribution & Impact Examples"
 question = "Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
+form_question_number = "1"
+form_required = true
+form_question = "Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
+form_guidance = "For each example, summarize:"
+form_bullets = [
+    "The outcome or progress made (or impact still in progress)",
+    "The CLG behaviors needed for success and how they were demonstrated",
+    "What you learned that you'll carry forward, and what will you do next to continue your development",
+]
+form_tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work."
+form_placeholder = "Required: Write your response..."
+focus_priorities = true
+focus_priority_help = "Select priorities you want this Lattice answer to emphasize. Brag Frog will still use linked contribution examples and logbook evidence."
 prompt = """Write a single paste-ready answer for this Lattice self-review question:
 "Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
 
@@ -32,6 +45,8 @@ promotion_addendum = "The engineer is targeting promotion. Emphasize scope, comp
 slug = "goal_outcomes"
 title = "Goal Outcomes"
 question = "Describe measurable progress or outcomes of your priorities"
+focus_priorities = true
+focus_priority_help = "Select priorities to include in this generated goal-outcomes draft. Leave blank to let Brag Frog use all priorities."
 prompt = """Write the "Goal Outcomes" section for a Lattice self-reflection. For each priority, use the tracking status provided (On Track / Progressing / Off Track / Complete) and provide:
 - **Impact**: 3-5 bullet points focusing on measurable outcomes and team/org impact
 - **Details**: 3-6 bullet points with context on collaboration, challenges, and communication

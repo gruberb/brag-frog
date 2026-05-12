@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use axum::{
     Form,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::Html,
 };
 
@@ -17,8 +17,8 @@ use crate::kernel::error::AppError;
 use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::reflections::model::QuarterlyCheckin;
 use crate::review::model::{
-    ContributionExample, Summary, assessment_config, rating_scale_config, section_question,
-    section_title,
+    ContributionExample, Summary, assessment_config, get_section, rating_scale_config,
+    section_question, section_title,
 };
 use crate::worklog::model::BragEntry;
 
@@ -114,6 +114,11 @@ struct SummaryData {
     wants_promotion: bool,
 }
 
+#[derive(serde::Deserialize)]
+pub struct AiDraftQuery {
+    pub priority_ids: Option<String>,
+}
+
 // Loads entries, department goals, priorities, and CLG level for building AI prompts.
 async fn load_summary_data(
     state: &AppState,
@@ -123,7 +128,7 @@ async fn load_summary_data(
     let user_crypto = state.crypto.for_user(user_id)?;
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &user_crypto).await?;
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &user_crypto).await?;
-    let priorities = Priority::list_active_for_user(&state.db, user_id, &user_crypto).await?;
+    let priorities = Priority::list_for_phase(&state.db, phase_id, &user_crypto).await?;
     let contribution_examples =
         ContributionExample::list_for_phase(&state.db, phase_id, &user_crypto).await?;
     let mut example_entry_ids = HashMap::new();
@@ -169,6 +174,7 @@ pub async fn summary_page(
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
     let examples = ContributionExample::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let priorities = Priority::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
     // Cycle overview: compute in-scope quarters for this phase
     let quarterly_checkins =
@@ -198,6 +204,7 @@ pub async fn summary_page(
     ctx.insert("current_page", "summary");
     ctx.insert("examples", &examples);
     ctx.insert("entries", &entries);
+    ctx.insert("priorities", &priorities);
     ctx.insert("example_entries", &example_entries);
 
     let html = state.templates.render("pages/summary.html", &ctx)?;
@@ -253,6 +260,7 @@ pub async fn generate_all(
             &data.priorities,
             &data.contribution_examples,
             &data.example_entry_ids,
+            &[],
             &phase.name,
             data.clg_level,
             data.wants_promotion,
@@ -279,6 +287,7 @@ pub async fn generate_all(
     ctx.insert("sections", &build_sections_json(&summaries));
     ctx.insert("phase", &phase);
     ctx.insert("has_ai", &true);
+    ctx.insert("priorities", &data.priorities);
 
     let html = state
         .templates
@@ -291,6 +300,7 @@ pub async fn ai_draft_section(
     auth: AuthUser,
     State(state): State<AppState>,
     Path((phase_id, section)): Path<(i64, String)>,
+    Query(query): Query<AiDraftQuery>,
 ) -> Result<String, AppError> {
     let ai_client = get_ai_client(&state, auth.user_id).await?;
 
@@ -299,6 +309,7 @@ pub async fn ai_draft_section(
         .ok_or_else(|| AppError::NotFound("Phase not found".to_string()))?;
 
     let data = load_summary_data(&state, phase_id, auth.user_id).await?;
+    let focused_priority_ids = parse_priority_ids(query.priority_ids.as_deref(), &data.priorities);
 
     let prompt = build_self_reflection_prompt(
         &section,
@@ -307,6 +318,7 @@ pub async fn ai_draft_section(
         &data.priorities,
         &data.contribution_examples,
         &data.example_entry_ids,
+        &focused_priority_ids,
         &phase.name,
         data.clg_level,
         data.wants_promotion,
@@ -348,21 +360,13 @@ pub async fn save_section(
     .await?;
 
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
+    let priorities = Priority::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
     let mut ctx = tera::Context::new();
-    ctx.insert(
-        "section",
-        &serde_json::json!({
-            "key": section,
-            "title": section_title(&section),
-            "question": section_question(&section),
-            "content": Some(summary.content),
-            "generated_at": Some(summary.generated_at),
-            "id": Some(summary.id),
-        }),
-    );
+    ctx.insert("section", &build_section_json(&section, Some(&summary)));
     ctx.insert("phase", &phase);
     ctx.insert("has_ai", &has_ai);
+    ctx.insert("priorities", &priorities);
 
     let html = state
         .templates
@@ -376,14 +380,39 @@ fn build_sections_json(summaries: &[Summary]) -> Vec<serde_json::Value> {
         .iter()
         .map(|&section| {
             let summary = summaries.iter().find(|s| s.section == section);
-            serde_json::json!({
-                "key": section,
-                "title": section_title(section),
-                "question": section_question(section),
-                "content": summary.map(|s| s.content.clone()),
-                "generated_at": summary.map(|s| s.generated_at.clone()),
-                "id": summary.map(|s| s.id),
-            })
+            build_section_json(section, summary)
         })
+        .collect()
+}
+
+fn build_section_json(section: &str, summary: Option<&Summary>) -> serde_json::Value {
+    let config = get_section(section);
+
+    serde_json::json!({
+        "key": section,
+        "title": section_title(section),
+        "question": section_question(section),
+        "form_question_number": config.and_then(|s| s.form_question_number.clone()),
+        "form_required": config.is_some_and(|s| s.form_required),
+        "form_question": config.and_then(|s| s.form_question.clone()),
+        "form_guidance": config.and_then(|s| s.form_guidance.clone()),
+        "form_bullets": config.map_or_else(Vec::new, |s| s.form_bullets.clone()),
+        "form_tip": config.and_then(|s| s.form_tip.clone()),
+        "form_placeholder": config.and_then(|s| s.form_placeholder.clone()),
+        "focus_priorities": config.is_some_and(|s| s.focus_priorities),
+        "focus_priority_help": config.and_then(|s| s.focus_priority_help.clone()),
+        "content": summary.map(|s| s.content.clone()),
+        "generated_at": summary.map(|s| s.generated_at.clone()),
+        "id": summary.map(|s| s.id),
+    })
+}
+
+fn parse_priority_ids(raw: Option<&str>, priorities: &[Priority]) -> Vec<i64> {
+    let allowed: HashSet<i64> = priorities.iter().map(|p| p.id).collect();
+
+    raw.unwrap_or("")
+        .split(',')
+        .filter_map(|value| value.trim().parse::<i64>().ok())
+        .filter(|id| allowed.contains(id))
         .collect()
 }

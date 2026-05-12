@@ -20,6 +20,7 @@ pub fn build_self_reflection_prompt(
     priorities: &[Priority],
     contribution_examples: &[ContributionExample],
     example_entry_ids: &HashMap<i64, Vec<i64>>,
+    focused_priority_ids: &[i64],
     phase_name: &str,
     clg_level: Option<&ClgLevel>,
     wants_promotion: bool,
@@ -28,6 +29,7 @@ pub fn build_self_reflection_prompt(
     let entries_by_priority = group_entries_by_priority(entries, dept_goals, priorities);
     let contribution_examples_text =
         format_contribution_examples(contribution_examples, example_entry_ids, entries);
+    let focused_priority_context = format_focused_priorities(priorities, focused_priority_ids);
 
     let clg_context = if let Some(level) = clg_level {
         let mut ctx = format!(
@@ -121,6 +123,7 @@ Phase: {phase_name}
 ## Department Goals & Priorities
 {goals_text}
 
+{focused_priority_context}
 ## Entries grouped by priority
 {entries_text}
 
@@ -135,6 +138,7 @@ Phase: {phase_name}
         phase_name = phase_name,
         stats = stats,
         goals_text = format_dept_goals_with_priorities(dept_goals, priorities),
+        focused_priority_context = focused_priority_context,
         entries_text = entries_by_priority.0,
         contribution_examples_text = contribution_examples_text,
         unlinked_text = entries_by_priority.1,
@@ -211,10 +215,27 @@ fn compute_stats(entries: &[BragEntry]) -> String {
 
     format!(
         "- PRs authored: {}\n- PRs reviewed: {}\n- PRs merged: {}\n- Bugs fixed: {}\n- Bugs filed: {}\n- Phabricator revisions: {}\n- Jira tasks completed: {}\n- Jira stories: {}\n- Jira tasks: {}\n- Jira epics: {}\n- Confluence pages: {}\n- Meetings: {}\n- Workshops: {}\n- Mentoring sessions: {}\n- Presentations: {}\n- Design docs: {}\n- Code reviews: {}\n- Onboarding: {}\n- Learning: {}\n- Interviews: {}\n- Other: {}",
-        prs_authored, prs_reviewed, prs_merged, bugs_fixed, bugs_filed, revisions,
-        jira_completed, jira_stories, jira_tasks, jira_epics, confluence_pages,
-        meetings, workshops, mentoring, presentations, design_docs, code_reviews,
-        onboarding, learning, interviews, other
+        prs_authored,
+        prs_reviewed,
+        prs_merged,
+        bugs_fixed,
+        bugs_filed,
+        revisions,
+        jira_completed,
+        jira_stories,
+        jira_tasks,
+        jira_epics,
+        confluence_pages,
+        meetings,
+        workshops,
+        mentoring,
+        presentations,
+        design_docs,
+        code_reviews,
+        onboarding,
+        learning,
+        interviews,
+        other
     )
 }
 
@@ -256,6 +277,54 @@ fn format_dept_goals_with_priorities(
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+fn format_focused_priorities(priorities: &[Priority], focused_priority_ids: &[i64]) -> String {
+    if focused_priority_ids.is_empty() {
+        return String::new();
+    }
+
+    let selected: Vec<String> = focused_priority_ids
+        .iter()
+        .filter_map(|id| priorities.iter().find(|p| p.id == *id))
+        .map(|p| {
+            let tracking = p
+                .tracking_status
+                .as_deref()
+                .map(|t| format!(", tracking: {}", t.replace('_', " ")))
+                .unwrap_or_default();
+            let description = p
+                .description
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .map(|s| format!(" - {}", s))
+                .unwrap_or_default();
+            let impact = p
+                .impact_narrative
+                .as_deref()
+                .filter(|s| !s.trim().is_empty())
+                .map(|s| format!(" Impact: {}", s))
+                .unwrap_or_default();
+
+            format!(
+                "- {} [{}{}]{}{}",
+                p.title,
+                p.status.replace('_', " "),
+                tracking,
+                description,
+                impact
+            )
+        })
+        .collect();
+
+    if selected.is_empty() {
+        return String::new();
+    }
+
+    format!(
+        "## User-selected focus priorities\n{}\n\nUse these selected priorities as the primary scope for this generated answer. Treat other work as supporting context only.\n",
+        selected.join("\n")
+    )
 }
 
 // Groups entries under their parent priority (via entry.priority_id).
@@ -377,7 +446,11 @@ fn group_entries_by_priority(
     let full_grouped = if standalone.is_empty() {
         grouped
     } else {
-        format!("{}\n\n## Standalone Priorities\n{}", grouped, standalone.join("\n"))
+        format!(
+            "{}\n\n## Standalone Priorities\n{}",
+            grouped,
+            standalone.join("\n")
+        )
     };
 
     let unlinked_text = unlinked
@@ -595,29 +668,32 @@ pub fn build_meeting_prep_prompt(
     };
 
     // Recent check-in highlights (most recent only, non-empty fields, truncated)
-    let checkin_section = checkins.first().map(|c| {
-        let mut parts = Vec::new();
-        if let Some(h) = c.highlights_impact.as_deref().filter(|s| !s.is_empty()) {
-            let truncated: String = h.chars().take(200).collect();
-            let suffix = if h.len() > 200 { "..." } else { "" };
-            parts.push(format!("**Highlights & Impact:** {}{}", truncated, suffix));
-        }
-        if let Some(s) = c.support_feedback.as_deref().filter(|s| !s.is_empty()) {
-            let truncated: String = s.chars().take(200).collect();
-            let suffix = if s.len() > 200 { "..." } else { "" };
-            parts.push(format!("**Blockers & Support:** {}{}", truncated, suffix));
-        }
-        if let Some(a) = c.looking_ahead.as_deref().filter(|s| !s.is_empty()) {
-            let truncated: String = a.chars().take(200).collect();
-            let suffix = if a.len() > 200 { "..." } else { "" };
-            parts.push(format!("**Looking Ahead:** {}{}", truncated, suffix));
-        }
-        if parts.is_empty() {
-            String::new()
-        } else {
-            format!("\n## Recent Check-in Highlights\n{}\n", parts.join("\n"))
-        }
-    }).unwrap_or_default();
+    let checkin_section = checkins
+        .first()
+        .map(|c| {
+            let mut parts = Vec::new();
+            if let Some(h) = c.highlights_impact.as_deref().filter(|s| !s.is_empty()) {
+                let truncated: String = h.chars().take(200).collect();
+                let suffix = if h.len() > 200 { "..." } else { "" };
+                parts.push(format!("**Highlights & Impact:** {}{}", truncated, suffix));
+            }
+            if let Some(s) = c.support_feedback.as_deref().filter(|s| !s.is_empty()) {
+                let truncated: String = s.chars().take(200).collect();
+                let suffix = if s.len() > 200 { "..." } else { "" };
+                parts.push(format!("**Blockers & Support:** {}{}", truncated, suffix));
+            }
+            if let Some(a) = c.looking_ahead.as_deref().filter(|s| !s.is_empty()) {
+                let truncated: String = a.chars().take(200).collect();
+                let suffix = if a.len() > 200 { "..." } else { "" };
+                parts.push(format!("**Looking Ahead:** {}{}", truncated, suffix));
+            }
+            if parts.is_empty() {
+                String::new()
+            } else {
+                format!("\n## Recent Check-in Highlights\n{}\n", parts.join("\n"))
+            }
+        })
+        .unwrap_or_default();
 
     // Existing draft notes
     let existing_text = existing_note
@@ -668,9 +744,7 @@ Priority: {} — status: {}
     let has_only_links = !context_text.is_empty()
         && context_text.lines().all(|line| {
             let trimmed = line.trim();
-            trimmed.is_empty()
-                || trimmed.starts_with("http://")
-                || trimmed.starts_with("https://")
+            trimmed.is_empty() || trimmed.starts_with("http://") || trimmed.starts_with("https://")
         });
 
     // Thin context: no user context, no goal, no existing notes, no linked priority,
@@ -715,12 +789,24 @@ Priority: {} — status: {}
 
     // Role guidance — placed after context so the model grounds on specifics first
     let role_hint = match role {
-        "manager" => "For this manager 1:1, consider: status on current work, blockers, growth/career topics, feedback, and follow-ups.",
-        "skip_level" => "For this skip-level, consider: high-impact work visibility, career goals, org-level impact, and strategic alignment.",
-        "peer" => "For this peer meeting, consider: collaboration updates, shared work, alignment on approach, and knowledge sharing.",
-        "stakeholder" => "For this stakeholder meeting, consider: project milestones, decisions needing input, risks, and timeline updates.",
-        "tech_lead" => "For this tech lead meeting, consider: technical decisions, architecture discussions, code quality, and tech debt.",
-        _ => "Consider: key discussion points, updates to share, questions to ask, decisions needed, and follow-ups.",
+        "manager" => {
+            "For this manager 1:1, consider: status on current work, blockers, growth/career topics, feedback, and follow-ups."
+        }
+        "skip_level" => {
+            "For this skip-level, consider: high-impact work visibility, career goals, org-level impact, and strategic alignment."
+        }
+        "peer" => {
+            "For this peer meeting, consider: collaboration updates, shared work, alignment on approach, and knowledge sharing."
+        }
+        "stakeholder" => {
+            "For this stakeholder meeting, consider: project milestones, decisions needing input, risks, and timeline updates."
+        }
+        "tech_lead" => {
+            "For this tech lead meeting, consider: technical decisions, architecture discussions, code quality, and tech debt."
+        }
+        _ => {
+            "Consider: key discussion points, updates to share, questions to ask, decisions needed, and follow-ups."
+        }
     };
 
     format!(
@@ -895,10 +981,7 @@ pub fn build_status_update_prompt(
             ctx.push('\n');
         }
         if entries.len() > 40 {
-            ctx.push_str(&format!(
-                "... and {} more entries\n",
-                entries.len() - 40
-            ));
+            ctx.push_str(&format!("... and {} more entries\n", entries.len() - 40));
         }
         ctx.push('\n');
     }
@@ -999,10 +1082,7 @@ pub fn build_quarterly_checkin_prompt(
             ctx.push('\n');
         }
         if entries.len() > 60 {
-            ctx.push_str(&format!(
-                "... and {} more entries\n",
-                entries.len() - 60
-            ));
+            ctx.push_str(&format!("... and {} more entries\n", entries.len() - 60));
         }
         ctx.push('\n');
     }

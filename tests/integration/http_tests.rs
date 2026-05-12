@@ -58,6 +58,16 @@ async fn test_review_page_shows_lattice_examples_and_prefers_review_quarter() {
     .fetch_one(&app.pool)
     .await
     .unwrap();
+    let crypto = app.crypto.for_user(user_id).unwrap();
+    common::create_test_priority(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Improve review summaries",
+        None,
+        &crypto,
+    )
+    .await;
     let cookie = app.login(user_id).await;
 
     let resp = app
@@ -65,8 +75,18 @@ async fn test_review_page_shows_lattice_examples_and_prefers_review_quarter() {
         .await;
     assert_eq!(resp.status, StatusCode::OK);
     assert!(resp.body.contains("Contribution &amp; Impact Examples"));
-    assert!(resp.body.contains("Describe 1-2 examples of your work so far this year"));
-    assert!(resp.body.contains("var firstReview = document.querySelector"));
+    assert!(
+        resp.body
+            .contains("Describe 1-2 examples of your work so far this year")
+    );
+    assert!(resp.body.contains("The outcome or progress made"));
+    assert!(resp.body.contains("Required: Write your response"));
+    assert!(resp.body.contains("Focus priorities for AI draft"));
+    assert!(resp.body.contains("Improve review summaries"));
+    assert!(
+        resp.body
+            .contains("var firstReview = document.querySelector")
+    );
 }
 
 // ── Quick-add entry ──
@@ -526,7 +546,10 @@ async fn test_priorities_page_loads() {
 
     let resp = app.get("/priorities", Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
-    assert!(resp.body.contains("Priorities"), "Page should contain 'Priorities'");
+    assert!(
+        resp.body.contains("Priorities"),
+        "Page should contain 'Priorities'"
+    );
 }
 
 // ── Trends page ──
@@ -659,9 +682,7 @@ async fn test_priority_create_returns_html() {
     let cookie = app.login(user_id).await;
 
     let body = "title=Test+Priority&status=not_started";
-    let resp = app
-        .post_form("/priorities", body, Some(&cookie))
-        .await;
+    let resp = app.post_form("/priorities", body, Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
     assert_eq!(resp.headers.get("HX-Redirect").unwrap(), "/priorities");
 }

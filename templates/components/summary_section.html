@@ -1,8 +1,10 @@
-<div id="summary-section-{{ section.key }}" class="summary-section">
+<div id="summary-section-{{ section.key }}" class="summary-section {% if section.form_question %}summary-section--form-prompt{% endif %}">
     <div class="summary-section-header">
         <div>
             <h3 class="summary-section-title">{{ section.title }}</h3>
+            {% if not section.form_question %}
             <p class="summary-section-question">{{ section.question }}</p>
+            {% endif %}
         </div>
         <button class="btn-icon"
                 onclick="toggleSummaryEdit('{{ section.key }}')"
@@ -16,6 +18,55 @@
             </svg>
         </button>
     </div>
+
+    {% if section.form_question %}
+    <div class="summary-form-prompt">
+        <h4 class="summary-form-question">
+            {% if section.form_question_number %}
+            <span class="summary-form-question-number">{{ section.form_question_number }}.</span>
+            {% endif %}
+            <span>{{ section.form_question }}</span>
+            {% if section.form_required %}
+            <span class="summary-form-required">*</span>
+            {% endif %}
+        </h4>
+        {% if section.form_guidance %}
+        <p class="summary-form-guidance">{{ section.form_guidance }}</p>
+        {% endif %}
+        {% if section.form_bullets | length > 0 %}
+        <ul class="summary-form-bullets">
+            {% for bullet in section.form_bullets %}
+            <li>{{ bullet }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if section.form_tip %}
+        <p class="summary-form-tip"><strong>Tip:</strong> {{ section.form_tip }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if section.focus_priorities and priorities is defined and priorities | length > 0 %}
+    <details class="summary-focus-priorities">
+        <summary>Focus priorities for AI draft</summary>
+        {% if section.focus_priority_help %}
+        <p>{{ section.focus_priority_help }}</p>
+        {% endif %}
+        <div class="summary-focus-priority-list">
+            {% for priority in priorities %}
+            <label class="summary-focus-priority">
+                <input type="checkbox"
+                       data-summary-priority
+                       data-summary-section="{{ section.key }}"
+                       value="{{ priority.id }}">
+                <span class="summary-focus-priority-color" style="background:{% if priority.color %}{{ priority.color }}{% else %}#FF453F{% endif %}"></span>
+                <span class="summary-focus-priority-title">{{ priority.title }}</span>
+                <span class="summary-focus-priority-status">{{ priority.status | replace(from="_", to=" ") }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
 
     {# -- View mode -- #}
     <div id="summary-view-{{ section.key }}">
@@ -32,7 +83,19 @@
             <span id="summary-copy-status-{{ section.key }}" style="font-size:var(--text-xs);color:var(--color-success);display:none;">Copied!</span>
         </div>
         {% else %}
-        <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">No content yet. Click the pencil to start writing.</p>
+        <div class="summary-empty-state">
+            <p>No content yet. Generate a draft from your work or click the pencil to start writing.</p>
+            {% if section.key != "future_plans" and has_ai %}
+            <button type="button"
+                    class="btn btn-sm btn-secondary"
+                    onclick="generateSummaryDraft('{{ section.key }}', {{ phase.id }})">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 1v2M8 13v2M3.05 3.05l1.414 1.414M11.536 11.536l1.414 1.414M1 8h2M13 8h2M3.05 12.95l1.414-1.414M11.536 4.464l1.414-1.414"/>
+                </svg>
+                Generate Draft
+            </button>
+            {% endif %}
+        </div>
         {% endif %}
     </div>
 
@@ -42,7 +105,7 @@
                   name="content"
                   class="summary-textarea"
                   rows="12"
-                  placeholder="Write your self-reflection for this section...">{% if section.content %}{{ section.content }}{% endif %}</textarea>
+                  placeholder="{% if section.form_placeholder %}{{ section.form_placeholder }}{% else %}Write your self-reflection for this section...{% endif %}">{% if section.content %}{{ section.content }}{% endif %}</textarea>
 
         <div style="display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-3); flex-wrap:wrap;">
             {# AI Help -- only for non-future_plans sections #}
@@ -62,7 +125,7 @@
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M8 1v2M8 13v2M3.05 3.05l1.414 1.414M11.536 11.536l1.414 1.414M1 8h2M13 8h2M3.05 12.95l1.414-1.414M11.536 4.464l1.414-1.414"/>
                     </svg>
-                    AI Draft
+                    Generate Draft
                     {% endif %}
                 </button>
                 {% else %}
@@ -184,11 +247,16 @@ function fetchAiDraft(key, phaseId) {
     var textarea = document.getElementById('summary-textarea-' + key);
     var btn = document.getElementById('summary-ai-btn-' + key);
     var loading = document.getElementById('summary-ai-loading-' + key);
+    var priorityIds = selectedPriorityIdsForSection(key);
+    var url = '/review/' + phaseId + '/ai-draft/' + key;
+    if (priorityIds.length > 0) {
+        url += '?priority_ids=' + encodeURIComponent(priorityIds.join(','));
+    }
 
     if (btn) btn.disabled = true;
     if (loading) loading.style.display = 'block';
 
-    fetch('/review/' + phaseId + '/ai-draft/' + key, {
+    fetch(url, {
         method: 'POST',
         headers: { 'HX-Request': 'true' }
     })
@@ -207,6 +275,22 @@ function fetchAiDraft(key, phaseId) {
     .finally(function() {
         if (btn) btn.disabled = false;
         if (loading) loading.style.display = 'none';
+    });
+}
+
+function generateSummaryDraft(key, phaseId) {
+    var editor = document.getElementById('summary-editor-' + key);
+    if (editor && editor.style.display === 'none') {
+        toggleSummaryEdit(key);
+    }
+    fetchAiDraft(key, phaseId);
+}
+
+function selectedPriorityIdsForSection(key) {
+    return Array.prototype.slice.call(
+        document.querySelectorAll('#summary-section-' + key + ' input[data-summary-priority]:checked')
+    ).map(function(input) {
+        return input.value;
     });
 }
 

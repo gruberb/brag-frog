@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.3] - 2026-05-12
+
+### Added
+- **Lattice-style self-review answer surface.** Review sections can now render platform prompt metadata, including question number, required marker, guidance bullets, tip text, and answer placeholder, so Brag Frog can mirror the actual Lattice prompt while still generating from saved work.
+- **Priority-focused AI drafts.** Review sections can opt into priority selection. The Lattice contribution examples and goal outcomes sections now let users choose which priorities to emphasize before generating a per-section draft.
+
 ## [5.2.2] - 2026-05-12
 
 ### Added
