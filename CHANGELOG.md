@@ -2,6 +2,11 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.5] - 2026-05-14
+
+### Fixed
+- **Department goal focus now scopes AI evidence.** When a Self Review section has selected department goals, AI drafts now receive only those goals, their linked priorities, linked logbook entries, and contribution examples tied to those entries. This prevents unrelated high-signal work from other goals from leaking into generated drafts.
+
 ## [5.2.4] - 2026-05-14
 
 ### Changed

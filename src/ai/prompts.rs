@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::cycle::model::MeetingPrepNote;
 use crate::identity::clg::ClgLevel;
@@ -25,12 +25,27 @@ pub fn build_self_reflection_prompt(
     clg_level: Option<&ClgLevel>,
     wants_promotion: bool,
 ) -> String {
-    let stats = compute_stats(entries);
-    let entries_by_priority = group_entries_by_priority(entries, dept_goals, priorities);
-    let contribution_examples_text =
-        format_contribution_examples(contribution_examples, example_entry_ids, entries);
-    let focused_dept_goal_context =
-        format_focused_department_goals(dept_goals, priorities, focused_dept_goal_ids);
+    let scoped = scope_self_reflection_data(
+        dept_goals,
+        entries,
+        priorities,
+        contribution_examples,
+        example_entry_ids,
+        focused_dept_goal_ids,
+    );
+    let stats = compute_stats(&scoped.entries);
+    let entries_by_priority =
+        group_entries_by_priority(&scoped.entries, &scoped.dept_goals, &scoped.priorities);
+    let contribution_examples_text = format_contribution_examples(
+        &scoped.contribution_examples,
+        &scoped.example_entry_ids,
+        &scoped.entries,
+    );
+    let focused_dept_goal_context = format_focused_department_goals(
+        &scoped.dept_goals,
+        &scoped.priorities,
+        focused_dept_goal_ids,
+    );
 
     let clg_context = if let Some(level) = clg_level {
         let mut ctx = format!(
@@ -138,7 +153,7 @@ Phase: {phase_name}
         review_platform = review_platform,
         phase_name = phase_name,
         stats = stats,
-        goals_text = format_dept_goals_with_priorities(dept_goals, priorities),
+        goals_text = format_dept_goals_with_priorities(&scoped.dept_goals, &scoped.priorities),
         focused_dept_goal_context = focused_dept_goal_context,
         entries_text = entries_by_priority.0,
         contribution_examples_text = contribution_examples_text,
@@ -163,6 +178,108 @@ Phase: {phase_name}
     };
 
     format!("{}\n\n---\n\n{}", context, instruction)
+}
+
+struct ScopedSelfReflectionData {
+    dept_goals: Vec<DepartmentGoal>,
+    priorities: Vec<Priority>,
+    entries: Vec<BragEntry>,
+    contribution_examples: Vec<ContributionExample>,
+    example_entry_ids: HashMap<i64, Vec<i64>>,
+}
+
+fn scope_self_reflection_data(
+    dept_goals: &[DepartmentGoal],
+    entries: &[BragEntry],
+    priorities: &[Priority],
+    contribution_examples: &[ContributionExample],
+    example_entry_ids: &HashMap<i64, Vec<i64>>,
+    focused_dept_goal_ids: &[i64],
+) -> ScopedSelfReflectionData {
+    if focused_dept_goal_ids.is_empty() {
+        return ScopedSelfReflectionData {
+            dept_goals: dept_goals.to_vec(),
+            priorities: priorities.to_vec(),
+            entries: entries.to_vec(),
+            contribution_examples: contribution_examples.to_vec(),
+            example_entry_ids: example_entry_ids.clone(),
+        };
+    }
+
+    let focused_goal_ids: HashSet<i64> = focused_dept_goal_ids.iter().copied().collect();
+    let scoped_dept_goals: Vec<DepartmentGoal> = dept_goals
+        .iter()
+        .filter(|goal| focused_goal_ids.contains(&goal.id))
+        .cloned()
+        .collect();
+
+    if scoped_dept_goals.is_empty() {
+        return ScopedSelfReflectionData {
+            dept_goals: dept_goals.to_vec(),
+            priorities: priorities.to_vec(),
+            entries: entries.to_vec(),
+            contribution_examples: contribution_examples.to_vec(),
+            example_entry_ids: example_entry_ids.clone(),
+        };
+    }
+
+    let scoped_priority_ids: HashSet<i64> = priorities
+        .iter()
+        .filter(|priority| {
+            priority
+                .department_goal_id
+                .is_some_and(|id| focused_goal_ids.contains(&id))
+        })
+        .map(|priority| priority.id)
+        .collect();
+
+    let scoped_priorities: Vec<Priority> = priorities
+        .iter()
+        .filter(|priority| scoped_priority_ids.contains(&priority.id))
+        .cloned()
+        .collect();
+
+    let scoped_entries: Vec<BragEntry> = entries
+        .iter()
+        .filter(|entry| {
+            entry
+                .priority_id
+                .is_some_and(|id| scoped_priority_ids.contains(&id))
+        })
+        .cloned()
+        .collect();
+    let scoped_entry_ids: HashSet<i64> = scoped_entries.iter().map(|entry| entry.id).collect();
+
+    let scoped_contribution_examples: Vec<ContributionExample> = contribution_examples
+        .iter()
+        .filter(|example| {
+            example_entry_ids
+                .get(&example.id)
+                .is_some_and(|ids| ids.iter().any(|id| scoped_entry_ids.contains(id)))
+        })
+        .cloned()
+        .collect();
+
+    let scoped_example_entry_ids = scoped_contribution_examples
+        .iter()
+        .filter_map(|example| {
+            let scoped_ids: Vec<i64> = example_entry_ids
+                .get(&example.id)?
+                .iter()
+                .copied()
+                .filter(|id| scoped_entry_ids.contains(id))
+                .collect();
+            Some((example.id, scoped_ids))
+        })
+        .collect();
+
+    ScopedSelfReflectionData {
+        dept_goals: scoped_dept_goals,
+        priorities: scoped_priorities,
+        entries: scoped_entries,
+        contribution_examples: scoped_contribution_examples,
+        example_entry_ids: scoped_example_entry_ids,
+    }
 }
 
 fn compute_stats(entries: &[BragEntry]) -> String {
@@ -354,7 +471,7 @@ fn format_focused_department_goals(
     }
 
     format!(
-        "## User-selected focus department goals\n{}\n\nUse these selected department goals as the primary scope for this generated answer. Treat linked priorities and entries under these goals as the strongest evidence, and treat other goals or unlinked work as supporting context only.\n",
+        "## User-selected focus department goals\n{}\n\nOnly use these selected department goals as the scope for this generated answer. Use their linked priorities and entries as evidence. Do not draft around or borrow examples from unselected department goals.\n",
         selected.join("\n")
     )
 }
@@ -1123,4 +1240,155 @@ pub fn build_quarterly_checkin_prompt(
     ctx.push_str(section_instruction);
 
     ctx
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::Once;
+
+    use super::*;
+
+    fn init_review_config() {
+        static INIT: Once = Once::new();
+        INIT.call_once(|| {
+            crate::review::model::load_review_config("config/review_sections.toml");
+        });
+    }
+
+    fn goal(id: i64, title: &str) -> DepartmentGoal {
+        DepartmentGoal {
+            id,
+            phase_id: 1,
+            title: title.to_string(),
+            description: None,
+            status: "in_progress".to_string(),
+            sort_order: id,
+            source: "manual".to_string(),
+            created_at: "2026-01-01".to_string(),
+        }
+    }
+
+    fn priority(id: i64, department_goal_id: i64, title: &str) -> Priority {
+        Priority {
+            id,
+            phase_id: 1,
+            user_id: 1,
+            title: title.to_string(),
+            status: "active".to_string(),
+            color: None,
+            sort_order: id,
+            scope: None,
+            started_at: None,
+            completed_at: None,
+            impact_narrative: None,
+            department_goal_id: Some(department_goal_id),
+            created_at: "2026-01-01".to_string(),
+            priority_level: None,
+            measure_type: None,
+            measure_start: None,
+            measure_target: None,
+            measure_current: None,
+            description: None,
+            tracking_status: None,
+            due_date: None,
+            tier: None,
+        }
+    }
+
+    fn entry(id: i64, priority_id: Option<i64>, title: &str) -> BragEntry {
+        BragEntry {
+            id,
+            week_id: 1,
+            priority_id,
+            source: "manual".to_string(),
+            source_id: None,
+            source_url: None,
+            title: title.to_string(),
+            description: None,
+            entry_type: "other".to_string(),
+            status: None,
+            repository: None,
+            occurred_at: "2026-01-01".to_string(),
+            teams: None,
+            collaborators: None,
+            outcome_statement: None,
+            evidence_urls: None,
+            role: None,
+            impact_tags: None,
+            reach: None,
+            complexity: None,
+            decision_alternatives: None,
+            decision_reasoning: None,
+            decision_outcome: None,
+            meeting_role: None,
+            recurring_group: None,
+            start_time: None,
+            end_time: None,
+            created_at: "2026-01-01".to_string(),
+            updated_at: "2026-01-01".to_string(),
+            deleted_at: None,
+        }
+    }
+
+    fn example(id: i64, title: &str) -> ContributionExample {
+        ContributionExample {
+            id,
+            phase_id: 1,
+            title: title.to_string(),
+            outcome: None,
+            behaviors: None,
+            impact_level: None,
+            learnings: None,
+            assessment_type: None,
+            status: "draft".to_string(),
+            sort_order: id,
+            created_at: "2026-01-01".to_string(),
+            updated_at: "2026-01-01".to_string(),
+        }
+    }
+
+    #[test]
+    fn selected_department_goals_scope_self_review_prompt_context() {
+        init_review_config();
+
+        let goals = vec![
+            goal(1, "Ship Soccer World Cup"),
+            goal(2, "Help ship Autopush"),
+        ];
+        let priorities = vec![
+            priority(10, 1, "World Cup schedule API"),
+            priority(20, 2, "Autopush memory fixes"),
+        ];
+        let entries = vec![
+            entry(100, Some(10), "World Cup standings entry"),
+            entry(200, Some(20), "Autopush performance entry"),
+            entry(300, None, "Unlinked planning entry"),
+        ];
+        let examples = vec![
+            example(1000, "World Cup launch example"),
+            example(2000, "Autopush performance example"),
+        ];
+        let example_entry_ids = HashMap::from([(1000, vec![100]), (2000, vec![200])]);
+
+        let prompt = build_self_reflection_prompt(
+            "impact_examples",
+            &goals,
+            &entries,
+            &priorities,
+            &examples,
+            &example_entry_ids,
+            &[1],
+            "2026 H1",
+            None,
+            false,
+        );
+
+        assert!(prompt.contains("Ship Soccer World Cup"));
+        assert!(prompt.contains("World Cup schedule API"));
+        assert!(prompt.contains("World Cup standings entry"));
+        assert!(prompt.contains("World Cup launch example"));
+        assert!(!prompt.contains("Autopush"));
+        assert!(!prompt.contains("Unlinked planning entry"));
+    }
 }
