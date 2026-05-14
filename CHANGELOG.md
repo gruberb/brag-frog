@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.4] - 2026-05-14
+
+### Changed
+- **Department-goal-focused AI drafts.** Self Review focus controls now select department goals instead of individual priorities. Generated drafts receive the selected department goals plus their linked priorities and evidence as the primary scope.
+- **Goal Outcomes grouped by department goal.** The default Lattice prompt and Mozilla overlay now ask AI to produce goal-outcome drafts around department goals, using linked priorities, contribution examples, logbook evidence, and impact signals as supporting detail.
+
 ## [5.2.3] - 2026-05-12
 
 ### Added

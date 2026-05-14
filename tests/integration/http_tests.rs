@@ -59,12 +59,15 @@ async fn test_review_page_shows_lattice_examples_and_prefers_review_quarter() {
     .await
     .unwrap();
     let crypto = app.crypto.for_user(user_id).unwrap();
+    let goal =
+        common::create_test_department_goal(&app.pool, phase_id, user_id, "Review goals", &crypto)
+            .await;
     common::create_test_priority(
         &app.pool,
         phase_id,
         user_id,
         "Improve review summaries",
-        None,
+        Some(goal.id),
         &crypto,
     )
     .await;
@@ -81,8 +84,8 @@ async fn test_review_page_shows_lattice_examples_and_prefers_review_quarter() {
     );
     assert!(resp.body.contains("The outcome or progress made"));
     assert!(resp.body.contains("Required: Write your response"));
-    assert!(resp.body.contains("Focus priorities for AI draft"));
-    assert!(resp.body.contains("Improve review summaries"));
+    assert!(resp.body.contains("Focus department goals for AI draft"));
+    assert!(resp.body.contains("Review goals"));
     assert!(
         resp.body
             .contains("var firstReview = document.querySelector")

@@ -116,7 +116,7 @@ struct SummaryData {
 
 #[derive(serde::Deserialize)]
 pub struct AiDraftQuery {
-    pub priority_ids: Option<String>,
+    pub dept_goal_ids: Option<String>,
 }
 
 // Loads entries, department goals, priorities, and CLG level for building AI prompts.
@@ -174,6 +174,7 @@ pub async fn summary_page(
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
     let examples = ContributionExample::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let priorities = Priority::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
     // Cycle overview: compute in-scope quarters for this phase
@@ -204,6 +205,7 @@ pub async fn summary_page(
     ctx.insert("current_page", "summary");
     ctx.insert("examples", &examples);
     ctx.insert("entries", &entries);
+    ctx.insert("dept_goals", &dept_goals);
     ctx.insert("priorities", &priorities);
     ctx.insert("example_entries", &example_entries);
 
@@ -287,6 +289,7 @@ pub async fn generate_all(
     ctx.insert("sections", &build_sections_json(&summaries));
     ctx.insert("phase", &phase);
     ctx.insert("has_ai", &true);
+    ctx.insert("dept_goals", &data.dept_goals);
     ctx.insert("priorities", &data.priorities);
 
     let html = state
@@ -309,7 +312,8 @@ pub async fn ai_draft_section(
         .ok_or_else(|| AppError::NotFound("Phase not found".to_string()))?;
 
     let data = load_summary_data(&state, phase_id, auth.user_id).await?;
-    let focused_priority_ids = parse_priority_ids(query.priority_ids.as_deref(), &data.priorities);
+    let focused_dept_goal_ids =
+        parse_department_goal_ids(query.dept_goal_ids.as_deref(), &data.dept_goals);
 
     let prompt = build_self_reflection_prompt(
         &section,
@@ -318,7 +322,7 @@ pub async fn ai_draft_section(
         &data.priorities,
         &data.contribution_examples,
         &data.example_entry_ids,
-        &focused_priority_ids,
+        &focused_dept_goal_ids,
         &phase.name,
         data.clg_level,
         data.wants_promotion,
@@ -360,12 +364,14 @@ pub async fn save_section(
     .await?;
 
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
+    let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let priorities = Priority::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
     let mut ctx = tera::Context::new();
     ctx.insert("section", &build_section_json(&section, Some(&summary)));
     ctx.insert("phase", &phase);
     ctx.insert("has_ai", &has_ai);
+    ctx.insert("dept_goals", &dept_goals);
     ctx.insert("priorities", &priorities);
 
     let html = state
@@ -407,8 +413,8 @@ fn build_section_json(section: &str, summary: Option<&Summary>) -> serde_json::V
     })
 }
 
-fn parse_priority_ids(raw: Option<&str>, priorities: &[Priority]) -> Vec<i64> {
-    let allowed: HashSet<i64> = priorities.iter().map(|p| p.id).collect();
+fn parse_department_goal_ids(raw: Option<&str>, dept_goals: &[DepartmentGoal]) -> Vec<i64> {
+    let allowed: HashSet<i64> = dept_goals.iter().map(|g| g.id).collect();
 
     raw.unwrap_or("")
         .split(',')

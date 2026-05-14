@@ -67,8 +67,9 @@ pub struct ReviewSection {
     pub form_tip: Option<String>,
     #[serde(default)]
     pub form_placeholder: Option<String>,
-    /// When true, the review UI lets the user pick priorities to emphasize
-    /// for this section's AI draft.
+    /// When true, the review UI lets the user pick department goals to
+    /// emphasize for this section's AI draft. The field name is retained for
+    /// compatibility with existing review_sections.toml overlays.
     #[serde(default)]
     pub focus_priorities: bool,
     #[serde(default)]

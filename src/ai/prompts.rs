@@ -20,7 +20,7 @@ pub fn build_self_reflection_prompt(
     priorities: &[Priority],
     contribution_examples: &[ContributionExample],
     example_entry_ids: &HashMap<i64, Vec<i64>>,
-    focused_priority_ids: &[i64],
+    focused_dept_goal_ids: &[i64],
     phase_name: &str,
     clg_level: Option<&ClgLevel>,
     wants_promotion: bool,
@@ -29,7 +29,8 @@ pub fn build_self_reflection_prompt(
     let entries_by_priority = group_entries_by_priority(entries, dept_goals, priorities);
     let contribution_examples_text =
         format_contribution_examples(contribution_examples, example_entry_ids, entries);
-    let focused_priority_context = format_focused_priorities(priorities, focused_priority_ids);
+    let focused_dept_goal_context =
+        format_focused_department_goals(dept_goals, priorities, focused_dept_goal_ids);
 
     let clg_context = if let Some(level) = clg_level {
         let mut ctx = format!(
@@ -123,7 +124,7 @@ Phase: {phase_name}
 ## Department Goals & Priorities
 {goals_text}
 
-{focused_priority_context}
+{focused_dept_goal_context}
 ## Entries grouped by priority
 {entries_text}
 
@@ -138,7 +139,7 @@ Phase: {phase_name}
         phase_name = phase_name,
         stats = stats,
         goals_text = format_dept_goals_with_priorities(dept_goals, priorities),
-        focused_priority_context = focused_priority_context,
+        focused_dept_goal_context = focused_dept_goal_context,
         entries_text = entries_by_priority.0,
         contribution_examples_text = contribution_examples_text,
         unlinked_text = entries_by_priority.1,
@@ -279,41 +280,72 @@ fn format_dept_goals_with_priorities(
         .join("\n")
 }
 
-fn format_focused_priorities(priorities: &[Priority], focused_priority_ids: &[i64]) -> String {
-    if focused_priority_ids.is_empty() {
+fn format_focused_department_goals(
+    dept_goals: &[DepartmentGoal],
+    priorities: &[Priority],
+    focused_dept_goal_ids: &[i64],
+) -> String {
+    if focused_dept_goal_ids.is_empty() {
         return String::new();
     }
 
-    let selected: Vec<String> = focused_priority_ids
+    let selected: Vec<String> = focused_dept_goal_ids
         .iter()
-        .filter_map(|id| priorities.iter().find(|p| p.id == *id))
-        .map(|p| {
-            let tracking = p
-                .tracking_status
-                .as_deref()
-                .map(|t| format!(", tracking: {}", t.replace('_', " ")))
-                .unwrap_or_default();
-            let description = p
+        .filter_map(|id| dept_goals.iter().find(|g| g.id == *id))
+        .map(|goal| {
+            let description = goal
                 .description
                 .as_deref()
                 .filter(|s| !s.trim().is_empty())
                 .map(|s| format!(" - {}", s))
                 .unwrap_or_default();
-            let impact = p
-                .impact_narrative
-                .as_deref()
-                .filter(|s| !s.trim().is_empty())
-                .map(|s| format!(" Impact: {}", s))
-                .unwrap_or_default();
-
-            format!(
-                "- {} [{}{}]{}{}",
-                p.title,
-                p.status.replace('_', " "),
-                tracking,
+            let mut lines = vec![format!(
+                "- {} [{}]{}",
+                goal.title,
+                goal.status.replace('_', " "),
                 description,
-                impact
-            )
+            )];
+
+            let linked_priorities: Vec<String> = priorities
+                .iter()
+                .filter(|p| p.department_goal_id == Some(goal.id))
+                .map(|p| {
+                    let tracking = p
+                        .tracking_status
+                        .as_deref()
+                        .map(|t| format!(", tracking: {}", t.replace('_', " ")))
+                        .unwrap_or_default();
+                    let description = p
+                        .description
+                        .as_deref()
+                        .filter(|s| !s.trim().is_empty())
+                        .map(|s| format!(" - {}", s))
+                        .unwrap_or_default();
+                    let impact = p
+                        .impact_narrative
+                        .as_deref()
+                        .filter(|s| !s.trim().is_empty())
+                        .map(|s| format!(" Impact: {}", s))
+                        .unwrap_or_default();
+
+                    format!(
+                        "  - Priority: {} [{}{}]{}{}",
+                        p.title,
+                        p.status.replace('_', " "),
+                        tracking,
+                        description,
+                        impact
+                    )
+                })
+                .collect();
+
+            if linked_priorities.is_empty() {
+                lines.push("  - (no linked priorities)".to_string());
+            } else {
+                lines.extend(linked_priorities);
+            }
+
+            lines.join("\n")
         })
         .collect();
 
@@ -322,7 +354,7 @@ fn format_focused_priorities(priorities: &[Priority], focused_priority_ids: &[i6
     }
 
     format!(
-        "## User-selected focus priorities\n{}\n\nUse these selected priorities as the primary scope for this generated answer. Treat other work as supporting context only.\n",
+        "## User-selected focus department goals\n{}\n\nUse these selected department goals as the primary scope for this generated answer. Treat linked priorities and entries under these goals as the strongest evidence, and treat other goals or unlinked work as supporting context only.\n",
         selected.join("\n")
     )
 }

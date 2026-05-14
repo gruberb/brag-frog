@@ -46,22 +46,22 @@
     </div>
     {% endif %}
 
-    {% if section.focus_priorities and priorities is defined and priorities | length > 0 %}
+    {% if section.focus_priorities and dept_goals is defined and dept_goals | length > 0 %}
     <details class="summary-focus-priorities">
-        <summary>Focus priorities for AI draft</summary>
+        <summary>Focus department goals for AI draft</summary>
         {% if section.focus_priority_help %}
         <p>{{ section.focus_priority_help }}</p>
         {% endif %}
         <div class="summary-focus-priority-list">
-            {% for priority in priorities %}
+            {% for goal in dept_goals %}
             <label class="summary-focus-priority">
                 <input type="checkbox"
-                       data-summary-priority
+                       data-summary-dept-goal
                        data-summary-section="{{ section.key }}"
-                       value="{{ priority.id }}">
-                <span class="summary-focus-priority-color" style="background:{% if priority.color %}{{ priority.color }}{% else %}#FF453F{% endif %}"></span>
-                <span class="summary-focus-priority-title">{{ priority.title }}</span>
-                <span class="summary-focus-priority-status">{{ priority.status | replace(from="_", to=" ") }}</span>
+                       value="{{ goal.id }}">
+                <span class="summary-focus-priority-color" style="background:#FF453F"></span>
+                <span class="summary-focus-priority-title">{{ goal.title }}</span>
+                <span class="summary-focus-priority-status">{{ goal.status | replace(from="_", to=" ") }}</span>
             </label>
             {% endfor %}
         </div>
@@ -247,10 +247,10 @@ function fetchAiDraft(key, phaseId) {
     var textarea = document.getElementById('summary-textarea-' + key);
     var btn = document.getElementById('summary-ai-btn-' + key);
     var loading = document.getElementById('summary-ai-loading-' + key);
-    var priorityIds = selectedPriorityIdsForSection(key);
+    var deptGoalIds = selectedDepartmentGoalIdsForSection(key);
     var url = '/review/' + phaseId + '/ai-draft/' + key;
-    if (priorityIds.length > 0) {
-        url += '?priority_ids=' + encodeURIComponent(priorityIds.join(','));
+    if (deptGoalIds.length > 0) {
+        url += '?dept_goal_ids=' + encodeURIComponent(deptGoalIds.join(','));
     }
 
     if (btn) btn.disabled = true;
@@ -286,9 +286,9 @@ function generateSummaryDraft(key, phaseId) {
     fetchAiDraft(key, phaseId);
 }
 
-function selectedPriorityIdsForSection(key) {
+function selectedDepartmentGoalIdsForSection(key) {
     return Array.prototype.slice.call(
-        document.querySelectorAll('#summary-section-' + key + ' input[data-summary-priority]:checked')
+        document.querySelectorAll('#summary-section-' + key + ' input[data-summary-dept-goal]:checked')
     ).map(function(input) {
         return input.value;
     });
