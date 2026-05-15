@@ -9,32 +9,49 @@
 <!-- Overview -->
 <section class="card" style="margin-bottom:16px;">
     <h2 class="section-title">Overview</h2>
-    <div class="report-stats-grid">
-        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_total }}</span><span class="report-stat-card-label">Total</span></div>
-        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_code }}</span><span class="report-stat-card-label">Code</span></div>
-        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_reviews }}</span><span class="report-stat-card-label">Reviews</span></div>
-        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_tickets }}</span><span class="report-stat-card-label">Tickets</span></div>
-        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_docs }}</span><span class="report-stat-card-label">Docs</span></div>
+    <div class="report-stats-grid trends-overview-grid">
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_total }}</span><span class="report-stat-card-label">Total Activities</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_prs_merged }}</span><span class="report-stat-card-label">PRs Merged</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_prs_reviewed }}</span><span class="report-stat-card-label">PRs Reviewed</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_jira_tickets_closed }}</span><span class="report-stat-card-label">Jira Tickets Closed</span></div>
+        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_docs_worked_on }}</span><span class="report-stat-card-label">Docs Worked On</span></div>
         <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_meetings }}</span><span class="report-stat-card-label">Meetings</span></div>
-        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_collaboration }}</span><span class="report-stat-card-label">Collab</span></div>
-        <div class="report-stat-card"><span class="report-stat-card-count">{{ overview_learning }}</span><span class="report-stat-card-label">Learning</span></div>
     </div>
 </section>
 
 <!-- Priority Activity -->
 <section class="card" style="margin-bottom:16px;">
     <h2 class="section-title">Priority Activity</h2>
-    {% if priority_bars | length > 0 %}
-    <div class="trends-priority-bars">
-        {% for item in priority_bars %}
-        <div class="trends-priority-item">
-            <div class="trends-priority-row">
-                <span class="trends-priority-dot" style="background:{{ item.color }}"></span>
-                <span class="trends-priority-name">{{ item.name }}</span>
-                <span class="trends-h-bar-value">{{ item.count }}</span>
+    {% if priority_activity_groups | length > 0 %}
+    <div class="trends-goal-activity">
+        {% for group in priority_activity_groups %}
+        <div class="trends-goal-group">
+            <div class="trends-goal-row">
+                <div class="trends-goal-main">
+                    <span class="trends-goal-dot" style="background:{{ group.color }}"></span>
+                    <span class="trends-goal-name">{{ group.name }}</span>
+                    {% if group.status %}
+                    <span class="trends-goal-status">{{ group.status | replace(from="_", to=" ") }}</span>
+                    {% endif %}
+                </div>
+                <span class="trends-h-bar-value">{{ group.count }}</span>
             </div>
-            <div class="trends-h-bar-track">
-                <div class="trends-h-bar-fill" style="width:{{ item.pct }}%;background:{{ item.color }};"></div>
+            <div class="trends-h-bar-track trends-goal-track">
+                <div class="trends-h-bar-fill" style="width:{{ group.pct }}%;background:{{ group.color }};"></div>
+            </div>
+            <div class="trends-priority-child-list">
+                {% for item in group.priorities %}
+                <div class="trends-priority-item">
+                    <div class="trends-priority-row">
+                        <span class="trends-priority-dot" style="background:{{ item.color }}"></span>
+                        <span class="trends-priority-name">{{ item.name }}</span>
+                        <span class="trends-h-bar-value">{{ item.count }}</span>
+                    </div>
+                    <div class="trends-h-bar-track">
+                        <div class="trends-h-bar-fill" style="width:{{ item.pct }}%;background:{{ item.color }};"></div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
         {% endfor %}
@@ -185,12 +202,60 @@
     border-radius: 50%;
     flex-shrink: 0;
 }
+.trends-goal-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
 
-/* Priority Activity — stacked layout (label row + bar row) */
-.trends-priority-bars {
+/* Priority Activity — department goals with priority rows beneath */
+.trends-goal-activity {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
+}
+.trends-goal-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.trends-goal-row,
+.trends-goal-main {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+}
+.trends-goal-row {
+    justify-content: space-between;
+}
+.trends-goal-main {
+    flex: 1;
+}
+.trends-goal-name {
+    font-size: 0.86rem;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.trends-goal-status {
+    font-size: 0.68rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+.trends-goal-track {
+    height: 6px;
+}
+.trends-priority-child-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-left: 18px;
 }
 .trends-priority-item {
     display: flex;
@@ -209,6 +274,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.trends-overview-grid {
+    grid-template-columns: repeat(3, 1fr);
 }
 
 /* Horizontal bar chart */
@@ -270,6 +339,9 @@
 }
 @media (max-width: 600px) {
     .trends-impact-grid { grid-template-columns: 1fr; }
+    .trends-priority-child-list { margin-left: 10px; }
+    .trends-goal-status { display: none; }
+    .trends-overview-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* Info icon with hover tooltip */

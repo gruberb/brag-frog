@@ -558,15 +558,176 @@ async fn test_priorities_page_loads() {
 // ── Trends page ──
 
 #[tokio::test]
-async fn test_trends_page_loads() {
+async fn test_trends_page_shows_requested_metrics_and_department_goal_activity() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
-    let _phase_id = common::create_test_phase(&app.pool, user_id).await;
+    let phase_id = common::create_test_phase(&app.pool, user_id).await;
+    let crypto = app.crypto.for_user(user_id).unwrap();
+    let world_cup_goal = common::create_test_department_goal(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Ship Soccer World Cup",
+        &crypto,
+    )
+    .await;
+    let mars_goal = common::create_test_department_goal(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Integrate MARS with Merino",
+        &crypto,
+    )
+    .await;
+    let world_cup_priority = common::create_test_priority(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Prepare merino for world cup deployment",
+        Some(world_cup_goal.id),
+        &crypto,
+    )
+    .await;
+    let mars_priority = common::create_test_priority(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Switch from Remote Settings to MARS",
+        Some(mars_goal.id),
+        &crypto,
+    )
+    .await;
+    let unassigned_priority = common::create_test_priority(
+        &app.pool,
+        phase_id,
+        user_id,
+        "Lead Rust book club",
+        None,
+        &crypto,
+    )
+    .await;
+    let week =
+        common::create_test_week(&app.pool, phase_id, 2, 2025, "2025-01-06", "2025-01-12").await;
+
+    common::create_test_entry(
+        &app.pool,
+        user_id,
+        week.id,
+        "World Cup merge",
+        "pr_merged",
+        "2025-01-06",
+        Some(world_cup_priority.id),
+        &crypto,
+    )
+    .await;
+    common::create_test_entry(
+        &app.pool,
+        user_id,
+        week.id,
+        "World Cup review",
+        "pr_reviewed",
+        "2025-01-07",
+        Some(world_cup_priority.id),
+        &crypto,
+    )
+    .await;
+    common::create_test_entry(
+        &app.pool,
+        user_id,
+        week.id,
+        "World Cup ticket",
+        "jira_completed",
+        "2025-01-08",
+        Some(world_cup_priority.id),
+        &crypto,
+    )
+    .await;
+    common::create_test_entry(
+        &app.pool,
+        user_id,
+        week.id,
+        "World Cup docs",
+        "design_doc",
+        "2025-01-09",
+        Some(world_cup_priority.id),
+        &crypto,
+    )
+    .await;
+    common::create_test_entry(
+        &app.pool,
+        user_id,
+        week.id,
+        "MARS docs",
+        "drive_edited",
+        "2025-01-10",
+        Some(mars_priority.id),
+        &crypto,
+    )
+    .await;
+    common::create_test_entry(
+        &app.pool,
+        user_id,
+        week.id,
+        "Book club notes",
+        "document",
+        "2025-01-11",
+        Some(unassigned_priority.id),
+        &crypto,
+    )
+    .await;
+    common::create_test_entry(
+        &app.pool,
+        user_id,
+        week.id,
+        "Planning meeting",
+        "meeting",
+        "2025-01-12",
+        None,
+        &crypto,
+    )
+    .await;
     let cookie = app.login(user_id).await;
 
     let resp = app.get("/trends", Some(&cookie)).await;
     assert_eq!(resp.status, StatusCode::OK);
     assert!(resp.body.contains("Trends"), "Page should contain 'Trends'");
+    assert!(resp.body.contains("Total Activities"));
+    assert!(resp.body.contains("PRs Merged"));
+    assert!(resp.body.contains("PRs Reviewed"));
+    assert!(resp.body.contains("Jira Tickets Closed"));
+    assert!(resp.body.contains("Docs Worked On"));
+    assert!(resp.body.contains("Meetings"));
+    assert!(resp.body.contains(
+        r#"<span class="report-stat-card-count">7</span><span class="report-stat-card-label">Total Activities</span>"#
+    ));
+    assert!(resp.body.contains(
+        r#"<span class="report-stat-card-count">1</span><span class="report-stat-card-label">PRs Merged</span>"#
+    ));
+    assert!(resp.body.contains(
+        r#"<span class="report-stat-card-count">1</span><span class="report-stat-card-label">PRs Reviewed</span>"#
+    ));
+    assert!(resp.body.contains(
+        r#"<span class="report-stat-card-count">1</span><span class="report-stat-card-label">Jira Tickets Closed</span>"#
+    ));
+    assert!(resp.body.contains(
+        r#"<span class="report-stat-card-count">3</span><span class="report-stat-card-label">Docs Worked On</span>"#
+    ));
+    assert!(resp.body.contains("Ship Soccer World Cup"));
+    assert!(
+        resp.body
+            .contains("Prepare merino for world cup deployment")
+    );
+    assert!(resp.body.contains("Integrate MARS with Merino"));
+    assert!(resp.body.contains("Switch from Remote Settings to MARS"));
+    assert!(resp.body.contains("No Department Goal"));
+    assert!(resp.body.contains("Unlinked Entries"));
+
+    let world_cup_pos = resp.body.find("Ship Soccer World Cup").unwrap();
+    let mars_pos = resp.body.find("Integrate MARS with Merino").unwrap();
+    assert!(
+        world_cup_pos < mars_pos,
+        "Department goals should be sorted by most activity"
+    );
 }
 
 // ── Check-in page ──

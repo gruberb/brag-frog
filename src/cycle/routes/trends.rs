@@ -3,12 +3,12 @@ use axum::response::Html;
 use std::collections::HashMap;
 
 use crate::AppState;
-use crate::worklog::model::BragEntry;
-use crate::objectives::model::Priority;
+use crate::cycle::model::BragPhase;
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::{PeopleAlias, User};
-use crate::cycle::model::BragPhase;
 use crate::kernel::error::AppError;
+use crate::objectives::model::{DepartmentGoal, Priority};
+use crate::worklog::model::BragEntry;
 
 fn category_color(cat: &str) -> &'static str {
     match cat {
@@ -29,8 +29,9 @@ fn entry_category(entry_type: &str) -> &'static str {
         "pr_authored" | "pr_merged" | "pr_development" | "revision_authored" | "development" => {
             "Code"
         }
-        "bug_fixed" | "bug_filed" | "jira_completed" | "jira_story" | "jira_task"
-        | "jira_epic" => "Tickets",
+        "bug_fixed" | "bug_filed" | "jira_completed" | "jira_story" | "jira_task" | "jira_epic" => {
+            "Tickets"
+        }
         "design_doc" | "document" | "confluence_page" | "drive_created" | "drive_edited"
         | "drive_commented" => "Docs",
         "meeting" => "Meetings",
@@ -73,6 +74,18 @@ fn entry_type_label(entry_type: &str) -> &'static str {
         "drive_commented" => "Drive Commented",
         _ => "Other",
     }
+}
+
+fn is_docs_work_type(entry_type: &str) -> bool {
+    matches!(
+        entry_type,
+        "design_doc"
+            | "document"
+            | "confluence_page"
+            | "drive_created"
+            | "drive_edited"
+            | "drive_commented"
+    )
 }
 
 fn humanize_label(val: &str) -> String {
@@ -140,9 +153,11 @@ pub async fn trends_page(
     entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
 
     let all_priorities = Priority::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
+    let department_goals =
+        DepartmentGoal::list_for_phase(&state.db, phase.id, &auth.crypto).await?;
     let alias_map = PeopleAlias::alias_map(&state.db, auth.user_id).await?;
 
-    // Priority activity bars — count entries per priority, plus "Unlinked" bucket
+    // Priority activity counts keyed by priority, plus an "Unlinked" bucket.
     let mut priority_counts: HashMap<i64, usize> = HashMap::new();
     let mut unlinked_count: usize = 0;
 
@@ -152,17 +167,15 @@ pub async fn trends_page(
     let mut role_counts: HashMap<String, usize> = HashMap::new();
     let mut person_counts: HashMap<String, usize> = HashMap::new();
 
-    // New metrics: repos, teams, weekday productivity, category overview
+    // New metrics: repos, teams, weekday productivity, requested overview counters
     let mut repo_counts: HashMap<String, usize> = HashMap::new();
     let mut team_counts: HashMap<String, usize> = HashMap::new();
     let mut weekday_counts: HashMap<String, usize> = HashMap::new();
-    let mut overview_reviews: usize = 0;
-    let mut overview_code: usize = 0;
-    let mut overview_docs: usize = 0;
+    let mut overview_prs_merged: usize = 0;
+    let mut overview_prs_reviewed: usize = 0;
+    let mut overview_jira_tickets_closed: usize = 0;
+    let mut overview_docs_worked_on: usize = 0;
     let mut overview_meetings: usize = 0;
-    let mut overview_collaboration: usize = 0;
-    let mut overview_learning: usize = 0;
-    let mut overview_tickets: usize = 0;
 
     // Category distribution + per-category type breakdown for tooltips
     let mut category_counts: HashMap<&str, usize> = HashMap::new();
@@ -232,20 +245,20 @@ pub async fn trends_page(
             *weekday_counts.entry(weekday).or_insert(0) += 1;
         }
 
-        // Category overview counters
-        let cat = entry_category(&entry.entry_type);
-        match cat {
-            "Reviews" => overview_reviews += 1,
-            "Code" => overview_code += 1,
-            "Docs" => overview_docs += 1,
-            "Meetings" => overview_meetings += 1,
-            "Collaboration" => overview_collaboration += 1,
-            "Learning" => overview_learning += 1,
-            "Tickets" => overview_tickets += 1,
+        // Requested overview counters
+        match entry.entry_type.as_str() {
+            "pr_merged" => overview_prs_merged += 1,
+            "pr_reviewed" => overview_prs_reviewed += 1,
+            "jira_completed" => overview_jira_tickets_closed += 1,
+            "meeting" => overview_meetings += 1,
             _ => {}
+        }
+        if is_docs_work_type(&entry.entry_type) {
+            overview_docs_worked_on += 1;
         }
 
         // Category + type breakdown
+        let cat = entry_category(&entry.entry_type);
         *category_counts.entry(cat).or_insert(0) += 1;
         let type_label = entry_type_label(&entry.entry_type);
         *category_type_counts
@@ -255,47 +268,119 @@ pub async fn trends_page(
             .or_insert(0) += 1;
     }
 
-    // Build priority bars with color from priority model
+    // Build priority activity grouped by department goal.
     let priority_lookup: HashMap<i64, &Priority> =
         all_priorities.iter().map(|p| (p.id, p)).collect();
-    let mut priority_bars: Vec<serde_json::Value> = priority_counts
+    let department_goal_lookup: HashMap<i64, &DepartmentGoal> = department_goals
         .iter()
-        .filter_map(|(pri_id, count)| {
-            let pri = priority_lookup.get(pri_id)?;
-            if pri.status == "cancelled" {
-                return None;
-            }
-            Some(serde_json::json!({
-                "name": pri.title,
-                "color": pri.color.as_deref().unwrap_or("#888"),
-                "count": count,
-            }))
-        })
+        .map(|goal| (goal.id, goal))
         .collect();
-    // Add "Unlinked" bucket before sorting so it participates in normalization
-    if unlinked_count > 0 {
-        priority_bars.push(serde_json::json!({
-            "name": "Unlinked",
-            "color": "#95A5A6",
-            "count": unlinked_count,
+    let mut grouped_priority_counts: HashMap<Option<i64>, Vec<serde_json::Value>> = HashMap::new();
+
+    for (pri_id, count) in &priority_counts {
+        let Some(priority) = priority_lookup.get(pri_id) else {
+            continue;
+        };
+        if priority.status == "cancelled" {
+            continue;
+        }
+        let department_goal_id = priority
+            .department_goal_id
+            .filter(|id| department_goal_lookup.contains_key(id));
+
+        grouped_priority_counts
+            .entry(department_goal_id)
+            .or_default()
+            .push(serde_json::json!({
+                "name": priority.title.as_str(),
+                "color": priority.color.as_deref().unwrap_or("#888"),
+                "count": count,
+            }));
+    }
+
+    let mut priority_activity_groups: Vec<serde_json::Value> = Vec::new();
+    for (department_goal_id, mut priorities) in grouped_priority_counts {
+        priorities.sort_by(|a, b| {
+            b["count"]
+                .as_u64()
+                .unwrap_or(0)
+                .cmp(&a["count"].as_u64().unwrap_or(0))
+                .then_with(|| {
+                    a["name"]
+                        .as_str()
+                        .unwrap_or("")
+                        .cmp(b["name"].as_str().unwrap_or(""))
+                })
+        });
+
+        let group_count: u64 = priorities
+            .iter()
+            .map(|item| item["count"].as_u64().unwrap_or(0))
+            .sum();
+        let child_max = priorities
+            .first()
+            .and_then(|item| item["count"].as_u64())
+            .unwrap_or(1) as f64;
+
+        for priority in &mut priorities {
+            let count = priority["count"].as_u64().unwrap_or(0) as f64;
+            priority.as_object_mut().unwrap().insert(
+                "pct".to_string(),
+                serde_json::json!((count / child_max * 100.0).round() as i64),
+            );
+        }
+
+        let (name, status) = department_goal_id
+            .and_then(|id| department_goal_lookup.get(&id).copied())
+            .map(|goal| (goal.title.as_str(), Some(goal.status.as_str())))
+            .unwrap_or(("No Department Goal", None));
+
+        priority_activity_groups.push(serde_json::json!({
+            "name": name,
+            "status": status,
+            "color": "#FF453F",
+            "count": group_count,
+            "priorities": priorities,
         }));
     }
-    priority_bars.sort_by(|a, b| {
+
+    if unlinked_count > 0 {
+        priority_activity_groups.push(serde_json::json!({
+            "name": "Unlinked Entries",
+            "status": null,
+            "color": "#95A5A6",
+            "count": unlinked_count,
+            "priorities": [{
+                "name": "No priority assigned",
+                "color": "#95A5A6",
+                "count": unlinked_count,
+                "pct": 100,
+            }],
+        }));
+    }
+    priority_activity_groups.sort_by(|a, b| {
         b["count"]
             .as_u64()
             .unwrap_or(0)
             .cmp(&a["count"].as_u64().unwrap_or(0))
+            .then_with(|| {
+                a["name"]
+                    .as_str()
+                    .unwrap_or("")
+                    .cmp(b["name"].as_str().unwrap_or(""))
+            })
     });
-    // Normalize pct to max across all rows (including Unlinked)
-    let max_priority = priority_bars
+
+    let max_department_goal_count = priority_activity_groups
         .first()
-        .and_then(|b| b["count"].as_u64())
+        .and_then(|group| group["count"].as_u64())
         .unwrap_or(1) as f64;
-    for bar in &mut priority_bars {
-        let count = bar["count"].as_u64().unwrap_or(0) as f64;
-        bar.as_object_mut()
-            .unwrap()
-            .insert("pct".to_string(), serde_json::json!((count / max_priority * 100.0).round() as i64));
+    for group in &mut priority_activity_groups {
+        let count = group["count"].as_u64().unwrap_or(0) as f64;
+        group.as_object_mut().unwrap().insert(
+            "pct".to_string(),
+            serde_json::json!((count / max_department_goal_count * 100.0).round() as i64),
+        );
     }
 
     // Impact signal bars
@@ -342,7 +427,7 @@ pub async fn trends_page(
     ctx.insert("phase", &phase);
     ctx.insert("phases", &phases);
     ctx.insert("total_entries", &entries.len());
-    ctx.insert("priority_bars", &priority_bars);
+    ctx.insert("priority_activity_groups", &priority_activity_groups);
     ctx.insert("category_bars", &category_bars);
     ctx.insert("reach_bars", &reach_bars);
     ctx.insert("complexity_bars", &complexity_bars);
@@ -352,13 +437,14 @@ pub async fn trends_page(
     ctx.insert("team_bars", &team_bars);
     ctx.insert("weekday_bars", &weekday_bars);
     ctx.insert("overview_total", &entries.len());
-    ctx.insert("overview_reviews", &overview_reviews);
-    ctx.insert("overview_code", &overview_code);
-    ctx.insert("overview_docs", &overview_docs);
+    ctx.insert("overview_prs_merged", &overview_prs_merged);
+    ctx.insert("overview_prs_reviewed", &overview_prs_reviewed);
+    ctx.insert(
+        "overview_jira_tickets_closed",
+        &overview_jira_tickets_closed,
+    );
+    ctx.insert("overview_docs_worked_on", &overview_docs_worked_on);
     ctx.insert("overview_meetings", &overview_meetings);
-    ctx.insert("overview_collaboration", &overview_collaboration);
-    ctx.insert("overview_learning", &overview_learning);
-    ctx.insert("overview_tickets", &overview_tickets);
     ctx.insert("current_page", "trends");
 
     let html = state.templates.render("pages/trends.html", &ctx)?;
