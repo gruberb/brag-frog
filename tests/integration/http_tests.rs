@@ -85,14 +85,69 @@ async fn test_review_page_shows_single_lattice_answer() {
     assert!(resp.body.contains("Required: Write your response"));
     assert!(resp.body.contains("Department goals"));
     assert!(resp.body.contains("Review goals"));
-    assert!(resp.body.contains("summary-goal-select"));
+    assert!(resp.body.contains("summary-goal-card"));
+    assert!(!resp.body.contains("summary-goal-select"));
     assert!(resp.body.contains("summary-answer-textarea"));
+    assert_eq!(resp.body.matches("summary-answer-textarea").count(), 1);
     assert!(resp.body.contains("Q2 2026"));
     assert!(resp.body.contains("Mid-year Review"));
     assert!(!resp.body.contains("Q1 2026"));
     assert!(!resp.body.contains("Check-in"));
     assert!(!resp.body.contains("quarterly-checkin"));
     assert!(!resp.body.contains("+ New Example"));
+}
+
+#[tokio::test]
+async fn test_review_save_renders_markdown_and_jira_issue_links() {
+    let app = common::TestApp::new().await;
+    let user_id = common::create_test_user(&app.pool).await;
+    let phase_id = common::create_test_phase(&app.pool, user_id).await;
+    let crypto = app.crypto.for_user(user_id).unwrap();
+    let week =
+        common::create_test_week(&app.pool, phase_id, 22, 2026, "2026-05-25", "2026-05-31").await;
+
+    brag_frog::worklog::model::BragEntry::create_from_sync(
+        &app.pool,
+        week.id,
+        "jira",
+        "jira-DISCO-4260",
+        Some("https://jira.example/browse/DISCO-4260"),
+        "Adding retry mechanism",
+        None,
+        "jira_task",
+        Some("Done"),
+        None,
+        "2026-05-27",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        &crypto,
+    )
+    .await
+    .unwrap();
+
+    let cookie = app.login(user_id).await;
+    let content = "Resolved DISCO-4260 with **retry handling**.";
+    let body = format!("content={}", urlencoding::encode(content));
+    let resp = app
+        .post_form(
+            &format!("/review/{}/save/impact_examples", phase_id),
+            &body,
+            Some(&cookie),
+        )
+        .await;
+
+    assert_eq!(resp.status, StatusCode::OK);
+    assert!(resp.body.contains("summary-answer-preview"));
+    assert!(resp.body.contains("<strong>retry handling</strong>"));
+    assert!(
+        resp.body
+            .contains(r#"href="https://jira.example/browse/DISCO-4260""#)
+    );
+    assert!(resp.body.contains(">DISCO-4260</a>"));
 }
 
 // ── Quick-add entry ──

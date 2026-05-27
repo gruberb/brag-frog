@@ -205,7 +205,7 @@ docker compose up -d          # migrations auto-apply on startup
 | `BRAGFROG_INSTANCE_NAME` | No | — | Shows "Brag Frog \| {name}" on login page |
 | `BRAGFROG_ALLOWED_DOMAIN` | No | — | Restrict sign-ups to an email domain |
 | `BRAGFROG_PUBLIC_ONLY` | No | `false` | Only sync public/non-confidential data |
-| `BRAGFROG_AI_MODEL` | No | `claude-sonnet-4-5-20250929` | Anthropic model for AI summaries |
+| `BRAGFROG_AI_MODEL` | No | `claude-opus-4-7` | Anthropic model for AI summaries |
 | `BRAGFROG_BASE_URL` | No | `http://localhost:{port}` | Public URL for OAuth redirects |
 | `BRAGFROG_HOST` | No | `0.0.0.0` | Bind address |
 | `BRAGFROG_PORT` | No | `8080` | Listen port (also reads `PORT`) |

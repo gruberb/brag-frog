@@ -2,6 +2,14 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.9] - 2026-05-27
+
+### Changed
+- **Review page enforces one Lattice answer.** The Review page now renders only the primary configured review section and uses selectable department-goal cards instead of a native multi-select box.
+- **Lattice self-review prompt matches past review quality better.** Drafts now avoid generated-looking headings, use ticket IDs only as support, emphasize stakeholder impact, and weave CLG evidence into the narrative instead of producing rubric sections.
+- **Review drafts render Markdown with Jira links.** The self-review answer now previews rendered Markdown and links known Jira issue keys from synced work items.
+- **AI drafts default to Claude Opus 4.7.** `BRAGFROG_AI_MODEL` now falls back to `claude-opus-4-7` when no environment override is set.
+
 ## [5.2.8] - 2026-05-27
 
 ### Changed

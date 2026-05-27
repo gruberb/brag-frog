@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use axum::{
-    Form,
+    Form, Json,
     extract::{Path, Query, State},
     response::Html,
 };
@@ -14,6 +14,7 @@ use crate::identity::auth::middleware::AuthUser;
 use crate::identity::clg::ClgLevel;
 use crate::identity::model::User;
 use crate::kernel::error::AppError;
+use crate::kernel::render::render_markdown;
 use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::review::model::{
     ContributionExample, Summary, assessment_config, get_section, rating_scale_config,
@@ -35,6 +36,12 @@ struct SummaryData {
 #[derive(serde::Deserialize)]
 pub struct AiDraftQuery {
     pub dept_goal_ids: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct DraftResponse {
+    pub content: String,
+    pub rendered_html: String,
 }
 
 // Loads entries, department goals, priorities, and CLG level for building AI prompts.
@@ -109,10 +116,9 @@ pub async fn summary_page(
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let priorities = Priority::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
-    let sections = build_sections_json(&summaries);
-    let primary_section_key = crate::review::model::section_slugs()
-        .first()
-        .copied()
+    let jira_links = jira_issue_links(&entries);
+    let sections = build_primary_section_json(&summaries, &jira_links);
+    let primary_section_key = primary_section_slug()
         .unwrap_or("impact_examples")
         .to_string();
     let (review_quarter, review_label) = review_marker_for_phase(&phase);
@@ -176,7 +182,7 @@ pub async fn generate_all(
 
     let data = load_summary_data(&state, phase_id, auth.user_id).await?;
 
-    for section in &crate::review::model::section_slugs() {
+    if let Some(section) = primary_section_slug() {
         let prompt = build_self_reflection_prompt(
             section,
             &data.dept_goals,
@@ -208,7 +214,11 @@ pub async fn generate_all(
     let summaries = Summary::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
 
     let mut ctx = tera::Context::new();
-    ctx.insert("sections", &build_sections_json(&summaries));
+    let jira_links = jira_issue_links(&data.entries);
+    ctx.insert(
+        "sections",
+        &build_primary_section_json(&summaries, &jira_links),
+    );
     ctx.insert("phase", &phase);
     ctx.insert("has_ai", &true);
     ctx.insert("dept_goals", &data.dept_goals);
@@ -226,7 +236,7 @@ pub async fn ai_draft_section(
     State(state): State<AppState>,
     Path((phase_id, section)): Path<(i64, String)>,
     Query(query): Query<AiDraftQuery>,
-) -> Result<String, AppError> {
+) -> Result<Json<DraftResponse>, AppError> {
     let ai_client = get_ai_client(&state, auth.user_id).await?;
 
     let phase = BragPhase::find_by_id(&state.db, phase_id, auth.user_id)
@@ -251,9 +261,14 @@ pub async fn ai_draft_section(
     );
 
     let content = ai_client.generate(&prompt).await?;
+    let jira_links = jira_issue_links(&data.entries);
+    let rendered_html = render_summary_content(&content, &jira_links);
 
-    // Return plain text — do NOT save to database
-    Ok(content)
+    // Return the draft and rendered preview — do NOT save to database.
+    Ok(Json(DraftResponse {
+        content,
+        rendered_html,
+    }))
 }
 
 /// Form payload for saving or updating a summary section's content.
@@ -288,9 +303,14 @@ pub async fn save_section(
     let has_ai = has_ai_for_user(&state, auth.user_id).await;
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let priorities = Priority::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let jira_links = jira_issue_links(&entries);
 
     let mut ctx = tera::Context::new();
-    ctx.insert("section", &build_section_json(&section, Some(&summary)));
+    ctx.insert(
+        "section",
+        &build_section_json(&section, Some(&summary), &jira_links),
+    );
     ctx.insert("phase", &phase);
     ctx.insert("has_ai", &has_ai);
     ctx.insert("dept_goals", &dept_goals);
@@ -302,19 +322,57 @@ pub async fn save_section(
     Ok(Html(html))
 }
 
-// Builds the template-ready JSON array for configured review sections, merging saved content.
-fn build_sections_json(summaries: &[Summary]) -> Vec<serde_json::Value> {
-    crate::review::model::section_slugs()
-        .iter()
-        .map(|&section| {
-            let summary = summaries.iter().find(|s| s.section == section);
-            build_section_json(section, summary)
-        })
-        .collect()
+/// HTMX helper: renders unsaved review Markdown so generated or edited drafts can
+/// be previewed without creating another review section.
+pub async fn preview_section(
+    auth: AuthUser,
+    State(state): State<AppState>,
+    Path((phase_id, _section)): Path<(i64, String)>,
+    Form(input): Form<UpdateSummaryForm>,
+) -> Result<Json<DraftResponse>, AppError> {
+    let _phase = BragPhase::find_by_id(&state.db, phase_id, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Phase not found".to_string()))?;
+
+    let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
+    let jira_links = jira_issue_links(&entries);
+    let rendered_html = render_summary_content(&input.content, &jira_links);
+
+    Ok(Json(DraftResponse {
+        content: input.content,
+        rendered_html,
+    }))
 }
 
-fn build_section_json(section: &str, summary: Option<&Summary>) -> serde_json::Value {
+// The Review page intentionally mirrors Lattice's single-answer self-review
+// flow. Custom configs may still define historical sections, but they should
+// not fan out into multiple textboxes on this page.
+fn primary_section_slug() -> Option<&'static str> {
+    crate::review::model::section_slugs().first().copied()
+}
+
+fn build_primary_section_json(
+    summaries: &[Summary],
+    jira_links: &HashMap<String, String>,
+) -> Vec<serde_json::Value> {
+    let Some(section) = primary_section_slug() else {
+        return Vec::new();
+    };
+    let summary = summaries.iter().find(|s| s.section == section);
+    vec![build_section_json(section, summary, jira_links)]
+}
+
+fn build_section_json(
+    section: &str,
+    summary: Option<&Summary>,
+    jira_links: &HashMap<String, String>,
+) -> serde_json::Value {
     let config = get_section(section);
+    let content = summary.map(|s| s.content.clone());
+    let rendered_content = content
+        .as_deref()
+        .map(|c| render_summary_content(c, jira_links))
+        .unwrap_or_default();
 
     serde_json::json!({
         "key": section,
@@ -329,10 +387,157 @@ fn build_section_json(section: &str, summary: Option<&Summary>) -> serde_json::V
         "form_placeholder": config.and_then(|s| s.form_placeholder.clone()),
         "focus_priorities": config.is_some_and(|s| s.focus_priorities),
         "focus_priority_help": config.and_then(|s| s.focus_priority_help.clone()),
-        "content": summary.map(|s| s.content.clone()),
+        "content": content,
+        "rendered_content": rendered_content,
         "generated_at": summary.map(|s| s.generated_at.clone()),
         "id": summary.map(|s| s.id),
     })
+}
+
+fn render_summary_content(content: &str, jira_links: &HashMap<String, String>) -> String {
+    let linked = linkify_jira_issue_keys(content, jira_links);
+    render_markdown(&linked)
+}
+
+fn jira_issue_links(entries: &[BragEntry]) -> HashMap<String, String> {
+    let mut links = HashMap::new();
+
+    for entry in entries {
+        let Some(url) = entry.source_url.as_deref().filter(|s| !s.trim().is_empty()) else {
+            continue;
+        };
+        if entry.source != "jira" && !url.contains("/browse/") {
+            continue;
+        }
+
+        let key = find_jira_issue_keys(url)
+            .into_iter()
+            .next()
+            .or_else(|| {
+                entry
+                    .source_id
+                    .as_deref()
+                    .and_then(|source_id| find_jira_issue_keys(source_id).into_iter().next())
+            })
+            .or_else(|| find_jira_issue_keys(&entry.title).into_iter().next());
+
+        if let Some(key) = key {
+            links.entry(key).or_insert_with(|| url.to_string());
+        }
+    }
+
+    links
+}
+
+fn linkify_jira_issue_keys(content: &str, links: &HashMap<String, String>) -> String {
+    if content.is_empty() || links.is_empty() {
+        return content.to_string();
+    }
+
+    let bytes = content.as_bytes();
+    let mut out = String::with_capacity(content.len());
+    let mut cursor = 0;
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if !bytes[i].is_ascii_uppercase() {
+            i += 1;
+            continue;
+        }
+
+        let start = i;
+        i += 1;
+        while i < bytes.len() && (bytes[i].is_ascii_uppercase() || bytes[i].is_ascii_digit()) {
+            i += 1;
+        }
+
+        if i >= bytes.len() || bytes[i] != b'-' || i - start < 2 {
+            continue;
+        }
+
+        let number_start = i + 1;
+        let mut end = number_start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+        if end == number_start {
+            continue;
+        }
+
+        let key = &content[start..end];
+        if let Some(url) = links.get(key)
+            && can_link_issue_key(content, start, end)
+        {
+            out.push_str(&content[cursor..start]);
+            out.push('[');
+            out.push_str(key);
+            out.push_str("](");
+            out.push_str(&escape_markdown_url(url));
+            out.push(')');
+            cursor = end;
+        }
+
+        i = end;
+    }
+
+    if cursor == 0 {
+        content.to_string()
+    } else {
+        out.push_str(&content[cursor..]);
+        out
+    }
+}
+
+fn find_jira_issue_keys(text: &str) -> Vec<String> {
+    let bytes = text.as_bytes();
+    let mut keys = Vec::new();
+    let mut i = 0;
+
+    while i < bytes.len() {
+        if !bytes[i].is_ascii_uppercase() {
+            i += 1;
+            continue;
+        }
+
+        let start = i;
+        i += 1;
+        while i < bytes.len() && (bytes[i].is_ascii_uppercase() || bytes[i].is_ascii_digit()) {
+            i += 1;
+        }
+
+        if i >= bytes.len() || bytes[i] != b'-' || i - start < 2 {
+            continue;
+        }
+
+        let number_start = i + 1;
+        let mut end = number_start;
+        while end < bytes.len() && bytes[end].is_ascii_digit() {
+            end += 1;
+        }
+
+        if end > number_start {
+            keys.push(text[start..end].to_string());
+        }
+        i = end;
+    }
+
+    keys
+}
+
+fn can_link_issue_key(content: &str, start: usize, end: usize) -> bool {
+    let previous = content[..start].chars().next_back();
+    let next = content[end..].chars().next();
+
+    if previous == Some('[') || next == Some(']') {
+        return false;
+    }
+
+    let is_embedded = |ch: char| ch.is_ascii_alphanumeric() || matches!(ch, '/' | '_' | '-' | '.');
+    !previous.is_some_and(is_embedded) && !next.is_some_and(is_embedded)
+}
+
+fn escape_markdown_url(url: &str) -> String {
+    url.replace(')', "%29").replace(' ', "%20")
 }
 
 fn parse_department_goal_ids(raw: Option<&str>, dept_goals: &[DepartmentGoal]) -> Vec<i64> {

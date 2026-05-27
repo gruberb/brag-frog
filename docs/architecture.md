@@ -252,7 +252,7 @@ See [customization.md](customization.md) for the full customization guide.
 ## AI Integration
 
 ### Per-User Client
-There is no global AI client. Each user configures their own Anthropic API key via the Integrations page. `AiClient` is instantiated per-request with the user's decrypted key and the model from `BRAGFROG_AI_MODEL` (default: `claude-sonnet-4-5-20250929`).
+There is no global AI client. Each user configures their own Anthropic API key via the Integrations page. `AiClient` is instantiated per-request with the user's decrypted key and the model from `BRAGFROG_AI_MODEL` (default: `claude-opus-4-7`).
 
 ### Prompt Building (`ai/prompts.rs`)
 `build_self_reflection_prompt()` assembles a prompt for one self-review section:

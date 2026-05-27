@@ -376,6 +376,10 @@ pub fn create_router() -> Router<AppState> {
             post(review_routes::summaries::ai_draft_section),
         )
         .route(
+            "/review/{phase_id}/preview/{section}",
+            post(review_routes::summaries::preview_section),
+        )
+        .route(
             "/review/{phase_id}/save/{section}",
             post(review_routes::summaries::save_section),
         )

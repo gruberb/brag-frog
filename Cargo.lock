@@ -248,7 +248,7 @@ dependencies = [
 
 [[package]]
 name = "brag-frog"
-version = "5.2.8"
+version = "5.2.9"
 dependencies = [
  "aes-gcm",
  "ammonia",

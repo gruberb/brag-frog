@@ -63,7 +63,7 @@ cargo run
 | `BRAGFROG_INSTANCE_NAME` | Shows "Brag Frog \| {name}" on the login page |
 | `BRAGFROG_ALLOWED_DOMAIN` | Restrict sign-ups to a specific email domain (e.g. `your-company.com`) |
 | `BRAGFROG_PUBLIC_ONLY` | Only sync public/non-confidential data (default: `false`) |
-| `BRAGFROG_AI_MODEL` | Anthropic model for summaries (default: `claude-sonnet-4-5-20250929`) |
+| `BRAGFROG_AI_MODEL` | Anthropic model for summaries (default: `claude-opus-4-7`) |
 | `BRAGFROG_PORT` | Server port (default: `8080`) |
 | `BRAGFROG_DATABASE_PATH` | SQLite database path (default: `bragfrog.db`) |
 

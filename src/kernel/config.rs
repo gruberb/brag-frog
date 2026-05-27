@@ -21,7 +21,7 @@ pub struct Config {
     pub allowed_domain: Option<String>,
     /// Public base URL for constructing absolute links. Default: `http://localhost:{port}`.
     pub base_url: String,
-    /// AI model identifier for summary generation. Default: `claude-sonnet-4-5-20250929`.
+    /// AI model identifier for summary generation. Default: `claude-opus-4-7`.
     pub ai_model: String,
     /// When true, sync services only fetch public/non-confidential data.
     /// Operator-level security policy via `BRAGFROG_PUBLIC_ONLY` env var.
@@ -63,7 +63,7 @@ impl Config {
             allowed_domain: env::var("BRAGFROG_ALLOWED_DOMAIN").ok(),
             base_url,
             ai_model: env::var("BRAGFROG_AI_MODEL")
-                .unwrap_or_else(|_| "claude-sonnet-4-5-20250929".to_string()),
+                .unwrap_or_else(|_| "claude-opus-4-7".to_string()),
             public_only: env::var("BRAGFROG_PUBLIC_ONLY")
                 .map(|v| v == "true" || v == "1")
                 .unwrap_or(false),
