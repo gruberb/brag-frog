@@ -48,7 +48,7 @@ async fn test_logbook_no_phase_shows_no_phase_page() {
 }
 
 #[tokio::test]
-async fn test_review_page_shows_lattice_examples_and_prefers_review_quarter() {
+async fn test_review_page_shows_single_lattice_answer() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
     let phase_id: i64 = sqlx::query_scalar(
@@ -77,19 +77,22 @@ async fn test_review_page_shows_lattice_examples_and_prefers_review_quarter() {
         .get(&format!("/review/{}", phase_id), Some(&cookie))
         .await;
     assert_eq!(resp.status, StatusCode::OK);
-    assert!(resp.body.contains("Contribution &amp; Impact Examples"));
     assert!(
         resp.body
             .contains("Describe 1-2 examples of your work so far this year")
     );
     assert!(resp.body.contains("The outcome or progress made"));
     assert!(resp.body.contains("Required: Write your response"));
-    assert!(resp.body.contains("Focus department goals for AI draft"));
+    assert!(resp.body.contains("Department goals"));
     assert!(resp.body.contains("Review goals"));
-    assert!(
-        resp.body
-            .contains("var firstReview = document.querySelector")
-    );
+    assert!(resp.body.contains("summary-goal-select"));
+    assert!(resp.body.contains("summary-answer-textarea"));
+    assert!(resp.body.contains("Q2 2026"));
+    assert!(resp.body.contains("Mid-year Review"));
+    assert!(!resp.body.contains("Q1 2026"));
+    assert!(!resp.body.contains("Check-in"));
+    assert!(!resp.body.contains("quarterly-checkin"));
+    assert!(!resp.body.contains("+ New Example"));
 }
 
 // ── Quick-add entry ──

@@ -116,6 +116,10 @@
     cursor: pointer;
 }
 
+.review-quarter-button[aria-current="page"] {
+    cursor: default;
+}
+
 .review-quarter-button:hover,
 .review-quarter-button:focus-visible {
     border-color: var(--color-primary);
@@ -162,6 +166,74 @@
 .review-content-heading h2 {
     font-size: var(--text-2xl);
     letter-spacing: 0;
+}
+
+.summary-answer-layout {
+    max-width: 980px;
+}
+
+.summary-answer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.summary-goal-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.summary-goal-select {
+    min-height: 112px;
+    padding: var(--space-2);
+    background: var(--color-surface);
+}
+
+.summary-answer .summary-form-prompt {
+    max-width: none;
+    margin: 0;
+}
+
+.summary-answer-textarea {
+    min-height: 220px;
+    background: var(--color-surface);
+    border-color: #CBD5E1;
+    font-size: var(--text-base);
+}
+
+.summary-answer-textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(255, 69, 63, 0.16);
+}
+
+.summary-answer-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.summary-save-status,
+.summary-ai-settings-link,
+.summary-ai-loading {
+    font-size: var(--text-xs);
+}
+
+.summary-ai-settings-link {
+    color: var(--color-primary);
+}
+
+.summary-ai-loading {
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-secondary);
+}
+
+.summary-ai-loading-spinner {
+    width: 12px;
+    height: 12px;
 }
 
 .review-examples-section {

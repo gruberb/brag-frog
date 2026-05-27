@@ -2,6 +2,11 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.8] - 2026-05-27
+
+### Changed
+- **Review page now mirrors the single Lattice answer flow.** Removed the Q1 check-in branch from the Review page and replaced section cards with one department-goal selector followed by one editable self-review textbox.
+
 ## [5.2.7] - 2026-05-27
 
 ### Changed

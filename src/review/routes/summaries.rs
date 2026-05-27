@@ -15,93 +15,11 @@ use crate::identity::clg::ClgLevel;
 use crate::identity::model::User;
 use crate::kernel::error::AppError;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::reflections::model::QuarterlyCheckin;
 use crate::review::model::{
     ContributionExample, Summary, assessment_config, get_section, rating_scale_config,
     section_question, section_title,
 };
 use crate::worklog::model::BragEntry;
-
-// Cycle overview card for a quarter within the phase.
-#[derive(serde::Serialize)]
-struct QuarterInfo {
-    quarter: String,
-    year: String,
-    is_review: bool,
-    label: String,
-    has_data: bool,
-}
-
-// Compute in-scope quarters for a phase, with 2026 vs 2027+ awareness.
-fn quarters_for_phase(phase: &BragPhase, checkins: &[QuarterlyCheckin]) -> Vec<QuarterInfo> {
-    let start_year: i32 = phase.start_date[..4].parse().unwrap_or(2026);
-    let start_month: u32 = phase.start_date[5..7].parse().unwrap_or(1);
-    let end_year: i32 = phase.end_date[..4].parse().unwrap_or(start_year);
-    let end_month: u32 = phase.end_date[5..7].parse().unwrap_or(12);
-
-    let mut quarters = Vec::new();
-
-    for year in start_year..=end_year {
-        for (q_name, q_start, q_end) in [
-            ("Q1", 1u32, 3u32),
-            ("Q2", 4, 6),
-            ("Q3", 7, 9),
-            ("Q4", 10, 12),
-        ] {
-            // Quarter is in-scope if its months overlap with the phase date range
-            let phase_start = (start_year, start_month);
-            let phase_end = (end_year, end_month);
-            let q_start_ym = (year, q_start);
-            let q_end_ym = (year, q_end);
-
-            if q_end_ym < phase_start || q_start_ym > phase_end {
-                continue;
-            }
-
-            let is_review = if year == 2026 {
-                q_name == "Q2" || q_name == "Q4"
-            } else {
-                // 2027+: only Q4 is a review
-                q_name == "Q4"
-            };
-
-            let label = if is_review {
-                if q_name == "Q2" {
-                    "Mid-year Review".to_string()
-                } else {
-                    "Year-end Review".to_string()
-                }
-            } else {
-                "Check-in".to_string()
-            };
-
-            let year_str = year.to_string();
-            let has_data = checkins.iter().any(|c| {
-                c.quarter == q_name
-                    && c.year == year as i64
-                    && [
-                        &c.highlights_impact,
-                        &c.learnings_adjustments,
-                        &c.growth_development,
-                        &c.support_feedback,
-                        &c.looking_ahead,
-                    ]
-                    .iter()
-                    .any(|f| f.as_ref().is_some_and(|s| !s.trim().is_empty()))
-            });
-
-            quarters.push(QuarterInfo {
-                quarter: q_name.to_string(),
-                year: year_str,
-                is_review,
-                label,
-                has_data,
-            });
-        }
-    }
-
-    quarters
-}
 
 // Aggregated data needed to build AI prompts for summary generation.
 struct SummaryData {
@@ -156,7 +74,22 @@ async fn load_summary_data(
     })
 }
 
-/// Renders the self-review summary page with inline contribution examples and narrative sections.
+fn review_marker_for_phase(phase: &BragPhase) -> (String, String) {
+    let year = phase.end_date.get(0..4).unwrap_or("Review").to_string();
+    let end_month = phase
+        .end_date
+        .get(5..7)
+        .and_then(|m| m.parse::<u32>().ok())
+        .unwrap_or(12);
+
+    if end_month <= 6 {
+        (format!("Q2 {}", year), "Mid-year Review".to_string())
+    } else {
+        (format!("Q4 {}", year), "Year-end Review".to_string())
+    }
+}
+
+/// Renders the self-review page as a single Lattice-style answer surface.
 pub async fn summary_page(
     auth: AuthUser,
     State(state): State<AppState>,
@@ -176,38 +109,27 @@ pub async fn summary_page(
     let entries = BragEntry::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let dept_goals = DepartmentGoal::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
     let priorities = Priority::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
-
-    // Cycle overview: compute in-scope quarters for this phase
-    let quarterly_checkins =
-        QuarterlyCheckin::list_for_phase(&state.db, phase_id, &auth.crypto).await?;
-    let quarters = quarters_for_phase(&phase, &quarterly_checkins);
-
-    // Build linked entry IDs per example for the contribution example cards
-    let mut example_entries: Vec<serde_json::Value> = Vec::new();
-    for ex in &examples {
-        let linked_ids = ContributionExample::linked_entry_ids(&state.db, ex.id).await?;
-        let linked: Vec<&BragEntry> = entries
-            .iter()
-            .filter(|e| linked_ids.contains(&e.id))
-            .collect();
-        example_entries.push(serde_json::json!({
-            "example_id": ex.id,
-            "linked_entries": linked,
-        }));
-    }
+    let sections = build_sections_json(&summaries);
+    let primary_section_key = crate::review::model::section_slugs()
+        .first()
+        .copied()
+        .unwrap_or("impact_examples")
+        .to_string();
+    let (review_quarter, review_label) = review_marker_for_phase(&phase);
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
     ctx.insert("phase", &phase);
-    ctx.insert("quarters", &quarters);
-    ctx.insert("sections", &build_sections_json(&summaries));
+    ctx.insert("review_quarter", &review_quarter);
+    ctx.insert("review_label", &review_label);
+    ctx.insert("sections", &sections);
+    ctx.insert("primary_section_key", &primary_section_key);
     ctx.insert("has_ai", &has_ai);
     ctx.insert("current_page", "summary");
     ctx.insert("examples", &examples);
     ctx.insert("entries", &entries);
     ctx.insert("dept_goals", &dept_goals);
     ctx.insert("priorities", &priorities);
-    ctx.insert("example_entries", &example_entries);
 
     let html = state.templates.render("pages/summary.html", &ctx)?;
     Ok(Html(html))

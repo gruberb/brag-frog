@@ -1,27 +1,22 @@
-<div id="summary-section-{{ section.key }}" class="summary-section {% if section.form_question %}summary-section--form-prompt{% endif %}">
-    <div class="summary-section-header">
-        <div>
-            <h3 class="summary-section-title">{{ section.title }}</h3>
-            {% if not section.form_question %}
-            <p class="summary-section-question">{{ section.question }}</p>
-            {% endif %}
-        </div>
-        <button class="btn-icon"
-                onclick="toggleSummaryEdit('{{ section.key }}')"
-                id="summary-toggle-btn-{{ section.key }}"
-                title="Edit section">
-            <svg id="summary-pencil-{{ section.key }}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11.333 2A1.886 1.886 0 0 1 14 4.667L5.333 13.333 2 14l.667-3.333L11.333 2z"/>
-            </svg>
-            <svg id="summary-close-{{ section.key }}" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-                <line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>
-            </svg>
-        </button>
+<section id="summary-section-{{ section.key }}" class="summary-answer">
+    {% if section.focus_priorities and dept_goals is defined and dept_goals | length > 0 %}
+    <div class="summary-goal-field">
+        <label class="form-label" for="summary-dept-goals-{{ section.key }}">Department goals</label>
+        <select id="summary-dept-goals-{{ section.key }}"
+                class="form-select summary-goal-select"
+                data-summary-dept-goal-select
+                multiple
+                size="4">
+            {% for goal in dept_goals %}
+            <option value="{{ goal.id }}">{{ goal.title }}</option>
+            {% endfor %}
+        </select>
     </div>
+    {% endif %}
 
-    {% if section.form_question %}
     <div class="summary-form-prompt">
-        <h4 class="summary-form-question">
+        {% if section.form_question %}
+        <h3 class="summary-form-question">
             {% if section.form_question_number %}
             <span class="summary-form-question-number">{{ section.form_question_number }}.</span>
             {% endif %}
@@ -29,7 +24,11 @@
             {% if section.form_required %}
             <span class="summary-form-required">*</span>
             {% endif %}
-        </h4>
+        </h3>
+        {% else %}
+        <h3 class="summary-form-question">{{ section.question }}</h3>
+        {% endif %}
+
         {% if section.form_guidance %}
         <p class="summary-form-guidance">{{ section.form_guidance }}</p>
         {% endif %}
@@ -44,168 +43,51 @@
         <p class="summary-form-tip"><strong>Tip:</strong> {{ section.form_tip }}</p>
         {% endif %}
     </div>
-    {% endif %}
 
-    {% if section.focus_priorities and dept_goals is defined and dept_goals | length > 0 %}
-    <details class="summary-focus-priorities">
-        <summary>Focus department goals for AI draft</summary>
-        {% if section.focus_priority_help %}
-        <p>{{ section.focus_priority_help }}</p>
-        {% endif %}
-        <div class="summary-focus-priority-list">
-            {% for goal in dept_goals %}
-            <label class="summary-focus-priority">
-                <input type="checkbox"
-                       data-summary-dept-goal
-                       data-summary-section="{{ section.key }}"
-                       value="{{ goal.id }}">
-                <span class="summary-focus-priority-color" style="background:#FF453F"></span>
-                <span class="summary-focus-priority-title">{{ goal.title }}</span>
-                <span class="summary-focus-priority-status">{{ goal.status | replace(from="_", to=" ") }}</span>
-            </label>
-            {% endfor %}
-        </div>
-    </details>
-    {% endif %}
+    <textarea id="summary-textarea-{{ section.key }}"
+              name="content"
+              class="summary-textarea summary-answer-textarea"
+              rows="12"
+              placeholder="{% if section.form_placeholder %}{{ section.form_placeholder }}{% else %}Write your self-review response...{% endif %}">{% if section.content %}{{ section.content }}{% endif %}</textarea>
 
-    {# -- View mode -- #}
-    <div id="summary-view-{{ section.key }}">
-        {% if section.content %}
-        <div class="summary-content markdown-content" id="summary-text-{{ section.key }}">{{ section.content | markdown | safe }}</div>
-        <div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-2);">
-            {% if section.generated_at %}
-            <span class="summary-meta">Generated {{ section.generated_at }}</span>
-            {% endif %}
-            <button type="button" class="btn-icon btn-icon--sm" title="Copy to clipboard"
-                    onclick="copySectionToClipboard('{{ section.key }}')">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>
-            </button>
-            <span id="summary-copy-status-{{ section.key }}" style="font-size:var(--text-xs);color:var(--color-success);display:none;">Copied!</span>
-        </div>
+    <div class="summary-answer-actions">
+        {% if has_ai %}
+        <button type="button"
+                class="btn btn-sm btn-secondary"
+                id="summary-ai-btn-{{ section.key }}"
+                onclick="fetchAiDraft('{{ section.key }}', {{ phase.id }})">
+            {% if section.content %}Regenerate Draft{% else %}Generate Draft{% endif %}
+        </button>
         {% else %}
-        <div class="summary-empty-state">
-            <p>No content yet. Generate a draft from your work or click the pencil to start writing.</p>
-            {% if section.key != "future_plans" and has_ai %}
-            <button type="button"
-                    class="btn btn-sm btn-secondary"
-                    onclick="generateSummaryDraft('{{ section.key }}', {{ phase.id }})">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M8 1v2M8 13v2M3.05 3.05l1.414 1.414M11.536 11.536l1.414 1.414M1 8h2M13 8h2M3.05 12.95l1.414-1.414M11.536 4.464l1.414-1.414"/>
-                </svg>
-                Generate Draft
-            </button>
-            {% endif %}
-        </div>
+        <a href="/integrations" class="summary-ai-settings-link">Set up Claude AI in Integrations</a>
         {% endif %}
+
+        <button type="button"
+                class="btn btn-sm btn-secondary"
+                onclick="copySectionToClipboard('{{ section.key }}')">
+            Copy
+        </button>
+        <button type="button"
+                class="btn btn-sm btn-primary"
+                onclick="saveSummarySection('{{ section.key }}', {{ phase.id }})">
+            Save
+        </button>
+        <span id="summary-save-status-{{ section.key }}" class="summary-save-status"></span>
     </div>
 
-    {# -- Edit mode -- #}
-    <div id="summary-editor-{{ section.key }}" style="display:none;">
-        <textarea id="summary-textarea-{{ section.key }}"
-                  name="content"
-                  class="summary-textarea"
-                  rows="12"
-                  placeholder="{% if section.form_placeholder %}{{ section.form_placeholder }}{% else %}Write your self-reflection for this section...{% endif %}">{% if section.content %}{{ section.content }}{% endif %}</textarea>
-
-        <div style="display:flex; align-items:center; gap:var(--space-2); margin-top:var(--space-3); flex-wrap:wrap;">
-            {# AI Help -- only for non-future_plans sections #}
-            {% if section.key != "future_plans" %}
-                {% if has_ai %}
-                <button type="button"
-                        class="btn btn-sm btn-secondary"
-                        id="summary-ai-btn-{{ section.key }}"
-                        onclick="fetchAiDraft('{{ section.key }}', {{ phase.id }})"
-                        style="display:inline-flex; align-items:center; gap:6px;">
-                    {% if section.content %}
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M1 4v4h4"/><path d="M3.51 10a5 5 0 1 0 .49-5.32L1 8"/>
-                    </svg>
-                    Regenerate
-                    {% else %}
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M8 1v2M8 13v2M3.05 3.05l1.414 1.414M11.536 11.536l1.414 1.414M1 8h2M13 8h2M3.05 12.95l1.414-1.414M11.536 4.464l1.414-1.414"/>
-                    </svg>
-                    Generate Draft
-                    {% endif %}
-                </button>
-                {% else %}
-                <span style="font-size:var(--text-xs); color:var(--color-text-secondary);">
-                    <a href="/integrations" style="color:var(--color-primary);">Set up Claude AI in Integrations</a> for AI help
-                </span>
-                {% endif %}
-            {% endif %}
-
-            <div style="flex:1;"></div>
-
-            <span id="summary-save-status-{{ section.key }}" style="font-size:var(--text-xs);"></span>
-
-            <button type="button"
-                    class="btn btn-sm btn-secondary"
-                    onclick="cancelSummaryEdit('{{ section.key }}')">
-                Cancel
-            </button>
-            <button type="button"
-                    class="btn btn-sm btn-primary"
-                    onclick="saveSummarySection('{{ section.key }}', {{ phase.id }})">
-                Save
-            </button>
-        </div>
-
-        <div id="summary-ai-loading-{{ section.key }}" style="display:none; margin-top:var(--space-2); font-size:var(--text-xs); color:var(--color-text-secondary);">
-            <span class="spinner" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:6px;"></span>
-            Generating AI draft...
-        </div>
+    <div id="summary-ai-loading-{{ section.key }}" class="summary-ai-loading" style="display:none;">
+        <span class="spinner summary-ai-loading-spinner"></span>
+        Generating draft...
     </div>
-</div>
+</section>
 
 <script>
-function toggleSummaryEdit(key) {
-    var view = document.getElementById('summary-view-' + key);
-    var editor = document.getElementById('summary-editor-' + key);
-    var pencil = document.getElementById('summary-pencil-' + key);
-    var close = document.getElementById('summary-close-' + key);
-
-    if (editor.style.display === 'none') {
-        view.style.display = 'none';
-        editor.style.display = 'block';
-        pencil.style.display = 'none';
-        close.style.display = 'block';
-        document.getElementById('summary-textarea-' + key).focus();
-    } else {
-        editor.style.display = 'none';
-        view.style.display = 'block';
-        pencil.style.display = 'block';
-        close.style.display = 'none';
-    }
-}
-
-function cancelSummaryEdit(key) {
-    var view = document.getElementById('summary-view-' + key);
-    var editor = document.getElementById('summary-editor-' + key);
-    var pencil = document.getElementById('summary-pencil-' + key);
-    var close = document.getElementById('summary-close-' + key);
-    var textarea = document.getElementById('summary-textarea-' + key);
-    var textEl = document.getElementById('summary-text-' + key);
-
-    if (textEl) {
-        textarea.value = textEl.textContent.trim();
-    }
-
-    editor.style.display = 'none';
-    view.style.display = 'block';
-    pencil.style.display = 'block';
-    close.style.display = 'none';
-
-    var status = document.getElementById('summary-save-status-' + key);
-    if (status) status.innerHTML = '';
-}
-
 function saveSummarySection(key, phaseId) {
     var textarea = document.getElementById('summary-textarea-' + key);
     var status = document.getElementById('summary-save-status-' + key);
     var content = textarea.value;
 
-    status.innerHTML = '<span style="color:var(--color-text-secondary);">Saving...</span>';
+    if (status) status.innerHTML = '<span style="color:var(--color-text-secondary);">Saving...</span>';
 
     var formData = new URLSearchParams();
     formData.append('content', content);
@@ -220,25 +102,23 @@ function saveSummarySection(key, phaseId) {
         return response.text();
     })
     .then(function(html) {
-        // Replace the entire section with server-rendered HTML (includes markdown, correct IDs)
         var section = document.getElementById('summary-section-' + key);
         section.outerHTML = html;
     })
     .catch(function() {
-        status.innerHTML = '<span style="color:var(--color-error);">Save failed. Try again.</span>';
+        if (status) status.innerHTML = '<span style="color:var(--color-error);">Save failed. Try again.</span>';
     });
 }
 
 function copySectionToClipboard(key) {
-    var textEl = document.getElementById('summary-text-' + key);
-    if (!textEl) return;
-    var text = textEl.innerText.trim();
-    if (!text) return;
-    navigator.clipboard.writeText(text).then(function() {
-        var status = document.getElementById('summary-copy-status-' + key);
+    var textarea = document.getElementById('summary-textarea-' + key);
+    if (!textarea || !textarea.value.trim()) return;
+
+    navigator.clipboard.writeText(textarea.value.trim()).then(function() {
+        var status = document.getElementById('summary-save-status-' + key);
         if (status) {
-            status.style.display = 'inline';
-            setTimeout(function() { status.style.display = 'none'; }, 1500);
+            status.innerHTML = '<span style="color:var(--color-success);">Copied.</span>';
+            setTimeout(function() { status.innerHTML = ''; }, 1500);
         }
     });
 }
@@ -247,6 +127,7 @@ function fetchAiDraft(key, phaseId) {
     var textarea = document.getElementById('summary-textarea-' + key);
     var btn = document.getElementById('summary-ai-btn-' + key);
     var loading = document.getElementById('summary-ai-loading-' + key);
+    var status = document.getElementById('summary-save-status-' + key);
     var deptGoalIds = selectedDepartmentGoalIdsForSection(key);
     var url = '/review/' + phaseId + '/ai-draft/' + key;
     if (deptGoalIds.length > 0) {
@@ -254,7 +135,8 @@ function fetchAiDraft(key, phaseId) {
     }
 
     if (btn) btn.disabled = true;
-    if (loading) loading.style.display = 'block';
+    if (loading) loading.style.display = 'flex';
+    if (status) status.innerHTML = '';
 
     fetch(url, {
         method: 'POST',
@@ -269,7 +151,6 @@ function fetchAiDraft(key, phaseId) {
         textarea.focus();
     })
     .catch(function() {
-        var status = document.getElementById('summary-save-status-' + key);
         if (status) status.innerHTML = '<span style="color:var(--color-error);">AI draft failed. Try again.</span>';
     })
     .finally(function() {
@@ -279,19 +160,16 @@ function fetchAiDraft(key, phaseId) {
 }
 
 function generateSummaryDraft(key, phaseId) {
-    var editor = document.getElementById('summary-editor-' + key);
-    if (editor && editor.style.display === 'none') {
-        toggleSummaryEdit(key);
-    }
+    var section = document.getElementById('summary-section-' + key);
+    if (section) section.scrollIntoView({behavior: 'smooth', block: 'start'});
     fetchAiDraft(key, phaseId);
 }
 
 function selectedDepartmentGoalIdsForSection(key) {
-    return Array.prototype.slice.call(
-        document.querySelectorAll('#summary-section-' + key + ' input[data-summary-dept-goal]:checked')
-    ).map(function(input) {
-        return input.value;
+    var select = document.getElementById('summary-dept-goals-' + key);
+    if (!select) return [];
+    return Array.prototype.slice.call(select.selectedOptions).map(function(option) {
+        return option.value;
     });
 }
-
 </script>

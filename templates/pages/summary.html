@@ -18,14 +18,10 @@
         {% if has_ai %}
         <div class="review-titlebar-actions">
             <button class="btn btn-primary"
-                    hx-post="/review/{{ phase.id }}/generate"
-                    hx-target="#summary-sections"
-                    hx-swap="innerHTML"
-                    hx-indicator="#generate-all-spinner"
-                    hx-confirm="Generate all sections? This will overwrite any existing content.">
+                    type="button"
+                    onclick="generateSummaryDraft('{{ primary_section_key }}', {{ phase.id }})">
                 Generate Draft
             </button>
-            <span id="generate-all-spinner" class="htmx-indicator spinner">Generating...</span>
         </div>
         {% endif %}
     </div>
@@ -42,107 +38,25 @@
                 </span>
                 <span>Write reviews</span>
             </div>
-            {% if quarters | length > 0 %}
             <div class="review-quarter-list">
-                {% for q in quarters %}
-                <button type="button"
-                        class="cycle-quarter-card review-quarter-button {% if q.is_review %}cycle-quarter-card--review{% endif %}"
-                        onclick="selectQuarter(this, {{ q.is_review }}, '{{ q.quarter }}', '{{ q.year }}')">
+                <div class="review-quarter-button cycle-quarter-card--active" aria-current="page">
                     <span class="review-quarter-main">
-                        <strong>{{ q.quarter }} {{ q.year }}</strong>
-                        {% if q.has_data and not q.is_review %}
-                        <span>Completed</span>
-                        {% elif not q.is_review %}
-                        <span>Not started</span>
-                        {% endif %}
+                        <strong>{{ review_quarter }}</strong>
                     </span>
-                    <span class="review-quarter-label">{{ q.label }}</span>
-                </button>
-                {% endfor %}
+                    <span class="review-quarter-label">{{ review_label }}</span>
+                </div>
             </div>
-            {% endif %}
         </aside>
 
         <main class="review-workspace">
-            <div id="quarterly-prep-content" class="review-content-panel" style="display:none;"></div>
+            <div class="review-content-heading">
+                <h2>Self Review</h2>
+            </div>
 
-            <div id="review-content" class="review-content-panel" style="display:none;">
-                <div class="review-content-heading">
-                    <h2>Self Review</h2>
-                </div>
-
-                <div id="summary-sections" class="summary-layout">
-                    {% for section in sections %}
-                    {% include "components/summary_section.html" %}
-                    {% endfor %}
-                </div>
-
-                <section class="summary-section review-examples-section">
-                    <div class="summary-section-header">
-                        <div>
-                            <h3 class="summary-section-title">Contribution Examples ({{ examples | length }})</h3>
-                        </div>
-                        <button class="btn btn-primary btn-sm" type="button" onclick="document.getElementById('new-example-form').classList.toggle('hidden')">
-                            + New Example
-                        </button>
-                    </div>
-
-                    <div id="new-example-form" class="hidden review-example-form">
-                        <form hx-post="/contribution-examples" hx-target="#examples-container" hx-swap="beforeend" hx-on::after-request="if(event.detail.successful){this.reset();this.closest('#new-example-form').classList.add('hidden');}">
-                            <div class="form-group">
-                                <label class="form-label">Title</label>
-                                <input type="text" name="title" class="form-input" required placeholder="e.g., Led cross-team debugging effort for production outage">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Outcome</label>
-                                <textarea name="outcome" class="form-textarea" rows="3"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Behaviors Demonstrated</label>
-                                <textarea name="behaviors" class="form-textarea" rows="3"></textarea>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label class="form-label">Impact Level</label>
-                                    <select name="impact_level" class="form-select">
-                                        <option value="">Select level</option>
-                                        <option value="individual">Individual</option>
-                                        <option value="team">Team</option>
-                                        <option value="org">Organization</option>
-                                        <option value="company">Company</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Assessment Type</label>
-                                    <select name="assessment_type" class="form-select">
-                                        <option value="">Select type</option>
-                                        <option value="strength">Strength</option>
-                                        <option value="growth_area">Growth Area</option>
-                                        <option value="neutral">Neutral</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Learnings</label>
-                                <textarea name="learnings" class="form-textarea" rows="2"></textarea>
-                            </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-primary btn-sm">Create Example</button>
-                                <button type="button" class="btn btn-text btn-sm" onclick="document.getElementById('new-example-form').classList.add('hidden')">Cancel</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div id="examples-container" class="review-examples-list">
-                        {% for example in examples %}
-                        {% include "components/contribution_example_card.html" %}
-                        {% endfor %}
-                    </div>
-
-                    {% if examples | length == 0 %}
-                    <p class="text-sm text-muted">No contribution examples yet.</p>
-                    {% endif %}
-                </section>
+            <div id="summary-sections" class="summary-answer-layout">
+                {% for section in sections %}
+                {% include "components/summary_section.html" %}
+                {% endfor %}
             </div>
         </main>
 
@@ -174,69 +88,4 @@
         </aside>
     </div>
 </div>
-
-<script>
-var _initialLoad = true;
-function selectQuarter(card, isReview, quarter, year) {
-    document.querySelectorAll('.cycle-quarter-card').forEach(function(c) {
-        c.classList.remove('cycle-quarter-card--active');
-    });
-    card.classList.add('cycle-quarter-card--active');
-
-    var prepEl = document.getElementById('quarterly-prep-content');
-    var reviewEl = document.getElementById('review-content');
-    var shouldScroll = !_initialLoad;
-    _initialLoad = false;
-
-    if (isReview) {
-        prepEl.innerHTML = '';
-        prepEl.style.display = 'none';
-        reviewEl.style.display = '';
-        if (shouldScroll) reviewEl.scrollIntoView({behavior: 'smooth', block: 'start'});
-    } else {
-        reviewEl.style.display = 'none';
-        prepEl.style.display = '';
-        htmx.ajax('GET', '/quarterly-checkin/' + quarter + '/' + year + '/panel', {
-            target: '#quarterly-prep-content',
-            swap: 'innerHTML'
-        }).then(function() {
-            if (shouldScroll) prepEl.scrollIntoView({behavior: 'smooth', block: 'start'});
-        });
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    var firstReview = document.querySelector('.cycle-quarter-card--review');
-    var first = firstReview || document.querySelector('.cycle-quarter-card');
-    if (first) first.click();
-});
-
-function copyExampleToClipboard(exampleId) {
-    var card = document.getElementById('example-' + exampleId);
-    if (!card) return;
-    var view = card.querySelector('[id^="example-view-"]');
-    if (!view) return;
-
-    var title = '';
-    var parts = [];
-    var titleEl = view.querySelector('span[style*="font-weight:600"]');
-    if (titleEl) title = titleEl.textContent.trim();
-
-    view.querySelectorAll('.form-label').forEach(function(label) {
-        var p = label.parentElement.querySelector('p');
-        if (p && p.textContent.trim()) {
-            parts.push(label.textContent.trim() + ': ' + p.textContent.trim());
-        }
-    });
-
-    var text = title + '\n\n' + parts.join('\n\n');
-    navigator.clipboard.writeText(text).then(function() {
-        var btn = card.querySelector('[title="Copy to clipboard"]');
-        if (btn) {
-            btn.title = 'Copied!';
-            setTimeout(function() { btn.title = 'Copy to clipboard'; }, 2000);
-        }
-    });
-}
-</script>
 {% endblock %}
