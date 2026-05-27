@@ -2,6 +2,11 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.12] - 2026-05-27
+
+### Fixed
+- **Jira issue keys in rendered review drafts now link reliably.** Review Markdown falls back to the configured Atlassian base URL for Jira-looking issue keys that are not already mapped from synced work items.
+
 ## [5.2.11] - 2026-05-27
 
 ### Fixed

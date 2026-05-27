@@ -395,8 +395,16 @@ fn build_section_json(
 }
 
 fn render_summary_content(content: &str, jira_links: &HashMap<String, String>) -> String {
-    let linked = linkify_jira_issue_keys(content, jira_links);
+    let linked = linkify_jira_issue_keys(content, jira_links, Some(default_jira_base_url()));
     render_markdown(&linked)
+}
+
+fn default_jira_base_url() -> String {
+    crate::integrations::services_config::get()
+        .atlassian
+        .default_base_url
+        .trim_end_matches('/')
+        .to_string()
 }
 
 fn jira_issue_links(entries: &[BragEntry]) -> HashMap<String, String> {
@@ -429,8 +437,12 @@ fn jira_issue_links(entries: &[BragEntry]) -> HashMap<String, String> {
     links
 }
 
-fn linkify_jira_issue_keys(content: &str, links: &HashMap<String, String>) -> String {
-    if content.is_empty() || links.is_empty() {
+fn linkify_jira_issue_keys(
+    content: &str,
+    links: &HashMap<String, String>,
+    fallback_base_url: Option<String>,
+) -> String {
+    if content.is_empty() {
         return content.to_string();
     }
 
@@ -465,14 +477,21 @@ fn linkify_jira_issue_keys(content: &str, links: &HashMap<String, String>) -> St
         }
 
         let key = &content[start..end];
-        if let Some(url) = links.get(key)
+        let url = links.get(key).cloned().or_else(|| {
+            fallback_base_url
+                .as_deref()
+                .filter(|base_url| !base_url.is_empty())
+                .map(|base_url| format!("{}/browse/{}", base_url, key))
+        });
+        if let Some(url) = url
+            && is_jira_issue_key(key)
             && can_link_issue_key(content, start, end)
         {
             out.push_str(&content[cursor..start]);
             out.push('[');
             out.push_str(key);
             out.push_str("](");
-            out.push_str(&escape_markdown_url(url));
+            out.push_str(&escape_markdown_url(&url));
             out.push(')');
             cursor = end;
         }
@@ -515,13 +534,23 @@ fn find_jira_issue_keys(text: &str) -> Vec<String> {
             end += 1;
         }
 
-        if end > number_start {
+        if end > number_start && is_jira_issue_key(&text[start..end]) {
             keys.push(text[start..end].to_string());
         }
         i = end;
     }
 
     keys
+}
+
+fn is_jira_issue_key(key: &str) -> bool {
+    let Some((project, issue_number)) = key.split_once('-') else {
+        return false;
+    };
+
+    project.len() >= 2
+        && project.chars().all(|ch| ch.is_ascii_uppercase())
+        && issue_number.chars().all(|ch| ch.is_ascii_digit())
 }
 
 fn can_link_issue_key(content: &str, start: usize, end: usize) -> bool {
@@ -532,7 +561,7 @@ fn can_link_issue_key(content: &str, start: usize, end: usize) -> bool {
         return false;
     }
 
-    let is_embedded = |ch: char| ch.is_ascii_alphanumeric() || matches!(ch, '/' | '_' | '-' | '.');
+    let is_embedded = |ch: char| ch.is_ascii_alphanumeric() || matches!(ch, '/' | '_' | '-');
     !previous.is_some_and(is_embedded) && !next.is_some_and(is_embedded)
 }
 

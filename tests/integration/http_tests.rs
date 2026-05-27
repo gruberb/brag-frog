@@ -132,7 +132,8 @@ async fn test_review_save_renders_markdown_and_jira_issue_links() {
     .unwrap();
 
     let cookie = app.login(user_id).await;
-    let content = "Resolved DISCO-4260 with **retry handling**.";
+    let content =
+        "Resolved DISCO-4260 with **retry handling**. Follow-up DISCO-9999. Review period H1-2026.";
     let body = format!("content={}", urlencoding::encode(content));
     let resp = app
         .post_form(
@@ -150,6 +151,11 @@ async fn test_review_save_renders_markdown_and_jira_issue_links() {
             .contains(r#"href="https://jira.example/browse/DISCO-4260""#)
     );
     assert!(resp.body.contains(">DISCO-4260</a>"));
+    assert!(
+        resp.body
+            .contains(r#"href="https://your-org.atlassian.net/browse/DISCO-9999""#)
+    );
+    assert!(!resp.body.contains("browse/H1-2026"));
 }
 
 // ── Quick-add entry ──
