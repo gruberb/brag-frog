@@ -5,6 +5,7 @@ use std::sync::Arc;
 use axum::{
     Router,
     extract::State,
+    http::{StatusCode, header},
     middleware,
     response::{Html, IntoResponse, Redirect, Response},
     routing::{delete, get, post, put},
@@ -392,6 +393,32 @@ pub fn create_router() -> Router<AppState> {
         .merge(protected_routes)
 }
 
+fn custom_tokens_css_response(path: &std::path::Path) -> Response {
+    let content_type = [(header::CONTENT_TYPE, "text/css; charset=utf-8")];
+
+    match std::fs::read_to_string(path) {
+        Ok(css) => (content_type, css).into_response(),
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {
+            // The custom overlay is optional. Return a valid empty stylesheet so
+            // browsers with `nosniff` do not reject the response as HTML.
+            (content_type, String::new()).into_response()
+        }
+        Err(err) => {
+            tracing::warn!(error = %err, path = %path.display(), "Failed to read custom tokens CSS");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+                "Failed to load custom tokens CSS",
+            )
+                .into_response()
+        }
+    }
+}
+
+async fn custom_tokens_css() -> Response {
+    custom_tokens_css_response(std::path::Path::new("custom/tokens.css"))
+}
+
 /// Assembles the full Axum application: router, static files, sessions, security headers.
 pub fn build_app(state: AppState, session_store: SqliteStore) -> Router {
     let is_production = state.config.base_url.starts_with("https://");
@@ -401,14 +428,42 @@ pub fn build_app(state: AppState, session_store: SqliteStore) -> Router {
         .with_same_site(SameSite::Lax)
         .with_expiry(Expiry::OnInactivity(time::Duration::hours(12)));
 
+    let custom_files = Router::new()
+        .route("/tokens.css", get(custom_tokens_css))
+        .fallback_service(ServeDir::new("custom").append_index_html_on_directories(false));
+
     Router::new()
         .merge(create_router())
         .nest_service("/static", ServeDir::new("static"))
-        .nest_service(
-            "/custom",
-            ServeDir::new("custom").append_index_html_on_directories(false),
-        )
+        .nest("/custom", custom_files)
         .layer(session_layer)
         .layer(axum::middleware::from_fn(security_headers))
         .with_state(state)
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::to_bytes;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn missing_custom_tokens_returns_empty_css() {
+        let missing = std::env::temp_dir().join(format!(
+            "bragfrog-missing-custom-tokens-{}-{}.css",
+            std::process::id(),
+            rand::random::<u64>()
+        ));
+
+        let response = custom_tokens_css_response(&missing);
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers().get(header::CONTENT_TYPE).unwrap(),
+            "text/css; charset=utf-8"
+        );
+
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        assert!(body.is_empty());
+    }
 }

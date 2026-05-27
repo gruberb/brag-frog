@@ -66,6 +66,7 @@ cargo run
 | `BRAGFROG_AI_MODEL` | Anthropic model for summaries (default: `claude-opus-4-7`) |
 | `BRAGFROG_PORT` | Server port (default: `8080`) |
 | `BRAGFROG_DATABASE_PATH` | SQLite database path (default: `bragfrog.db`) |
+| `SQLITE_JOURNAL_MODE` | SQLite journal mode; use `delete` for FUSE/NFS-backed volumes |
 
 See [`.env.example`](.env.example) for the full list.
 

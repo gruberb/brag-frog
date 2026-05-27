@@ -11,14 +11,13 @@ use crate::kernel::crypto::Crypto;
 /// Journal mode defaults to WAL for local disks. Set `SQLITE_JOURNAL_MODE=delete`
 /// for FUSE/NFS-mounted volumes where WAL's shared-memory files cause stale handle errors.
 pub async fn setup_pool(database_path: &str) -> SqlitePool {
-    let journal_mode = match std::env::var("SQLITE_JOURNAL_MODE")
+    let journal_mode_setting = std::env::var("SQLITE_JOURNAL_MODE")
         .unwrap_or_default()
-        .to_lowercase()
-        .as_str()
-    {
-        "delete" => sqlx::sqlite::SqliteJournalMode::Delete,
-        "truncate" => sqlx::sqlite::SqliteJournalMode::Truncate,
-        _ => sqlx::sqlite::SqliteJournalMode::Wal,
+        .to_lowercase();
+    let (journal_mode, max_connections) = match journal_mode_setting.as_str() {
+        "delete" => (sqlx::sqlite::SqliteJournalMode::Delete, 1),
+        "truncate" => (sqlx::sqlite::SqliteJournalMode::Truncate, 1),
+        _ => (sqlx::sqlite::SqliteJournalMode::Wal, 5),
     };
 
     let options = SqliteConnectOptions::from_str(&format!("sqlite:{}", database_path))
@@ -28,7 +27,7 @@ pub async fn setup_pool(database_path: &str) -> SqlitePool {
         .foreign_keys(true);
 
     SqlitePoolOptions::new()
-        .max_connections(5)
+        .max_connections(max_connections)
         .connect_with(options)
         .await
         .expect("Failed to connect to database")

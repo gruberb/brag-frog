@@ -210,3 +210,4 @@ docker compose up -d          # migrations auto-apply on startup
 | `BRAGFROG_HOST` | No | `0.0.0.0` | Bind address |
 | `BRAGFROG_PORT` | No | `8080` | Listen port (also reads `PORT`) |
 | `BRAGFROG_DATABASE_PATH` | No | `bragfrog.db` | Path to SQLite database |
+| `SQLITE_JOURNAL_MODE` | No | `wal` | SQLite journal mode; use `delete` for FUSE/NFS-backed volumes |

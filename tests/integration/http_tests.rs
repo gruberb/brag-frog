@@ -103,6 +103,8 @@ async fn test_review_save_renders_markdown_and_jira_issue_links() {
     let user_id = common::create_test_user(&app.pool).await;
     let phase_id = common::create_test_phase(&app.pool, user_id).await;
     let crypto = app.crypto.for_user(user_id).unwrap();
+    common::create_test_department_goal(&app.pool, phase_id, user_id, "Review goals", &crypto)
+        .await;
     let week =
         common::create_test_week(&app.pool, phase_id, 22, 2026, "2026-05-25", "2026-05-31").await;
 

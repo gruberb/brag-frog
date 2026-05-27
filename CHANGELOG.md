@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.11] - 2026-05-27
+
+### Fixed
+- **Missing custom token CSS no longer trips `nosniff`.** `/custom/tokens.css` now returns a valid empty CSS response when no overlay stylesheet is present.
+- **FUSE-backed SQLite deployments can avoid WAL files.** `SQLITE_JOURNAL_MODE=delete` and `truncate` now run with a single SQLite connection to reduce stale file-handle errors on mounted volumes.
+
 ## [5.2.10] - 2026-05-27
 
 ### Changed
