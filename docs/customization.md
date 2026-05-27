@@ -41,7 +41,7 @@ See `config/clg_levels.toml` for the full format.
 
 ## Review sections (`review_sections.toml`)
 
-Configure what sections appear in the AI-generated self-review and the prompts used to generate them. This maps to your review platform (CultureAmp, Lattice, 15Five, etc.).
+Configure what sections appear in the AI-generated self-review and the prompts used to generate them. This maps to your review platform (Lattice, 15Five, etc.).
 
 ```toml
 [[sections]]

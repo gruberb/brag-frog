@@ -24,30 +24,92 @@ focus_priority_help = "Select department goals you want this Lattice answer to e
 prompt = """Write one paste-ready answer for this Lattice self-review question:
 "Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
 
-Output rules:
-- Do not include a title, H1/H2 headings, markdown emphasis, or meta labels such as "CLG Behaviors", "What I learned", or "Carrying forward".
-- Do not write a generic performance-review essay. Write in first person, in Bastian's direct self-review style: concrete, evidence-dense, and outcome-oriented.
-- Use one strong example if it is clearly stronger than the rest; use two examples only when both have clear impact.
-- For each example, naturally cover: what I owned, why it mattered, concrete outcomes or progress, who was impacted or unblocked, how I coordinated with people, and what I learned or will apply next.
-- Favor impact and stakeholder value over long ticket lists. Use ticket IDs sparingly as supporting evidence, not as the structure. If a Jira URL appears in the evidence for a cited issue, format the issue key as a Markdown link.
-- Name teams or stakeholders when the evidence provides them.
-- Do not undercut impact with phrases like "has not fully shipped yet"; if work is still in progress, frame the concrete progress, risk reduction, or launch readiness achieved.
-- Avoid vague phrases such as "demonstrated domain expertise" unless tied to a concrete action.
+Match a strong structured self-reflection format: action-oriented headline, status, impact bullets, details bullets, CLG behavior bullets, and learnings bullets. Use compact Markdown that can be pasted into one Lattice textbox.
 
-Select the strongest evidence from contribution examples first, then priorities and logbook entries. Do not invent metrics; if quantitative evidence is absent, use concrete qualitative outcomes."""
+Use exactly this structure:
+
+1. <Action-oriented example headline>
+
+Status: <Completed/In progress/etc. plus one concrete sentence about what shipped, changed, or is ready.>
+
+Impact:
+- <3-5 bullets focused on team, user, organization, reliability, launch, or operational impact.>
+- <Use only the strongest ticket IDs as supporting evidence, not as the structure.>
+
+Details:
+- <3-5 bullets with ownership, scope, technical complexity, sequencing, collaborators, and cross-team coordination.>
+
+CLG Behaviors Demonstrated:
+- Complexity: <Concrete action and why it was ambiguous or broad.>
+- Risk Management: <Concrete sequencing, observability, rollout, or mitigation.>
+- Influence & Communication: <Concrete stakeholder/team alignment.>
+- Team Contribution or Domain Expertise: <Concrete support, review, mentoring, or technical leadership.>
+
+Learnings Going Forward:
+- <1-2 bullets about what I learned and how I will apply it next.>
+
+2. <Second action-oriented example headline>
+
+Repeat the same Status, Impact, Details, CLG Behaviors Demonstrated, and Learnings Going Forward structure.
+
+3. Development Focus For H2 / Next Half
+
+- <4-6 bullets about what I want to continue developing in the next quarter/half. Tie these to the work above, team success, and future Staff-level impact.>
+
+Output rules:
+- Do not include an H1/H2 title before section 1.
+- Write in first person with a direct self-review style: concrete, evidence-dense, confident, and outcome-oriented.
+- Use two examples when the evidence supports two strong examples; use one example only if the second would be weak. Always include section 3.
+- Prefer selected department goals and contribution examples first, then linked priorities and logbook entries.
+- Favor impact and stakeholder value over long ticket lists. Link only the most important Jira IDs. If a Jira URL appears in the evidence for a cited issue, format the issue key as a Markdown link.
+- Name teams, stakeholders, and collaborators when the evidence provides them.
+- Do not undercut impact with phrases like "has not fully shipped yet"; if work is still in progress, frame the concrete progress, risk reduction, launch readiness, or remaining rollout work.
+- Do not invent metrics. If quantitative evidence is absent, use concrete qualitative outcomes.
+- Avoid vague phrases such as "demonstrated domain expertise" unless tied to a concrete action."""
 prompt_with_clg = """Write one paste-ready answer for this Lattice self-review question:
 "Describe 1-2 examples of your work so far this year that illustrate your level of contribution and impact."
 
-Output rules:
-- Do not include a title, H1/H2 headings, markdown emphasis, or meta labels such as "CLG Behaviors", "What I learned", or "Carrying forward".
-- Do not write a generic performance-review essay. Write in first person, in Bastian's direct self-review style: concrete, evidence-dense, and outcome-oriented.
-- Use one strong example if it is clearly stronger than the rest; use two examples only when both have clear impact.
-- For each example, naturally cover: what I owned, why it mattered, concrete outcomes or progress, who was impacted or unblocked, how I coordinated with people, and what I learned or will apply next.
-- Favor impact and stakeholder value over long ticket lists. Use ticket IDs sparingly as supporting evidence, not as the structure. If a Jira URL appears in the evidence for a cited issue, format the issue key as a Markdown link.
-- Name teams or stakeholders when the evidence provides them.
-- Weave relevant CLG behaviors into the narrative naturally, especially Complexity, Risk Management, Influence, Communication, and Team Contributions. Do not create a separate rubric section.
-- Do not undercut impact with phrases like "has not fully shipped yet"; if work is still in progress, frame the concrete progress, risk reduction, or launch readiness achieved.
-- Avoid vague phrases such as "demonstrated domain expertise" unless tied to a concrete action.
+Match a strong structured self-reflection format: action-oriented headline, status, impact bullets, details bullets, CLG behavior bullets, and learnings bullets. Use compact Markdown that can be pasted into one Lattice textbox.
 
-Select the strongest evidence from contribution examples first, then priorities and logbook entries. Do not invent metrics; if quantitative evidence is absent, use concrete qualitative outcomes."""
+Use exactly this structure:
+
+1. <Action-oriented example headline>
+
+Status: <Completed/In progress/etc. plus one concrete sentence about what shipped, changed, or is ready.>
+
+Impact:
+- <3-5 bullets focused on team, user, organization, reliability, launch, or operational impact.>
+- <Use only the strongest ticket IDs as supporting evidence, not as the structure.>
+
+Details:
+- <3-5 bullets with ownership, scope, technical complexity, sequencing, collaborators, and cross-team coordination.>
+
+CLG Behaviors Demonstrated:
+- Complexity: <Concrete action and why it was ambiguous or broad.>
+- Risk Management: <Concrete sequencing, observability, rollout, or mitigation.>
+- Influence & Communication: <Concrete stakeholder/team alignment.>
+- Team Contribution or Domain Expertise: <Concrete support, review, mentoring, or technical leadership.>
+
+Learnings Going Forward:
+- <1-2 bullets about what I learned and how I will apply it next.>
+
+2. <Second action-oriented example headline>
+
+Repeat the same Status, Impact, Details, CLG Behaviors Demonstrated, and Learnings Going Forward structure.
+
+3. Development Focus For H2 / Next Half
+
+- <4-6 bullets about what I want to continue developing in the next quarter/half. Tie these to the work above, team success, and future Staff-level impact.>
+
+Output rules:
+- Do not include an H1/H2 title before section 1.
+- Write in first person with a direct self-review style: concrete, evidence-dense, confident, and outcome-oriented.
+- Use two examples when the evidence supports two strong examples; use one example only if the second would be weak. Always include section 3.
+- Prefer selected department goals and contribution examples first, then linked priorities and logbook entries.
+- Favor impact and stakeholder value over long ticket lists. Link only the most important Jira IDs. If a Jira URL appears in the evidence for a cited issue, format the issue key as a Markdown link.
+- Name teams, stakeholders, and collaborators when the evidence provides them.
+- Use the CLG behavior section explicitly. Choose the most relevant behaviors from Complexity, Risk Management, Influence, Communication, Team Contribution, and Domain Expertise. Do not include generic CLG claims; tie every behavior to a concrete action.
+- Do not undercut impact with phrases like "has not fully shipped yet"; if work is still in progress, frame the concrete progress, risk reduction, launch readiness, or remaining rollout work.
+- Do not invent metrics. If quantitative evidence is absent, use concrete qualitative outcomes.
+- Avoid vague phrases such as "demonstrated domain expertise" unless tied to a concrete action."""
 promotion_addendum = "The engineer is targeting promotion. Emphasize scope, complexity, ownership, and cross-team influence that credibly demonstrate next-level readiness without overclaiming."

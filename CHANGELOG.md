@@ -2,6 +2,11 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.10] - 2026-05-27
+
+### Changed
+- **Self-review drafts now use a structured review format.** Generated Lattice answers now request numbered examples with Status, Impact, Details, CLG Behaviors Demonstrated, Learnings Going Forward, and a Development Focus section.
+
 ## [5.2.9] - 2026-05-27
 
 ### Changed
