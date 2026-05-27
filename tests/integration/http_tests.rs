@@ -686,6 +686,72 @@ async fn test_trends_page_shows_requested_metrics_and_department_goal_activity()
         &crypto,
     )
     .await;
+    brag_frog::worklog::model::BragEntry::create_from_sync(
+        &app.pool,
+        week.id,
+        "jira",
+        "jira-WC-1",
+        Some("https://jira.example/browse/WC-1"),
+        "Closed Jira story",
+        None,
+        "jira_story",
+        Some("Done"),
+        None,
+        "2025-01-12",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        &crypto,
+    )
+    .await
+    .unwrap();
+    brag_frog::worklog::model::BragEntry::create_from_sync(
+        &app.pool,
+        week.id,
+        "jira",
+        "jira-WC-2",
+        Some("https://jira.example/browse/WC-2"),
+        "Closed Jira task",
+        None,
+        "jira_task",
+        Some("Closed"),
+        None,
+        "2025-01-12",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        &crypto,
+    )
+    .await
+    .unwrap();
+    brag_frog::worklog::model::BragEntry::create_from_sync(
+        &app.pool,
+        week.id,
+        "jira",
+        "jira-WC-3",
+        Some("https://jira.example/browse/WC-3"),
+        "Active Jira epic",
+        None,
+        "jira_epic",
+        Some("In Progress"),
+        None,
+        "2025-01-12",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        &crypto,
+    )
+    .await
+    .unwrap();
     let cookie = app.login(user_id).await;
 
     let resp = app.get("/trends", Some(&cookie)).await;
@@ -698,7 +764,7 @@ async fn test_trends_page_shows_requested_metrics_and_department_goal_activity()
     assert!(resp.body.contains("Docs Worked On"));
     assert!(resp.body.contains("Meetings"));
     assert!(resp.body.contains(
-        r#"<span class="report-stat-card-count">7</span><span class="report-stat-card-label">Total Activities</span>"#
+        r#"<span class="report-stat-card-count">10</span><span class="report-stat-card-label">Total Activities</span>"#
     ));
     assert!(resp.body.contains(
         r#"<span class="report-stat-card-count">1</span><span class="report-stat-card-label">PRs Merged</span>"#
@@ -707,7 +773,7 @@ async fn test_trends_page_shows_requested_metrics_and_department_goal_activity()
         r#"<span class="report-stat-card-count">1</span><span class="report-stat-card-label">PRs Reviewed</span>"#
     ));
     assert!(resp.body.contains(
-        r#"<span class="report-stat-card-count">1</span><span class="report-stat-card-label">Jira Tickets Closed</span>"#
+        r#"<span class="report-stat-card-count">3</span><span class="report-stat-card-label">Jira Tickets Closed</span>"#
     ));
     assert!(resp.body.contains(
         r#"<span class="report-stat-card-count">3</span><span class="report-stat-card-label">Docs Worked On</span>"#
@@ -730,35 +796,17 @@ async fn test_trends_page_shows_requested_metrics_and_department_goal_activity()
     );
 }
 
-// ── Check-in page ──
+// ── Removed legacy reflections routes ──
 
 #[tokio::test]
-async fn test_checkin_page_loads() {
+async fn test_weekly_checkin_page_removed() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
-    let phase_id = common::create_test_phase(&app.pool, user_id).await;
+    let _phase_id = common::create_test_phase(&app.pool, user_id).await;
     let cookie = app.login(user_id).await;
 
-    // Create a week for the checkin
-    let week = brag_frog::cycle::model::Week::find_or_create(
-        &app.pool,
-        phase_id,
-        9,
-        2025,
-        "2025-02-24",
-        "2025-03-02",
-    )
-    .await
-    .unwrap();
-
-    let resp = app
-        .get(&format!("/checkin/{}", week.id), Some(&cookie))
-        .await;
-    assert_eq!(resp.status, StatusCode::OK);
-    assert!(
-        resp.body.contains("Reflection") || resp.body.contains("reflection"),
-        "Page should contain 'Reflection'"
-    );
+    let resp = app.get("/checkin/1", Some(&cookie)).await;
+    assert_eq!(resp.status, StatusCode::NOT_FOUND);
 }
 
 // ── Integrations page ──
@@ -778,21 +826,15 @@ async fn test_integrations_page_loads() {
     );
 }
 
-// ── Check-in history page ──
-
 #[tokio::test]
-async fn test_checkins_list_page_loads() {
+async fn test_checkins_list_page_removed() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
     let _phase_id = common::create_test_phase(&app.pool, user_id).await;
     let cookie = app.login(user_id).await;
 
     let resp = app.get("/checkins", Some(&cookie)).await;
-    assert_eq!(resp.status, StatusCode::OK);
-    assert!(
-        resp.body.contains("Reflections") || resp.body.contains("No reflections"),
-        "Page should contain reflections content"
-    );
+    assert_eq!(resp.status, StatusCode::NOT_FOUND);
 }
 
 // ── Meeting prep panel ──

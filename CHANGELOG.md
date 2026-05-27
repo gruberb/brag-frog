@@ -2,6 +2,16 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [5.2.7] - 2026-05-27
+
+### Changed
+- **Review page simplified around Lattice.** The page now uses a Lattice-style menu, self-review workspace, and overview column. Review config defaults to the single contribution-and-impact self-review question.
+- **Quarterly check-in AI drafts now use work items directly.** Drafts pull from logged work in the selected quarter instead of weekly reflection rollups.
+- **Reports count completed Jira work by terminal status.** The Trends report now treats Jira entries with terminal statuses such as Done, Closed, Resolved, and Verified as closed work even when their entry type is not `jira_completed`.
+
+### Removed
+- **10x Protocol and legacy reflections.** Removed the `/protocol`, `/checkins`, `/checkin/{week}`, and monthly check-in surfaces, their Rust modules/templates, and their persistence tables via migration 023.
+
 ## [5.2.5] - 2026-05-14
 
 ### Fixed

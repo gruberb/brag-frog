@@ -3,8 +3,9 @@
 use std::sync::Arc;
 
 use axum::{
-    Router, middleware,
+    Router,
     extract::State,
+    middleware,
     response::{Html, IntoResponse, Redirect, Response},
     routing::{delete, get, post, put},
 };
@@ -20,16 +21,15 @@ use crate::kernel::error::AppError;
 use crate::kernel::middleware::{csrf_protection, security_headers};
 use crate::kernel::render::markdown_filter;
 
+use crate::cycle::routes as cycle_routes;
 use crate::identity::auth::middleware::require_auth;
 use crate::identity::routes as identity_routes;
-use crate::worklog::routes as worklog_routes;
-use crate::objectives::routes as objectives_routes;
-use crate::cycle::routes as cycle_routes;
-use crate::reflections::routes as reflections_routes;
-use crate::review::routes as review_routes;
 use crate::integrations::integrations_routes;
 use crate::integrations::sync_routes;
-use crate::protocol::routes as protocol_routes;
+use crate::objectives::routes as objectives_routes;
+use crate::reflections::routes as reflections_routes;
+use crate::review::routes as review_routes;
+use crate::worklog::routes as worklog_routes;
 
 /// Resolves a config file path: checks `custom/` first, falls back to `config/`.
 /// This allows organizations to override default config files by placing their
@@ -122,8 +122,10 @@ async fn landing_page(
 
     let mut ctx = tera::Context::new();
 
-    let state_token =
-        crate::identity::oauth_state::mint(&state.crypto, crate::identity::oauth_state::OAuthFlow::Login)?;
+    let state_token = crate::identity::oauth_state::mint(
+        &state.crypto,
+        crate::identity::oauth_state::OAuthFlow::Login,
+    )?;
     let google_auth_url = crate::identity::auth::google_auth_url(&state.config, &state_token);
     ctx.insert("google_auth_url", &google_auth_url);
     ctx.insert("instance_name", &state.config.instance_name);
@@ -161,7 +163,10 @@ pub fn create_router() -> Router<AppState> {
         .route("/logbook", get(cycle_routes::logbook::logbook))
         // Entries
         .route("/entries/quick", post(worklog_routes::quick_create_entry))
-        .route("/entries/bulk-update", post(worklog_routes::bulk_update_entries))
+        .route(
+            "/entries/bulk-update",
+            post(worklog_routes::bulk_update_entries),
+        )
         .route("/entries/{id}", put(worklog_routes::update_entry))
         .route("/entries/{id}", delete(worklog_routes::delete_entry))
         .route("/entries/{id}/view", get(worklog_routes::view_entry))
@@ -199,14 +204,6 @@ pub fn create_router() -> Router<AppState> {
             "/status-update/{week_id}/save",
             post(cycle_routes::status_update::save_status_update),
         )
-        // Check-ins
-        .route("/checkins", get(reflections_routes::checkins::checkins_list))
-        .route(
-            "/checkin/{week_id}",
-            get(reflections_routes::checkins::checkin_page)
-                .post(reflections_routes::checkins::save_checkin)
-                .delete(reflections_routes::checkins::delete_checkin),
-        )
         // Contribution Examples
         .route(
             "/contribution-examples",
@@ -223,14 +220,7 @@ pub fn create_router() -> Router<AppState> {
             post(review_routes::contribution_examples::link_entry_to_example)
                 .delete(review_routes::contribution_examples::unlink_entry_from_example),
         )
-        // Monthly Check-ins
-        .route(
-            "/monthly-checkin/{month}/{year}",
-            get(reflections_routes::monthly::monthly_checkin_page)
-                .post(reflections_routes::monthly::save_monthly_checkin)
-                .delete(reflections_routes::monthly::delete_monthly_checkin),
-        )
-        // Quarterly Check-ins
+        // Review check-ins
         .route(
             "/quarterly-checkin/{quarter}/{year}",
             get(reflections_routes::checkins::quarterly_checkin_page)
@@ -254,13 +244,34 @@ pub fn create_router() -> Router<AppState> {
             get(cycle_routes::logbook::logbook_filtered_entries),
         )
         // Priorities
-        .route("/priorities", get(objectives_routes::priorities_page).post(objectives_routes::create_priority))
-        .route("/priorities/new-panel", get(objectives_routes::priority_form_panel))
-        .route("/priorities/import-panel", get(objectives_routes::import_panel))
-        .route("/priorities/{id}/edit-panel", get(objectives_routes::priority_edit_panel))
-        .route("/priorities/goals/new-panel", get(objectives_routes::department_goal_form_panel))
-        .route("/priorities/goals/{id}/edit-panel", get(objectives_routes::department_goal_edit_panel))
-        .route("/priorities/import", post(objectives_routes::import_lattice_csv))
+        .route(
+            "/priorities",
+            get(objectives_routes::priorities_page).post(objectives_routes::create_priority),
+        )
+        .route(
+            "/priorities/new-panel",
+            get(objectives_routes::priority_form_panel),
+        )
+        .route(
+            "/priorities/import-panel",
+            get(objectives_routes::import_panel),
+        )
+        .route(
+            "/priorities/{id}/edit-panel",
+            get(objectives_routes::priority_edit_panel),
+        )
+        .route(
+            "/priorities/goals/new-panel",
+            get(objectives_routes::department_goal_form_panel),
+        )
+        .route(
+            "/priorities/goals/{id}/edit-panel",
+            get(objectives_routes::department_goal_edit_panel),
+        )
+        .route(
+            "/priorities/import",
+            post(objectives_routes::import_lattice_csv),
+        )
         .route(
             "/priorities/goals",
             post(objectives_routes::create_department_goal),
@@ -278,16 +289,6 @@ pub fn create_router() -> Router<AppState> {
             "/priorities/{id}/updates",
             post(objectives_routes::post_priority_update),
         )
-        // 10x Protocol
-        .route("/protocol", get(protocol_routes::protocol_page))
-        .route(
-            "/protocol/{slug}/toggle",
-            post(protocol_routes::toggle_protocol_check),
-        )
-        .route(
-            "/protocol/clear",
-            post(protocol_routes::clear_protocol_checks),
-        )
         // Phases (Performance Cycle)
         .route("/phases", post(cycle_routes::phases::create_phase))
         .route("/phases/{id}", delete(cycle_routes::phases::delete_phase))
@@ -298,12 +299,21 @@ pub fn create_router() -> Router<AppState> {
         // Settings
         .route("/settings", get(identity_routes::settings_page))
         .route("/settings", post(identity_routes::save_settings))
-        .route("/settings/people-alias", post(identity_routes::upsert_people_alias))
-        .route("/settings/people-alias/{id}", delete(identity_routes::delete_people_alias))
+        .route(
+            "/settings/people-alias",
+            post(identity_routes::upsert_people_alias),
+        )
+        .route(
+            "/settings/people-alias/{id}",
+            delete(identity_routes::delete_people_alias),
+        )
         // Level Guide
         .route("/level-guide", get(identity_routes::clg_guide_page))
         // Review Guide
-        .route("/review-guide", get(review_routes::summaries::review_guide_page))
+        .route(
+            "/review-guide",
+            get(review_routes::summaries::review_guide_page),
+        )
         // Export
         .route("/export", get(review_routes::export::export_page))
         .route(
@@ -344,7 +354,10 @@ pub fn create_router() -> Router<AppState> {
         )
         // Sync
         .route("/sync/status", get(sync_routes::sync_status))
-        .route("/sync/status/activity", get(sync_routes::sync_status_activity))
+        .route(
+            "/sync/status/activity",
+            get(sync_routes::sync_status_activity),
+        )
         .route("/sync/{service}", post(sync_routes::sync_service))
         .route("/sync/{service}/hard", post(sync_routes::hard_sync_service))
         .route("/sync/all", post(sync_routes::sync_all))

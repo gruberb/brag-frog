@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 pub struct CheckinSection {
     pub slug: String,
     pub title: String,
-    pub weekly_question: String,
     pub quarterly_question: String,
     /// Title override for quarterly context (falls back to `title` if absent).
     #[serde(default)]

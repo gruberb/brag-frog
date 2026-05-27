@@ -15,7 +15,7 @@ Reference material for the entry system, data model, and subsystem conventions. 
 
 Hierarchy: **Goal → KeyResult → Entry** (via `key_result_id` → `goal_id` FKs). **Initiative → Entry** (via `initiative_id`). **Initiative ↔ KeyResult** (many-to-many via `initiative_key_results`).
 
-Additional tables: `initiatives`, `initiative_key_results`, `weekly_checkins`, `kr_checkin_snapshots`, `impact_stories`, `story_entries`, `ai_documents`, `meeting_rules`, `entry_competencies`, `weekly_focus`, `weekly_focus_items`, `meeting_prep_notes`.
+Additional tables: `department_goals`, `priorities`, `contribution_examples`, `contribution_example_entries`, `quarterly_checkins`, `summaries`, `ai_documents`, `meeting_rules`, `meeting_prep_notes`, `status_updates`, `last_week_reports`.
 
 ## KR Measurement System
 
@@ -33,16 +33,15 @@ Additional tables: `initiatives`, `initiative_key_results`, `weekly_checkins`, `
 
 ## Navigation
 
-- **Primary nav:** Dashboard, Logbook, Goals, Prep, Review
+- **Primary nav:** Dashboard, Logbook, Priorities, Reports, Review
 - **Secondary (avatar dropdown):** Settings, Integrations, Level Guide, Trends, Export, Sync All, Sign Out
 - `GET /` → redirects to `/dashboard`
-- `/goals` — OKR management (goals, key results, initiatives, phase management)
-- `/meeting-prep` — meeting preparation (notes per meeting)
-- `/checkins` — check-in history
+- `/priorities` — department goals, priorities, and priority updates
+- `/reports` — last-week summaries and latest updates
 - `/integrations` — service connections (split from settings)
 - `/settings` — profile and preferences
 - `/review/:id` — self-review page
-- `GET /phases` route removed (merged into `/goals`)
+- `/quarterly-checkin/:quarter/:year` — Review-owned check-in page
 
 ## Config System
 

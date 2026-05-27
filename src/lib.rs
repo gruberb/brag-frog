@@ -2,25 +2,24 @@
 
 pub mod ai;
 pub mod app;
-pub mod db;
-pub mod worklog;
-pub mod identity;
-pub mod objectives;
 pub mod cycle;
+pub mod db;
+pub mod identity;
+pub mod integrations;
+pub mod kernel;
+pub mod objectives;
 pub mod reflections;
 pub mod review;
-pub mod kernel;
-pub mod integrations;
-pub mod protocol;
+pub mod worklog;
 
 use std::collections::HashMap;
 use std::sync::Arc;
 
 use tera::Tera;
 
+use integrations::sync_status::SyncStatusMap;
 use kernel::config::Config;
 use kernel::crypto::Crypto;
-use integrations::sync_status::SyncStatusMap;
 
 /// Registers custom Tera filters used by templates.
 /// Called at startup from `app::build_state()` and in test helpers.

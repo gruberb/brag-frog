@@ -88,6 +88,34 @@ fn is_docs_work_type(entry_type: &str) -> bool {
     )
 }
 
+fn is_terminal_jira_status(status: Option<&str>) -> bool {
+    let Some(status) = status else {
+        return false;
+    };
+    let normalized = status.trim().to_ascii_lowercase();
+    matches!(
+        normalized.as_str(),
+        "done"
+            | "closed"
+            | "resolved"
+            | "verified"
+            | "complete"
+            | "completed"
+            | "fixed"
+            | "won't do"
+            | "wont do"
+            | "duplicate"
+            | "cancelled"
+            | "canceled"
+            | "declined"
+    )
+}
+
+fn is_closed_jira_entry(entry: &BragEntry) -> bool {
+    entry.entry_type == "jira_completed"
+        || (entry.source == "jira" && is_terminal_jira_status(entry.status.as_deref()))
+}
+
 fn humanize_label(val: &str) -> String {
     match val {
         "cross_team" => "Cross-team".to_string(),
@@ -249,9 +277,11 @@ pub async fn trends_page(
         match entry.entry_type.as_str() {
             "pr_merged" => overview_prs_merged += 1,
             "pr_reviewed" => overview_prs_reviewed += 1,
-            "jira_completed" => overview_jira_tickets_closed += 1,
             "meeting" => overview_meetings += 1,
             _ => {}
+        }
+        if is_closed_jira_entry(entry) {
+            overview_jira_tickets_closed += 1;
         }
         if is_docs_work_type(&entry.entry_type) {
             overview_docs_worked_on += 1;

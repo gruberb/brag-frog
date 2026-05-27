@@ -166,14 +166,14 @@ BragEntry  N──1 Initiative  (optional FK: initiative_id)
 KeyResult  N──1 Goal        (optional FK: goal_id)
 Initiative N──N KeyResult   (via initiative_key_results join table)
 
-Week 1──1 WeeklyFocus 1──N WeeklyFocusItem
-Week 1──N WeeklyCheckin 1──N KrCheckinSnapshot
 Week 1──N MeetingPrepNote
+Week 1──N StatusUpdate
+Week 1──N LastWeekReport
 ```
 
-Hierarchy: **Goal → KeyResult → Entry** (via FKs). **Initiative → Entry** (via `initiative_id`). **Initiative ↔ KeyResult** (many-to-many).
+Hierarchy: **DepartmentGoal → Priority → Entry** (via `priority_id` and `department_goal_id`).
 
-Data flow: `WeeklyFocus` tracks what KRs/Initiatives the user is focusing on this week. `MeetingPrepNote` attaches prep notes to meeting entries. `WeeklyCheckin` captures weekly reflections with per-KR snapshots.
+Data flow: synced and manual work items feed Reports, meeting prep, quarterly Review check-ins, and self-review drafts. `MeetingPrepNote` attaches prep notes to meeting entries.
 
 ### Deduplication
 Synced entries use `UNIQUE(source, source_id)` with `ON CONFLICT` upsert. Soft-deleted entries (user removed them) are skipped on re-sync.

@@ -1,63 +1,58 @@
-# Check-in section configuration — 10x Engineer Habits framework.
-# Same slugs used for weekly (lightweight) and quarterly (synthesized).
+# Review check-in section configuration.
 # Override via custom/checkin_sections.toml.
 
 [[sections]]
 slug = "highlights_impact"
 title = "Ownership & Impact"
 quarterly_title = "Impact & Outcomes"
-weekly_question = "What did you own end-to-end this week? What outcomes moved the needle?"
-quarterly_question = "What did you own end-to-end this quarter? Which outcomes had the greatest impact on team or organizational goals, and what did your ownership look like in practice?"
-ai_prompt = """Synthesize the weekly ownership and impact entries into a quarterly narrative. Focus on:
-- Concrete outcomes owned end-to-end and their impact on team/org goals
-- Evidence of proactive ownership (finding blockers, resolving dependencies, keeping stakeholders informed)
-- Instances where the user drove results without needing management oversight
+quarterly_question = "What did you own end-to-end this quarter? Which outcomes had the greatest impact on team or organizational goals, and what did your ownership look like in practice? Which CLG behaviors or skills supported that impact?"
+ai_prompt = """Draft a quarterly check-in answer from logged work. Focus on:
+- Concrete outcomes owned end-to-end and their impact on team or organizational goals
+- Evidence of proactive ownership, dependency resolution, and stakeholder communication
+- CLG behaviors or skills that supported the impact
 Use first person. Be specific and evidence-based."""
 
 [[sections]]
 slug = "learnings_adjustments"
 title = "Blockers & Tradeoffs"
 quarterly_title = "Lessons & Adjustments"
-weekly_question = "What blockers did you hit? How did you frame them for stakeholders?"
-quarterly_question = "What were the biggest blockers or tradeoffs you navigated this quarter? How did you communicate constraints and options to stakeholders?"
-ai_prompt = """Synthesize weekly blockers and tradeoff entries into quarterly themes. Focus on:
+quarterly_question = "What were the biggest blockers or tradeoffs you navigated this quarter? How did you communicate constraints and options to stakeholders? What have you learned from feedback, results, or experiences?"
+ai_prompt = """Draft a quarterly check-in answer from logged work. Focus on:
 - Patterns in how the user communicated constraints and options
 - Evidence of framing delays as tradeoffs rather than surprises
-- Proactive stakeholder communication and expectation management
+- Concrete adjustments made in response to feedback, results, or experiences
 Use first person. Be reflective about communication growth."""
 
 [[sections]]
 slug = "growth_development"
 title = "Relationships & Curiosity"
 quarterly_title = "Growth & Relationships"
-weekly_question = "Who did you talk to outside your team? What did you learn from a PM, designer, or engineer?"
-quarterly_question = "What cross-team relationships did you build or strengthen this quarter? What did you learn by engaging with people outside your immediate team?"
-ai_prompt = """Synthesize weekly relationship and curiosity entries into a quarterly narrative. Focus on:
+quarterly_question = "What cross-team relationships did you build or strengthen this quarter? What did you learn by engaging with people outside your immediate team? What experiences, projects, or responsibilities stretched your growth?"
+ai_prompt = """Draft a quarterly check-in answer from logged work. Focus on:
 - Cross-team relationships built or strengthened
-- Insights gained from PMs, designers, or engineers on other teams
-- How curiosity-driven conversations influenced work or decisions
+- Insights gained from collaborators outside the immediate team
+- Experiences, projects, or responsibilities that stretched growth
 Use first person. Highlight the value of cross-functional engagement."""
 
 [[sections]]
 slug = "support_feedback"
 title = "Giving & Helping"
 quarterly_title = "Contributions & Collaboration"
-weekly_question = "Who did you help this week? How did you invest in professional relationships?"
-quarterly_question = "How did you help others this quarter? What professional relationships did you invest in, and how did that give-and-take shape your effectiveness?"
-ai_prompt = """Synthesize weekly helping and relationship entries into quarterly themes. Focus on:
+quarterly_question = "How did you help others this quarter? What professional relationships did you invest in, and how did that give-and-take shape your effectiveness? Are there ways we could improve how we collaborate?"
+ai_prompt = """Draft a quarterly check-in answer from logged work. Focus on:
 - Patterns of helping others (unblocking, mentoring, reviewing, collaborating)
 - Give-and-take dynamics in professional relationships
 - How investing in others amplified the user's own effectiveness
+- Collaboration or communication improvements worth raising
 Use first person. Be specific about contributions to others."""
 
 [[sections]]
 slug = "looking_ahead"
-title = "Next Week"
+title = "Looking Ahead"
 quarterly_title = "Looking Ahead"
-weekly_question = "What are your #1, #2, #3 for next week? What do stakeholders need to know?"
-quarterly_question = "What are your top priorities for next quarter? What do stakeholders need to know about your focus and any upcoming tradeoffs?"
-ai_prompt = """Synthesize weekly planning entries into a quarterly forward look. Focus on:
+quarterly_question = "What are your top priorities for next quarter? What do stakeholders need to know about your focus and any upcoming tradeoffs? Where would alignment with your manager or team be most valuable?"
+ai_prompt = """Draft a quarterly check-in answer from logged work. Focus on:
 - Key priorities and why they matter to the team and organization
 - Stakeholder communication needs and upcoming tradeoffs
-- Connection between weekly focus areas and larger strategic goals
+- Areas where manager or team alignment would help
 Use first person. Be energized and strategic."""

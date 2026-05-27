@@ -8,14 +8,13 @@ use chrono::{Duration, Local};
 use crate::AppState;
 use crate::ai::prompts::build_meeting_prep_prompt;
 use crate::ai::{get_ai_client, has_ai_for_user};
-use crate::worklog::model::BragEntry;
+use crate::cycle::model::{BragPhase, MeetingPrepNote, Week};
 use crate::identity::auth::middleware::AuthUser;
 use crate::identity::model::User;
-use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::cycle::model::{BragPhase, MeetingPrepNote, Week};
-use crate::reflections::model::WeeklyCheckin;
-use crate::review::model::AiDocument;
 use crate::kernel::error::AppError;
+use crate::objectives::model::{DepartmentGoal, Priority};
+use crate::review::model::AiDocument;
+use crate::worklog::model::BragEntry;
 
 /// Query params for the panel GET.
 #[derive(serde::Deserialize, Default)]
@@ -126,11 +125,13 @@ pub async fn save_meeting_prep_panel(
     // Copy prep notes into the entry's description so they appear in the logbook.
     if let Some(notes) = input.notes.as_deref().filter(|s| !s.is_empty()) {
         let enc = auth.crypto.encrypt(notes)?;
-        sqlx::query("UPDATE brag_entries SET description = ?, updated_at = datetime('now') WHERE id = ?")
-            .bind(&enc)
-            .bind(entry_id)
-            .execute(&state.db)
-            .await?;
+        sqlx::query(
+            "UPDATE brag_entries SET description = ?, updated_at = datetime('now') WHERE id = ?",
+        )
+        .bind(&enc)
+        .bind(entry_id)
+        .execute(&state.db)
+        .await?;
     }
 
     // Update entry's priority_id if provided (or clear it).
@@ -232,23 +233,16 @@ pub async fn ai_draft_meeting_prep(
             matched.truncate(10);
             (matched, rest)
         } else {
-            (Vec::new(), all_recent.into_iter().filter(|e| e.id != entry_id).collect())
+            (
+                Vec::new(),
+                all_recent
+                    .into_iter()
+                    .filter(|e| e.id != entry_id)
+                    .collect(),
+            )
         };
 
-    // Load check-ins for current and previous week
-    let prev_week = Week::find_or_create_for_date(&state.db, phase.id, now - Duration::days(7)).await?;
-    let current_checkin = WeeklyCheckin::find_for_week(&state.db, current_week.id, auth.user_id, &auth.crypto).await?;
-    let prev_checkin = WeeklyCheckin::find_for_week(&state.db, prev_week.id, auth.user_id, &auth.crypto).await?;
-    let checkins: Vec<&WeeklyCheckin> = [current_checkin.as_ref(), prev_checkin.as_ref()]
-        .into_iter()
-        .flatten()
-        .collect();
-
-    let context_text = input
-        .context_snippets
-        .as_deref()
-        .unwrap_or("")
-        .trim();
+    let context_text = input.context_snippets.as_deref().unwrap_or("").trim();
 
     let meeting_goal = input
         .meeting_goal
@@ -282,7 +276,6 @@ pub async fn ai_draft_meeting_prep(
         linked_priority,
         &recent_entries,
         &other_recent_entries,
-        &checkins,
         context_text,
         prep_note.as_ref(),
         meeting_goal,

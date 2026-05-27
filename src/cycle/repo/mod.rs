@@ -112,14 +112,6 @@ impl BragPhase {
         .execute(&mut *tx)
         .await?;
 
-        // Delete weekly_checkins for weeks in this phase
-        sqlx::query(
-            "DELETE FROM weekly_checkins WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
-        )
-        .bind(id)
-        .execute(&mut *tx)
-        .await?;
-
         // Delete status updates for weeks in this phase
         sqlx::query(
             "DELETE FROM status_updates WHERE week_id IN (SELECT id FROM weeks WHERE phase_id = ?)",
@@ -161,13 +153,8 @@ impl BragPhase {
             .execute(&mut *tx)
             .await?;
 
-        // Delete quarterly checkins and annual alignment
+        // Delete review check-ins
         sqlx::query("DELETE FROM quarterly_checkins WHERE phase_id = ?")
-            .bind(id)
-            .execute(&mut *tx)
-            .await?;
-
-        sqlx::query("DELETE FROM annual_alignment WHERE phase_id = ?")
             .bind(id)
             .execute(&mut *tx)
             .await?;
@@ -225,11 +212,10 @@ impl BragPhase {
 impl Week {
     /// Fetches a single week by ID.
     pub async fn find_by_id(pool: &SqlitePool, week_id: i64) -> Result<Option<Self>, AppError> {
-        let week =
-            sqlx::query_as::<_, Week>("SELECT * FROM weeks WHERE id = ?")
-                .bind(week_id)
-                .fetch_optional(pool)
-                .await?;
+        let week = sqlx::query_as::<_, Week>("SELECT * FROM weeks WHERE id = ?")
+            .bind(week_id)
+            .fetch_optional(pool)
+            .await?;
         Ok(week)
     }
 

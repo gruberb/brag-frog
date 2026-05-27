@@ -3,7 +3,6 @@ use std::collections::{HashMap, HashSet};
 use crate::cycle::model::MeetingPrepNote;
 use crate::identity::clg::ClgLevel;
 use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
-use crate::reflections::model::{CheckinWithWeek, WeeklyCheckin};
 use crate::review::model::{AiDocument, ContributionExample, get_section};
 use crate::worklog::model::BragEntry;
 
@@ -737,7 +736,6 @@ pub fn build_meeting_prep_prompt(
     linked_priority: Option<&Priority>,
     recent_entries: &[BragEntry],
     other_recent_entries: &[BragEntry],
-    checkins: &[&WeeklyCheckin],
     context_text: &str,
     existing_note: Option<&MeetingPrepNote>,
     meeting_goal: Option<&str>,
@@ -816,34 +814,6 @@ pub fn build_meeting_prep_prompt(
         }
     };
 
-    // Recent check-in highlights (most recent only, non-empty fields, truncated)
-    let checkin_section = checkins
-        .first()
-        .map(|c| {
-            let mut parts = Vec::new();
-            if let Some(h) = c.highlights_impact.as_deref().filter(|s| !s.is_empty()) {
-                let truncated: String = h.chars().take(200).collect();
-                let suffix = if h.len() > 200 { "..." } else { "" };
-                parts.push(format!("**Highlights & Impact:** {}{}", truncated, suffix));
-            }
-            if let Some(s) = c.support_feedback.as_deref().filter(|s| !s.is_empty()) {
-                let truncated: String = s.chars().take(200).collect();
-                let suffix = if s.len() > 200 { "..." } else { "" };
-                parts.push(format!("**Blockers & Support:** {}{}", truncated, suffix));
-            }
-            if let Some(a) = c.looking_ahead.as_deref().filter(|s| !s.is_empty()) {
-                let truncated: String = a.chars().take(200).collect();
-                let suffix = if a.len() > 200 { "..." } else { "" };
-                parts.push(format!("**Looking Ahead:** {}{}", truncated, suffix));
-            }
-            if parts.is_empty() {
-                String::new()
-            } else {
-                format!("\n## Recent Check-in Highlights\n{}\n", parts.join("\n"))
-            }
-        })
-        .unwrap_or_default();
-
     // Existing draft notes
     let existing_text = existing_note
         .and_then(|n| n.notes.as_deref())
@@ -897,15 +867,14 @@ Priority: {} — status: {}
         });
 
     // Thin context: no user context, no goal, no existing notes, no linked priority,
-    // no calendar description, no prior preps, no recent work/checkins
+    // no calendar description, no prior preps, and no recent work.
     let has_thin_context = context_text.is_empty()
         && meeting_goal.is_none_or(|g| g.is_empty())
         && existing_text.is_empty()
         && linked_priority.is_none()
         && entry.description.as_ref().is_none_or(|d| d.is_empty())
         && prior_preps.is_empty()
-        && recent_work_section.is_empty()
-        && checkin_section.is_empty();
+        && recent_work_section.is_empty();
 
     let link_caveat = if has_only_links {
         "\n## Important: Link-Only Context\n\
@@ -967,7 +936,7 @@ Priority: {} — status: {}
 - Time: {time_range}
 - Role: {role}
 - Series: {recurring}
-{goal_section}{calendar_desc_section}{context_section}{prior_preps_section}{recent_work_section}{checkin_section}{existing_text}{priority_context}{link_caveat}{thin_context_guidance}
+{goal_section}{calendar_desc_section}{context_section}{prior_preps_section}{recent_work_section}{existing_text}{priority_context}{link_caveat}{thin_context_guidance}
 ## Role Guidance
 {role_hint}
 
@@ -1000,7 +969,6 @@ Keep talking points concise (1-2 sentences each) so they can be directly pasted 
         context_section = context_section,
         prior_preps_section = prior_preps_section,
         recent_work_section = recent_work_section,
-        checkin_section = checkin_section,
         existing_text = existing_text,
         priority_context = priority_context,
         link_caveat = link_caveat,
@@ -1155,16 +1123,12 @@ pub fn build_status_update_prompt(
 
 /// Builds the AI prompt for a single quarterly check-in section.
 ///
-/// The quarterly check-in is a synthesis of weekly reflections rolled up across the
-/// quarter. The model gets the section's question and instruction (from
-/// `checkin_sections.toml`), the relevant slice of each weekly reflection, and any
-/// brag entries logged during the quarter as supplementary context. Returns plain
-/// text that the caller can drop into the textarea — no persistence happens here.
+/// The model gets the section's question and instruction from
+/// `checkin_sections.toml` plus brag entries logged during the quarter. Returns
+/// plain text that the caller can drop into the textarea; no persistence happens here.
 pub fn build_quarterly_checkin_prompt(
-    section_slug: &str,
     section_question: &str,
     section_instruction: &str,
-    weekly_reflections: &[CheckinWithWeek],
     entries: &[BragEntry],
     quarter: &str,
     year: i64,
@@ -1175,45 +1139,6 @@ pub fn build_quarterly_checkin_prompt(
         quarter, year
     ));
     ctx.push_str(&format!("## Question\n{}\n\n", section_question));
-
-    // Pull the field this section synthesises from each weekly reflection.
-    fn pick<'a>(slug: &str, r: &'a CheckinWithWeek) -> Option<&'a str> {
-        let v = match slug {
-            "highlights_impact" => r.highlights_impact.as_deref(),
-            "learnings_adjustments" => r.learnings_adjustments.as_deref(),
-            "growth_development" => r.growth_development.as_deref(),
-            "support_feedback" => r.support_feedback.as_deref(),
-            "looking_ahead" => r.looking_ahead.as_deref(),
-            _ => None,
-        };
-        v.map(str::trim).filter(|s| !s.is_empty())
-    }
-
-    let with_content: Vec<&CheckinWithWeek> = weekly_reflections
-        .iter()
-        .filter(|r| pick(section_slug, r).is_some())
-        .collect();
-
-    if with_content.is_empty() {
-        ctx.push_str(
-            "## Weekly Reflections\n_No relevant weekly reflections recorded for this section._\n\n",
-        );
-    } else {
-        ctx.push_str(&format!(
-            "## Weekly Reflections ({} weeks with content)\n\n",
-            with_content.len()
-        ));
-        for r in with_content {
-            ctx.push_str(&format!(
-                "### Week {} ({} → {})\n",
-                r.iso_week, r.week_start, r.week_end
-            ));
-            if let Some(text) = pick(section_slug, r) {
-                ctx.push_str(text);
-                ctx.push_str("\n\n");
-            }
-        }
-    }
 
     // Brag entries from the quarter give the model concrete artefacts to anchor the
     // narrative. Cap the list so we do not blow past the model's context window on

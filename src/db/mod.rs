@@ -151,6 +151,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "022_last_week_reports",
         include_str!("../../migrations/022_last_week_reports.sql"),
     ),
+    (
+        "023_remove_legacy_checkins_protocol",
+        include_str!("../../migrations/023_remove_legacy_checkins_protocol.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.
@@ -390,10 +394,7 @@ async fn migrate_key_results_to_priorities(pool: &SqlitePool, crypto: &Crypto) {
             other => other,
         };
 
-        let color = kr
-            .color
-            .clone()
-            .unwrap_or_else(random_priority_color);
+        let color = kr.color.clone().unwrap_or_else(random_priority_color);
 
         let result = sqlx::query(
             r#"
@@ -428,11 +429,10 @@ async fn migrate_key_results_to_priorities(pool: &SqlitePool, crypto: &Crypto) {
         match result {
             Ok(_) => {
                 // Map entries that pointed to this KR via key_result_id
-                let priority_id: Option<i64> =
-                    sqlx::query_scalar("SELECT last_insert_rowid()")
-                        .fetch_one(pool)
-                        .await
-                        .ok();
+                let priority_id: Option<i64> = sqlx::query_scalar("SELECT last_insert_rowid()")
+                    .fetch_one(pool)
+                    .await
+                    .ok();
 
                 if let Some(pid) = priority_id {
                     let _ = sqlx::query(
