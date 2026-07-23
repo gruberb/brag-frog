@@ -18,7 +18,7 @@ pub async fn create_phase(
 ) -> Result<impl IntoResponse, AppError> {
     let _phase = BragPhase::create(&state.db, auth.user_id, &input).await?;
 
-    Ok(hx_redirect("/goals"))
+    Ok(hx_redirect("/priorities"))
 }
 
 /// HTMX handler: sets a phase as active (deactivating the current one) and redirects.
@@ -29,7 +29,7 @@ pub async fn activate_phase(
 ) -> Result<impl IntoResponse, AppError> {
     BragPhase::set_active(&state.db, id, auth.user_id).await?;
 
-    Ok(hx_redirect("/goals"))
+    Ok(hx_redirect("/priorities"))
 }
 
 /// HTMX handler: deletes a phase after ownership check. Cascades to weeks, entries, goals, summaries.
@@ -45,5 +45,5 @@ pub async fn delete_phase(
 
     BragPhase::delete(&state.db, id, auth.user_id).await?;
 
-    Ok(hx_redirect("/goals"))
+    Ok(hx_redirect("/priorities"))
 }
