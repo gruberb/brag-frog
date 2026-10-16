@@ -2,6 +2,17 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [6.0.3] - 2026-10-16
+
+### Fixed
+- PDF downloads failed with "WebAssembly.instantiate() blocked by CSP". The policy now allows `wasm-unsafe-eval` (WebAssembly only; `eval()` stays blocked).
+- Trends: bars could grow into the hover bar above the chart.
+- Review: a section that had been opened and cleared counted as written, so it showed no "empty" label and no guidance.
+
+### Changed
+- Review: an empty section opens with its template (headings and helper text) already in the editor. "Insert template" next to Guidance adds it to a section that already has text.
+- Logbook: "Bulk edit" is a button in the header (it was a label-like pill). The bar at the bottom says to click entries until some are selected.
+
 ## [6.0.2] - 2026-10-16
 
 ### Changed

@@ -58,10 +58,12 @@ export function StackedBars({ weeks, onSelectWeek }: Props) {
               onFocus={() => setActive(i)}
               onBlur={() => setActive(null)}
             >
-              <span className="chart-stack" style={{ height: `${(total / max) * 100}%` }}>
-                {SERIES.map((s) =>
-                  w.by_type[s.key] > 0 ? <span key={s.key} style={{ flexGrow: w.by_type[s.key], background: s.color }} /> : null,
-                )}
+              <span className="chart-area">
+                <span className="chart-stack" style={{ height: `${(total / max) * 100}%` }}>
+                  {SERIES.map((s) =>
+                    w.by_type[s.key] > 0 ? <span key={s.key} style={{ flexGrow: w.by_type[s.key], background: s.color }} /> : null,
+                  )}
+                </span>
               </span>
               <span className="chart-label">{i % step === 0 ? format(parseISO(w.week_start), 'MMM d') : ''}</span>
             </button>

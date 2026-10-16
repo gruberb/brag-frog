@@ -63,9 +63,10 @@
 .chart-info-item { display: inline-flex; align-items: center; gap: 5px; }
 .chart-info-item i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 .chart-plot { display: flex; align-items: stretch; gap: 4px; padding-bottom: 0; }
-.chart-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; padding: 0 3px; border: 0; background: transparent; cursor: pointer; font: inherit; border-radius: var(--radius-sm); }
+.chart-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: stretch; overflow: hidden; padding: 0 3px; border: 0; background: transparent; cursor: pointer; font: inherit; border-radius: var(--radius-sm); }
 .chart-col:hover, .chart-col.on { background: rgba(0, 0, 0, 0.04); }
 .chart-col:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+.chart-area { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; }
 .chart-stack { display: flex; flex-direction: column-reverse; width: 100%; min-height: 2px; flex: none; border-radius: 3px 3px 0 0; overflow: hidden; opacity: 0.85; }
 .chart-col:hover .chart-stack, .chart-col.on .chart-stack { opacity: 1; }
 .chart-label { height: 22px; flex: none; display: block; text-align: center; font-size: var(--text-xs); color: var(--color-text-secondary); white-space: nowrap; overflow: visible; line-height: 22px; }

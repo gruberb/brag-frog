@@ -53,7 +53,7 @@ describe('Logbook', () => {
     renderWithProviders(<Logbook />, { route: '/logbook', readOnly: true });
     await screen.findByText(/entries/);
     expect(screen.queryByRole('button', { name: 'Log entry' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Bulk Edit' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bulk edit' })).not.toBeInTheDocument();
   });
 
   it('shows an error state with retry', async () => {

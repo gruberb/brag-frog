@@ -30,14 +30,14 @@ export function LogbookPage({ cycleName, cycleEntryCount, matching, facets, goal
           <h1>Logbook</h1>
           <p>
             {cycleName} · {cycleEntryCount == null ? `${matching}` : `${matching} of ${cycleEntryCount}`} entries
-            {!readOnly && (
-              <button type="button" className="pill" onClick={onToggleSelect} aria-pressed={selectMode}>
-                {selectMode ? 'Done' : 'Bulk Edit'}
-              </button>
-            )}
           </p>
         </div>
         <div className="row">
+          {!readOnly && (
+            <Button onClick={onToggleSelect} aria-pressed={selectMode}>
+              {selectMode ? 'Done selecting' : 'Bulk edit'}
+            </Button>
+          )}
           <Button onClick={() => setReport(true)}>Report</Button>
           {!readOnly && <Button variant="primary" onClick={onLogEntry}>Log entry</Button>}
         </div>

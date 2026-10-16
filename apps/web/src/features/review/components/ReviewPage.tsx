@@ -8,7 +8,7 @@ import { EmptyState, ErrorState } from '@/components/ui/EmptyState';
 import { Menu } from '@/components/ui/Menu';
 import { Popover } from '@/components/ui/Popover';
 import { SkeletonRows } from '@/components/ui/Spinner';
-import { markdownToBlocks } from '@/components/editor/convert';
+import { hasContent } from '@/components/editor/content';
 import { LazyRichEditor } from '@/components/editor/LazyRichEditor';
 import type { EntryRefCandidate, RichEditorHandle } from '@/components/editor/types';
 import { paths } from '@/config/paths';
@@ -65,11 +65,15 @@ function SectionEditor({ cycleId, section, readOnly, jiraBase, Evidence, EntryDr
     let cancelled = false;
     // Content is parsed once per document; later cache patches from our own saves must not reset the editor.
     void import('@/components/editor/convert').then(async (m) => {
-      const b = await m.contentToBlocks(initial.content ?? '', initial.content_format as ContentFormat, jiraBase);
+      // An empty section starts from its outline (headings plus helper text), like a document template.
+      const empty = !hasContent(initial.content, initial.content_format);
+      const b = empty && initial.template && !readOnly
+        ? await m.markdownToBlocks(initial.template)
+        : await m.contentToBlocks(initial.content ?? '', initial.content_format as ContentFormat, jiraBase);
       if (!cancelled) setBlocks(b);
     });
     return () => { cancelled = true; };
-  }, [jiraBase, initial]);
+  }, [jiraBase, initial, readOnly]);
 
   if (!blocks) return <SkeletonRows rows={4} h={28} />;
   return (
@@ -122,9 +126,10 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
 
   const sections = useMemo(() => review.data?.sections ?? [], [review.data]);
   const active = sections.find((s) => s.slug === sectionSlug) ?? sections[0];
-  const guidance = active ? (guidanceToggle[active.slug] ?? !active.content?.trim()) : false;
+  const guidance = active ? (guidanceToggle[active.slug] ?? !hasContent(active.content, active.content_format)) : false;
   const startFromOutline = async () => {
     if (!active?.template || !handle.current) return;
+    const { markdownToBlocks } = await import('@/components/editor/convert');
     const blocks = await markdownToBlocks(active.template);
     if (handle.current.isEmpty()) handle.current.replaceAll(blocks);
     else handle.current.insertBlocks(blocks);
@@ -135,7 +140,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
       setBusyExport(true);
       try {
         handle.current?.flush();
-        const chosen = (scope === 'section' && active ? [active] : sections).filter((s) => s.content?.trim());
+        const chosen = (scope === 'section' && active ? [active] : sections).filter((s) => hasContent(s.content, s.content_format));
         if (chosen.length === 0) return toast('Nothing written yet to export');
         const { downloadReview } = await import('@/lib/export');
         await downloadReview(format, `Self review · ${cycle?.name ?? ''}`.trim(), chosen.map((s) => ({ title: s.title, content: s.content ?? '', content_format: s.content_format as ContentFormat })), jiraBase);
@@ -208,7 +213,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
           <div className="pills" role="tablist" aria-label="Review sections" style={{ marginBottom: 12 }}>
             {sections.map((s) => (
               <button key={s.slug} type="button" role="tab" aria-selected={s.slug === active.slug} data-state={s.slug === active.slug ? 'active' : 'inactive'} onClick={() => onSectionChange(s.slug)}>
-                {s.title}{!s.content?.trim() && <small>empty</small>}
+                {s.title}{!hasContent(s.content, s.content_format) && <small>empty</small>}
               </button>
             ))}
           </div>
@@ -217,6 +222,12 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
             <button type="button" className="linkish" aria-expanded={guidance} onClick={() => setGuidanceToggle((t) => ({ ...t, [active.slug]: !guidance }))}>Guidance</button>
             {' · '}
             <button type="button" className="linkish" onClick={() => setLevel(true)}>Career level</button>
+            {active.template && !readOnly && (
+              <>
+                {' · '}
+                <button type="button" className="linkish" onClick={() => void startFromOutline()}>Insert template</button>
+              </>
+            )}
           </div>
           {guidance && (
             <Card className="card-b" style={{ marginBottom: 12 }}>
@@ -224,11 +235,6 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
               {active.form_guidance && <p style={{ margin: '8px 0 4px' }}>{active.form_guidance}</p>}
               {active.form_bullets.length > 0 && <ul style={{ margin: 0, paddingLeft: 20 }}>{active.form_bullets.map((b) => <li key={b}>{b}</li>)}</ul>}
               {active.form_tip && <p className="small muted" style={{ margin: '8px 0 0' }}>{active.form_tip}</p>}
-              {active.template && !readOnly && (
-                <div style={{ marginTop: 12 }}>
-                  <Button size="sm" onClick={() => void startFromOutline()}>Start from outline</Button>
-                </div>
-              )}
             </Card>
           )}
           <SectionEditor

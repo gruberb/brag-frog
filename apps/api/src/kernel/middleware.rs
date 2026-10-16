@@ -9,9 +9,11 @@ use axum::{
 pub async fn security_headers(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
+    // `wasm-unsafe-eval` lets the PDF export compile its WebAssembly layout engine; it does not
+    // re-enable `eval()` for scripts. Styles stay `unsafe-inline` for the editor's injected styles.
     headers.insert(
         axum::http::header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self'; frame-ancestors 'none'"),
+        HeaderValue::from_static("default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https://*.googleusercontent.com; connect-src 'self'; frame-ancestors 'none'"),
     );
     headers.insert(
         axum::http::header::X_FRAME_OPTIONS,

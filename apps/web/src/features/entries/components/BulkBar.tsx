@@ -27,7 +27,7 @@ export function BulkBar({ ids, priorities, onDone }: Props) {
   const empty = Object.keys(patch).length === 0;
   return (
     <div className="card card-b row wrap" style={{ position: 'sticky', bottom: 12, zIndex: 3, boxShadow: 'var(--shadow-md)' }} role="region" aria-label="Bulk edit">
-      <b>{ids.length} selected</b>
+      <b>{ids.length === 0 ? 'Click entries to select them' : `${ids.length} selected`}</b>
       <Select aria-label="Set priority" value={priority} onChange={(e) => setPriority(e.target.value)} options={priorities} placeholder="Priority…" />
       <Select aria-label="Set reach" value={reach} onChange={(e) => setReach(e.target.value)} options={reachOptions} placeholder="Reach…" />
       <Select aria-label="Set complexity" value={complexity} onChange={(e) => setComplexity(e.target.value)} options={complexityOptions} placeholder="Complexity…" />
