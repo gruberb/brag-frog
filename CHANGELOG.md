@@ -2,7 +2,7 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
-## [Unreleased]
+## [6.0.0] - 2026-10-16
 
 ### Changed
 - **New web app.** The server-rendered pages are replaced by a React single-page app (`apps/web`) that talks to a JSON API under `/api/v1`. Pages load once and navigate without full reloads, and lists are paged instead of rendering a whole cycle at once.

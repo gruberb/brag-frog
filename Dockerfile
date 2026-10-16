@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY --from=api /app/target/release/brag-frog /usr/local/bin/
 COPY --from=web /repo/apps/web/dist /app/web
 COPY apps/api/config/ /app/config/
+RUN mkdir -p /data
 WORKDIR /app
 ENV PORT=8080 \
     BRAGFROG_DATABASE_PATH=/data/bragfrog.db \

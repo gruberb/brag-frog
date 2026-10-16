@@ -1,6 +1,6 @@
 [package]
 name = "brag-frog"
-version = "5.2.12"
+version = "6.0.0"
 edition = "2024"
 
 [dependencies]
