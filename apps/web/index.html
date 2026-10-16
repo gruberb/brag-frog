@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/MozillaText-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <title>Brag Frog</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+    <!-- Deployment overlay hook. It sits after #root so it follows the bundled CSS (Vite appends that to <head>) and wins the cascade. A missing file is harmless. -->
+    <link rel="stylesheet" href="/custom/tokens.css" />
+  </body>
+</html>

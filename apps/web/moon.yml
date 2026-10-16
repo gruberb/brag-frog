@@ -1,0 +1,15 @@
+language: 'typescript'
+tasks:
+  dev:
+    command: 'npm run dev'
+    preset: 'server'
+  build:
+    command: 'npm run build'
+    inputs: ['src/**/*', 'public/**/*', 'index.html', 'vite.config.ts', 'tsconfig*.json', 'package.json']
+    outputs: ['dist']
+  lint:
+    command: 'npm run lint'
+  typecheck:
+    command: 'npm run typecheck'
+  test:
+    command: 'npm run test'

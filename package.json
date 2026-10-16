@@ -1,0 +1,6 @@
+{
+  "name": "brag-frog-monorepo",
+  "private": true,
+  "workspaces": ["apps/web"],
+  "engines": { "node": ">=24" }
+}

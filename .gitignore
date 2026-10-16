@@ -9,3 +9,4 @@ plan.md
 custom/
 brag-frog-mozilla/
 website/js/analytics.local.js
+node_modules

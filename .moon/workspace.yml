@@ -1,3 +1,4 @@
 # Monorepo projects. Paths are relative to the repo root.
 projects:
   api: 'apps/api'
+  web: 'apps/web'
