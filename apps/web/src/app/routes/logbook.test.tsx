@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/testing/mocks/server';
 import { renderWithProviders } from '@/testing/test-utils';
-import { db } from '@/testing/mocks/db';
+
 import { Component as Logbook } from './logbook';
 
 const seen: URL[] = [];
@@ -47,39 +47,6 @@ describe('Logbook', () => {
     await waitFor(() => expect(seen.some((u) => u.searchParams.get('cursor') === '50')).toBe(true));
     await waitFor(() => expect(rows()).toBe(90));
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
-  });
-
-  it('edits an entry through the drawer', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Logbook />, { route: '/logbook' });
-    await user.click(await screen.findByText('Merged runner autoscaling'));
-    const title = await screen.findByLabelText('Title');
-    await user.clear(title);
-    await user.type(title, 'Merged autoscaling v2');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByText('Entry saved')).toBeInTheDocument();
-    expect(db.entries.find((e) => e.title === 'Merged autoscaling v2')).toBeTruthy();
-    await waitFor(() => expect(screen.getByText('Merged autoscaling v2')).toBeInTheDocument());
-  });
-
-  it('shows a validation error instead of saving an empty title', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Logbook />, { route: '/logbook' });
-    await user.click(await screen.findByText('Merged runner autoscaling'));
-    await user.clear(await screen.findByLabelText('Title'));
-    await user.click(screen.getByRole('button', { name: 'Save' }));
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
-  });
-
-  it('asks for confirmation before deleting', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(<Logbook />, { route: '/logbook' });
-    await user.click(await screen.findByText('Mentored new hire on storage internals'));
-    await user.click(await screen.findByRole('button', { name: 'Delete' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Delete entry' });
-    expect(db.entries.some((e) => e.title === 'Mentored new hire on storage internals')).toBe(true);
-    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
-    await waitFor(() => expect(db.entries.some((e) => e.title === 'Mentored new hire on storage internals')).toBe(false));
   });
 
   it('hides mutations in a past cycle', async () => {

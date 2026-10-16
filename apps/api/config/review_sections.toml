@@ -19,30 +19,36 @@ form_bullets = [
 ]
 form_tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work."
 form_placeholder = "Required: Write your response..."
-template = """1. <Action-oriented example headline>
+template = """## Example 1: <action-oriented headline>
 
-**Status:** <Completed or in progress, and one concrete sentence about what shipped or changed.>
+### Outcome or progress
+_What changed, who was impacted, and the evidence. If the impact is still in progress, say what is done and what is left._
+- 
 
-**Impact**
-- <Who or what improved: team, users, organization, reliability, launch.>
-- <Evidence: numbers if you have them, otherwise concrete outcomes.>
+### CLG behaviors demonstrated
+_The behaviors this work needed and how you showed them, with one concrete action each._
+- Complexity: 
+- Risk management: 
+- Influence and communication: 
 
-**Details**
-- <Your ownership, scope and sequencing. Who you worked with.>
-- <The hardest technical or coordination problem and how you handled it.>
+### Learnings and next steps
+_What you will carry forward, and what you will do next to keep developing._
+- 
 
-**CLG behaviors demonstrated**
-- Complexity: <...>
-- Risk management: <...>
-- Influence and communication: <...>
+## Example 2: <action-oriented headline>
 
-**Learnings going forward**
-- <What you learned and what you will do next.>
+### Outcome or progress
+- 
 
-2. <Second example, same structure>
+### CLG behaviors demonstrated
+- 
 
-**Development focus for next half**
-- <What you want to grow next, tied to the work above.>"""
+### Learnings and next steps
+- 
+
+## Development focus for next half
+_Where you want to grow next, tied to the work above._
+- """
 focus_priorities = true
 focus_priority_help = "Select department goals you want this Lattice answer to emphasize. Brag Frog will still use linked contribution examples, priorities, and logbook evidence."
 prompt = """Write one paste-ready answer for this Lattice self-review question:
