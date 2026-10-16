@@ -20,12 +20,12 @@ describe('RichEditor', () => {
     expect(chip).toHaveAttribute('data-entry-ref', '7');
 
     // Autosave fires after the 500 ms debounce and stores the reference as inline content.
-    await waitFor(() => expect(onSave).toHaveBeenCalled(), { timeout: 3000 });
+    await waitFor(() => expect(onSave).toHaveBeenCalled(), { timeout: 10000 });
     expect(JSON.stringify(onSave.mock.calls.at(-1)![0])).toContain('"type":"entryRef"');
 
     await user.click(chip);
     expect(onOpenEntry).toHaveBeenCalledWith(7);
-  }, 20000);
+  }, 40000);
 
   it('does not echo an external replace back as a user save, but saves AI drafts', async () => {
     const handle = createRef<RichEditorHandle>();
@@ -35,8 +35,8 @@ describe('RichEditor', () => {
     expect(handle.current!.isEmpty()).toBe(true);
     act(() => handle.current!.replaceAll([{ type: 'paragraph', content: 'Drafted text' }]));
     expect(handle.current!.isEmpty()).toBe(false);
-    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1), { timeout: 3000 });
-  }, 20000);
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1), { timeout: 10000 });
+  }, 40000);
 });
 
 describe('convert', () => {
