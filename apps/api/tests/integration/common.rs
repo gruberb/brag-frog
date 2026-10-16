@@ -98,6 +98,7 @@ impl TestApp {
             templates: Arc::new(templates),
             crypto: crypto.clone(),
             sync_status: brag_frog::integrations::sync_status::new_sync_status_map(),
+            entry_facets: brag_frog::api::facets::new_facet_map(),
         };
 
         // Build app with a test-only login route

@@ -1,3 +1,4 @@
+mod api_core_tests;
 mod api_tests;
 mod common;
 mod db_tests;
