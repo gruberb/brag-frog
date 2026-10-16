@@ -192,7 +192,7 @@ fn checkbox_value<'a>(input: &'a IntegrationForm, name: &str) -> Option<&'a Opti
 }
 
 /// Insert non-empty form fields into a fresh JSON config map.
-fn build_config_json(input: &IntegrationForm, service: &str) -> Option<String> {
+pub(crate) fn build_config_json(input: &IntegrationForm, service: &str) -> Option<String> {
     let mut config = serde_json::Map::new();
     let fields: &[(&str, &Option<String>)] = &[
         ("username", &input.username),
@@ -223,7 +223,7 @@ fn build_config_json(input: &IntegrationForm, service: &str) -> Option<String> {
 }
 
 /// Merge non-empty form fields into an existing JSON config (for test_connection).
-fn merge_form_into_config(
+pub(crate) fn merge_form_into_config(
     mut saved: serde_json::Value,
     input: &IntegrationForm,
     service: &str,
@@ -459,7 +459,7 @@ pub struct ResetQuery {
 }
 
 /// Map a service/integration name to the source names used in `brag_entries.source`.
-fn service_to_sources(service: &str) -> Vec<&str> {
+pub(crate) fn service_to_sources(service: &str) -> Vec<&str> {
     match service {
         "atlassian" => vec!["jira", "confluence"],
         "google_drive" => vec!["google_drive"],

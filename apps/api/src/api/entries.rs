@@ -15,9 +15,9 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use super::auth::ApiAuth;
-use super::cycles::owned_cycle;
 use super::error::{ApiError, ApiResult};
 use super::facets;
+use super::scope::resolve_cycle;
 use crate::AppState;
 use crate::cycle::model::{BragPhase, Week};
 use crate::cycle::routes::logbook_insights::{
@@ -156,7 +156,7 @@ pub struct EntryPage {
 /// Filter keys shared with the report endpoint (`POST /reports` uses the same names).
 #[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
 #[ts(export)]
-pub struct EntryFilter {
+pub struct LogbookFilter {
     #[serde(default)]
     #[ts(optional)]
     pub from: Option<String>,
@@ -207,7 +207,7 @@ pub struct EntryFilter {
 }
 
 /// Query-string form of the list endpoint. Fields are spelled out instead of flattening
-/// `EntryFilter`, because serde cannot parse numbers and booleans through `#[serde(flatten)]`
+/// `LogbookFilter`, because serde cannot parse numbers and booleans through `#[serde(flatten)]`
 /// from a query string.
 #[derive(Debug, Deserialize)]
 pub struct ListQuery {
@@ -232,8 +232,8 @@ pub struct ListQuery {
 }
 
 impl ListQuery {
-    fn filter(&self) -> EntryFilter {
-        EntryFilter {
+    fn filter(&self) -> LogbookFilter {
+        LogbookFilter {
             from: self.from.clone(),
             to: self.to.clone(),
             source: self.source.clone(),
@@ -257,7 +257,7 @@ fn flag(v: Option<bool>) -> Option<String> {
     v.filter(|b| *b).map(|_| "1".to_string())
 }
 
-impl EntryFilter {
+impl LogbookFilter {
     fn as_page_query(&self) -> AnalyzePageQuery {
         AnalyzePageQuery {
             department_goal_id: self.goal_id.map(|v| v.to_string()),
@@ -277,20 +277,6 @@ impl EntryFilter {
     }
 }
 
-/// Resolves the cycle for a request: the given id (ownership checked) or the active cycle.
-pub async fn resolve_cycle(
-    state: &AppState,
-    user_id: i64,
-    cycle_id: Option<i64>,
-) -> Result<BragPhase, ApiError> {
-    match cycle_id {
-        Some(id) => owned_cycle(state, id, user_id).await,
-        None => BragPhase::get_active(&state.db, user_id)
-            .await?
-            .ok_or_else(|| ApiError::invalid("No active cycle")),
-    }
-}
-
 /// Runs the filter against a cycle and returns display-ready entries, newest first, with
 /// people aliases applied. Future synced entries (upcoming meetings) are hidden; manual
 /// entries with future dates stay. Shared by the entries list and by reports.
@@ -299,7 +285,7 @@ pub async fn filtered_entries(
     user_id: i64,
     crypto: &crate::kernel::crypto::UserCrypto,
     phase: &BragPhase,
-    filter: &EntryFilter,
+    filter: &LogbookFilter,
 ) -> Result<Vec<BragEntry>, ApiError> {
     let today = Local::now().format("%Y-%m-%d").to_string();
     let sources: Vec<String> = filter
@@ -432,7 +418,7 @@ pub async fn facets_handler(
         auth.user_id,
         &auth.crypto,
         &phase,
-        &EntryFilter::default(),
+        &LogbookFilter::default(),
     )
     .await?;
     let mut teams = BTreeSet::new();

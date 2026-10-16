@@ -2,18 +2,22 @@
 //! bounded contexts and only translate to and from wire types.
 
 pub mod auth;
+pub mod config;
 pub mod cycles;
 pub mod dto;
 pub mod entries;
 pub mod error;
 pub mod facets;
+pub mod integrations;
 pub mod me;
 pub mod priorities;
 pub mod reports;
 pub mod review;
 pub mod scope;
 pub mod settings;
+pub mod sync;
 pub mod today;
+pub mod trends;
 
 use axum::{
     Router, middleware,
@@ -97,6 +101,21 @@ pub fn router() -> Router<AppState> {
             "/api/v1/reports/{id}",
             get(reports::get_report).delete(reports::delete_report),
         )
+        .route("/api/v1/config", get(config::get_config))
+        .route("/api/v1/trends", get(trends::get_trends))
+        .route("/api/v1/integrations", get(integrations::list))
+        .route(
+            "/api/v1/integrations/{service}",
+            put(integrations::save).delete(integrations::reset),
+        )
+        .route("/api/v1/integrations/{service}/test", post(integrations::test))
+        .route(
+            "/api/v1/integrations/{service}/excluded/{id}",
+            delete(integrations::restore_excluded),
+        )
+        .route("/api/v1/sync", post(sync::sync_all))
+        .route("/api/v1/sync/status", get(sync::status))
+        .route("/api/v1/sync/{service}", post(sync::sync_service))
         .layer(middleware::from_fn(auth::require_auth_api))
         .layer(middleware::from_fn(csrf_protection))
 }

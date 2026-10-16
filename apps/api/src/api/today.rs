@@ -12,7 +12,8 @@ use ts_rs::TS;
 
 use super::auth::ApiAuth;
 use super::dto::CycleDto;
-use super::entries::{EntryDto, resolve_cycle};
+use super::entries::EntryDto;
+use super::scope::resolve_cycle;
 use super::error::{ApiError, ApiResult};
 use crate::AppState;
 use crate::ai::get_ai_client;

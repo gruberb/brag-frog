@@ -360,12 +360,12 @@ async fn today_returns_week_columns_and_active_priorities() {
 }
 
 #[tokio::test]
-async fn today_without_cycle_is_422() {
+async fn today_without_cycle_is_404() {
     let app = TestApp::new().await;
     let uid = common::create_test_user(&app.pool).await;
     let cookie = app.login(uid).await;
     let r = app.get_json("/api/v1/today", Some(&cookie)).await;
-    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(r.status, StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]

@@ -12,6 +12,7 @@ use ts_rs::TS;
 use super::auth::ApiAuth;
 use super::dto::CycleDto;
 use super::error::{ApiError, ApiResult};
+use super::scope::owned_cycle;
 use crate::AppState;
 use crate::cycle::model::{BragPhase, CreatePhase};
 
@@ -39,18 +40,6 @@ pub struct CreateCycleRequest {
 pub struct DeleteCycleRequest {
     /// Must equal the cycle's name. Deleting a cycle removes all of its data.
     pub confirm_name: String,
-}
-
-/// Loads a cycle the user owns or fails with 404. Every cycle-scoped endpoint starts here
-/// because `brag_entries` and the other tables only reach a user through their cycle.
-pub async fn owned_cycle(
-    state: &AppState,
-    cycle_id: i64,
-    user_id: i64,
-) -> Result<BragPhase, ApiError> {
-    BragPhase::find_by_id(&state.db, cycle_id, user_id)
-        .await?
-        .ok_or_else(|| ApiError::not_found("Cycle not found"))
 }
 
 fn parse_date(label: &str, value: &str) -> Result<NaiveDate, ApiError> {
@@ -130,9 +119,9 @@ pub async fn activate(
     Path(id): Path<i64>,
 ) -> ApiResult<CycleDto> {
     // `set_active` deactivates every cycle first, so an unowned id must be rejected before it.
-    owned_cycle(&state, id, auth.user_id).await?;
+    owned_cycle(&state, auth.user_id, id).await?;
     BragPhase::set_active(&state.db, id, auth.user_id).await?;
-    let phase = owned_cycle(&state, id, auth.user_id).await?;
+    let phase = owned_cycle(&state, auth.user_id, id).await?;
     Ok(Json(phase.into()))
 }
 
@@ -143,7 +132,7 @@ pub async fn delete(
     Path(id): Path<i64>,
     Json(input): Json<DeleteCycleRequest>,
 ) -> Result<StatusCode, ApiError> {
-    let phase = owned_cycle(&state, id, auth.user_id).await?;
+    let phase = owned_cycle(&state, auth.user_id, id).await?;
     if input.confirm_name != phase.name {
         return Err(ApiError::invalid("confirm_name does not match the cycle name"));
     }
