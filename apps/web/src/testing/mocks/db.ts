@@ -110,7 +110,7 @@ function createDb() {
   const preps: Record<number, { notes: string | null; meeting_goal: string | null; doc_urls: string | null; updated_at: string }> = { 7002: { notes: 'Talk about growth', meeting_goal: null, doc_urls: null, updated_at: iso(-1) } };
   const reports: ReportDto[] = [];
   const integrations: IntegrationDto[] = [
-    integration('github', 'GitHub', { entry_count: 188, token_url: 'https://github.com/settings/tokens/new', note: 'Create a classic token.', fields: [field('org', 'Organizations', { placeholder: 'my-org', value: 'mozilla' }), field('sync_pr_authored', 'Sync authored PRs', { field_type: 'checkbox', default_value: true, value: true })] }),
+    integration('github', 'GitHub', { entry_count: 188, token_url: 'https://github.com/settings/tokens/new', note: 'Create a classic token.', fields: [field('org', 'Organizations', { placeholder: 'my-org', value: 'acme' }), field('sync_pr_authored', 'Sync authored PRs', { field_type: 'checkbox', default_value: true, value: true })] }),
     integration('phabricator', 'Phabricator', { entry_count: 74, fields: [field('base_url', 'Base URL', { placeholder: 'https://phabricator.example.com', value: 'https://phabricator.example.com' })] }),
     integration('bugzilla', 'Bugzilla', { entry_count: 12, last_sync_status: 'error', last_sync_error: 'token expired', fields: [field('base_url', 'Base URL'), field('email', 'Email')] }),
     integration('atlassian', 'Atlassian', { entry_count: 40, note: 'Syncs Jira and Confluence.', fields: [field('base_url', 'Base URL', { placeholder: 'https://your-org.atlassian.net', default_value: 'https://example.atlassian.net', value: 'https://example.atlassian.net' }), field('email', 'Email')] }),

@@ -15,11 +15,3 @@ export function describeFilters(f: EntryFilters, priorityNames: Record<string, s
   if (f.no_person) out.push('No person');
   return out;
 }
-
-/** Filters the report endpoint understands (`ReportFilters`). Category and the "no X" views are list-only. */
-export function toReportFilters(f: EntryFilters) {
-  const { from, to, priority_id, goal_id, source, q, team, person, reach, complexity, role } = f;
-  return { from, to, priority_id, goal_id, source, q, team, person, reach, complexity, role };
-}
-
-export const hasListOnlyFilters = (f: EntryFilters) => !!(f.category || f.no_priority || f.no_team || f.no_person);

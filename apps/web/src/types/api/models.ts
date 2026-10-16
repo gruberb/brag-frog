@@ -1,3 +1,4 @@
+import type { LogbookFilter } from './LogbookFilter';
 // UI-facing aliases over the generated ts-rs types in this folder (the generated files are the source of truth).
 // Only types that exist purely on the client are defined here.
 import type { EntryDto } from './EntryDto';
@@ -37,7 +38,7 @@ export type { ReviewSectionConfig } from './ReviewSectionConfig';
 export type { ArchiveResponse as Archive } from './ArchiveResponse';
 export type { ReportDto as Report } from './ReportDto';
 export type { ReportListItem as ReportMeta } from './ReportListItem';
-export type { ReportFilters } from './ReportFilters';
+export type { LogbookFilter } from './LogbookFilter';
 export type { ReportStats } from './ReportStats';
 export type { ReportKeyEntry } from './ReportKeyEntry';
 export type { CreateReportRequest as ReportInput } from './CreateReportRequest';
@@ -62,24 +63,8 @@ export type { UpsertPersonRequest as PeopleAliasInput } from './UpsertPersonRequ
 export type ContentFormat = 'markdown' | 'blocknote';
 export type EntrySource = 'github' | 'phabricator' | 'bugzilla' | 'jira' | 'confluence' | 'google_calendar' | 'google_drive' | 'manual';
 
-/** Logbook filters as they appear in the URL and in `GET /entries` (the generated `LogbookFilter` plus nothing else). */
-export type EntryFilters = {
-  from?: string;
-  to?: string;
-  source?: string;
-  priority_id?: number;
-  goal_id?: number;
-  category?: string;
-  q?: string;
-  team?: string;
-  person?: string;
-  reach?: string;
-  complexity?: string;
-  role?: string;
-  no_priority?: boolean;
-  no_team?: boolean;
-  no_person?: boolean;
-};
+/** Logbook filters as they appear in the URL, in `GET /entries` and in saved reports. */
+export type EntryFilters = LogbookFilter;
 
 /** List rows only need a few fields; the list endpoint returns full DTOs. */
 export type EntrySummary = EntryDto;

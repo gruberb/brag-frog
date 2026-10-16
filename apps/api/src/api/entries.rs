@@ -20,9 +20,7 @@ use super::facets;
 use super::scope::resolve_cycle;
 use crate::AppState;
 use crate::cycle::model::{BragPhase, Week};
-use crate::cycle::service::logbook_insights::{
-    AnalyzePageQuery, apply_in_memory_filters, category_to_entry_types,
-};
+use crate::cycle::service::logbook_insights::LogbookFilter;
 use crate::identity::model::PeopleAlias;
 use crate::kernel::error::AppError;
 use crate::objectives::model::Priority;
@@ -153,59 +151,6 @@ pub struct EntryPage {
     pub total_matching: usize,
 }
 
-/// Filter keys shared with the report endpoint (`POST /reports` uses the same names).
-#[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
-#[ts(export)]
-pub struct LogbookFilter {
-    #[serde(default)]
-    #[ts(optional)]
-    pub from: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub to: Option<String>,
-    /// Comma-separated sources (`github,phabricator`).
-    #[serde(default)]
-    #[ts(optional)]
-    pub source: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub priority_id: Option<i64>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub goal_id: Option<i64>,
-    /// Entry type category (`code`, `reviews`, `docs`, `meetings`, `collaboration`, `learning`).
-    #[serde(default)]
-    #[ts(optional)]
-    pub category: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub q: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub team: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub person: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub reach: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub complexity: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub role: Option<String>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub no_priority: Option<bool>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub no_team: Option<bool>,
-    #[serde(default)]
-    #[ts(optional)]
-    pub no_person: Option<bool>,
-}
-
 /// Query-string form of the list endpoint. Fields are spelled out instead of flattening
 /// `LogbookFilter`, because serde cannot parse numbers and booleans through `#[serde(flatten)]`
 /// from a query string.
@@ -253,30 +198,6 @@ impl ListQuery {
     }
 }
 
-fn flag(v: Option<bool>) -> Option<String> {
-    v.filter(|b| *b).map(|_| "1".to_string())
-}
-
-impl LogbookFilter {
-    fn as_page_query(&self) -> AnalyzePageQuery {
-        AnalyzePageQuery {
-            department_goal_id: self.goal_id.map(|v| v.to_string()),
-            priority_id: self.priority_id.map(|v| v.to_string()),
-            category: self.category.clone(),
-            source: self.source.clone(),
-            team: self.team.clone(),
-            collaborator: self.person.clone(),
-            search: self.q.clone(),
-            no_priority: flag(self.no_priority),
-            no_team: flag(self.no_team),
-            no_collaborator: flag(self.no_person),
-            reach: self.reach.clone(),
-            complexity: self.complexity.clone(),
-            role: self.role.clone(),
-        }
-    }
-}
-
 /// Runs the filter against a cycle and returns display-ready entries, newest first, with
 /// people aliases applied. Future synced entries (upcoming meetings) are hidden; manual
 /// entries with future dates stay. Shared by the entries list and by reports.
@@ -288,14 +209,6 @@ pub async fn filtered_entries(
     filter: &LogbookFilter,
 ) -> Result<Vec<BragEntry>, ApiError> {
     let today = Local::now().format("%Y-%m-%d").to_string();
-    let sources: Vec<String> = filter
-        .source
-        .as_deref()
-        .unwrap_or("")
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
     let start = filter.from.clone().unwrap_or_else(|| phase.start_date.clone());
     let end = filter.to.clone().unwrap_or_else(|| phase.end_date.clone());
 
@@ -307,7 +220,7 @@ pub async fn filtered_entries(
         &[],
         Some(&start),
         Some(&end),
-        &sources,
+        &filter.sources(),
         crypto,
     )
     .await?;
@@ -318,11 +231,7 @@ pub async fn filtered_entries(
     let team_map = PeopleAlias::team_map(&state.db, user_id).await?;
     PeopleAlias::apply_to_entries(&mut entries, &alias_map, &team_map);
 
-    apply_in_memory_filters(&mut entries, &filter.as_page_query());
-    if let Some(cat) = filter.category.as_deref().filter(|c| !c.is_empty()) {
-        let allowed = category_to_entry_types(cat);
-        entries.retain(|e| allowed.contains(&e.entry_type.as_str()));
-    }
+    filter.apply_in_memory(&mut entries);
     // Stable order for cursor paging.
     entries.sort_by(|a, b| {
         b.occurred_at

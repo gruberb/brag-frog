@@ -18,12 +18,12 @@ use super::scope::owned_cycle;
 use crate::AppState;
 use crate::ai::get_ai_client;
 use crate::ai::prompts::build_self_reflection_prompt;
-use crate::cycle::model::{LastWeekReport, StatusUpdate, Week};
+use crate::cycle::model::Week;
 use crate::identity::model::User;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::reflections::model::QuarterlyCheckin;
+use crate::archive;
 use crate::review::model::{
-    ContributionExample, ReviewSection, Summary, get_section, review_config,
+    ReviewSection, Summary, get_section, review_config,
 };
 use crate::worklog::model::BragEntry;
 
@@ -199,10 +199,10 @@ pub async fn draft_section(
         .collect();
 
     // Retired contribution examples still feed the prompt, as they did before the redesign.
-    let examples = ContributionExample::list_for_phase(&state.db, cycle.id, &auth.crypto).await?;
+    let examples = archive::contribution_examples(&state.db, cycle.id, &auth.crypto).await?;
     let mut example_entry_ids: HashMap<i64, Vec<i64>> = HashMap::new();
     for (example_id, entry_id, _) in
-        ContributionExample::linked_entries_for_phase(&state.db, cycle.id, &auth.crypto).await?
+        archive::example_entries(&state.db, cycle.id, &auth.crypto).await?
     {
         example_entry_ids
             .entry(example_id)
@@ -318,11 +318,11 @@ pub async fn get_archive(
     let cycle = owned_cycle(&state, auth.user_id, cycle_id).await?;
     let crypto = &auth.crypto;
 
-    let checkins = QuarterlyCheckin::list_for_phase(&state.db, cycle.id, crypto).await?;
-    let examples = ContributionExample::list_for_phase(&state.db, cycle.id, crypto).await?;
-    let links = ContributionExample::linked_entries_for_phase(&state.db, cycle.id, crypto).await?;
-    let status_updates = StatusUpdate::list_for_phase(&state.db, cycle.id, crypto).await?;
-    let reports = LastWeekReport::list_for_phase(&state.db, cycle.id, crypto).await?;
+    let checkins = archive::checkins(&state.db, cycle.id, crypto).await?;
+    let examples = archive::contribution_examples(&state.db, cycle.id, crypto).await?;
+    let links = archive::example_entries(&state.db, cycle.id, crypto).await?;
+    let status_updates = archive::status_updates(&state.db, cycle.id, crypto).await?;
+    let reports = archive::last_week_reports(&state.db, cycle.id, crypto).await?;
     let week_starts: HashMap<i64, String> = Week::list_for_phase(&state.db, cycle.id)
         .await?
         .into_iter()

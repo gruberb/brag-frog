@@ -56,7 +56,7 @@ src/
   objectives/           # Priorities, department goals, priority updates, Lattice CSV import
   cycle/                # Cycles (BragPhase), weeks, meeting prep notes, dashboard, trends, logbook insights
   review/               # Summaries (review sections), reports, AI documents, report stats
-  reflections/          # Legacy check-in tables, kept for the read-only archive
+  archive.rs            # Read-only access to retired features' tables (check-ins, examples, status updates, last-week reports)
   integrations/         # External service sync
     mod.rs              # SyncService trait, SyncedEntry, ConnectionStatus
     orchestrator.rs     # run_sync, entry persistence, cycle window resolution

@@ -38,9 +38,6 @@ impl ApiError {
         Self::new(StatusCode::NOT_FOUND, "not_found", message)
     }
 
-    pub fn status(&self) -> StatusCode {
-        self.status
-    }
 }
 
 impl From<AppError> for ApiError {

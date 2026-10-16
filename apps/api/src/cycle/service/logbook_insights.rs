@@ -1,135 +1,134 @@
+//! The Logbook filter set, shared by the entries list, reports and anything else that
+//! selects "the entries the user is looking at".
+
+use serde::{Deserialize, Serialize};
+use ts_rs::TS;
+
 use crate::worklog::model::{BragEntry, EntryType};
 
-/// Delegates to `EntryType::types_for_category`. Public for callers that
-/// use the logbook_insights module directly (e.g., trends).
-pub fn category_to_entry_types(category: &str) -> Vec<&'static str> {
-    EntryType::types_for_category(category)
-}
-
-/// Query parameters for analyze filters (string types for URL state round-tripping).
-#[derive(serde::Deserialize)]
-pub struct AnalyzePageQuery {
-    pub department_goal_id: Option<String>,
-    pub priority_id: Option<String>,
-    pub category: Option<String>,
+/// Which entries to look at. Every field is optional; comma-separated fields hold several
+/// values. The same keys are used as query parameters and in saved reports.
+#[derive(Debug, Default, Clone, Deserialize, Serialize, TS)]
+#[ts(export)]
+pub struct LogbookFilter {
+    /// Inclusive `YYYY-MM-DD`. Defaults to the cycle start.
+    #[serde(default)]
+    #[ts(optional)]
+    pub from: Option<String>,
+    /// Inclusive `YYYY-MM-DD`. Defaults to the cycle end.
+    #[serde(default)]
+    #[ts(optional)]
+    pub to: Option<String>,
+    /// Comma-separated sources (`github,phabricator`).
+    #[serde(default)]
+    #[ts(optional)]
     pub source: Option<String>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub priority_id: Option<i64>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub goal_id: Option<i64>,
+    /// Entry type category (`code`, `reviews`, `docs`, `meetings`, `collaboration`, `learning`).
+    #[serde(default)]
+    #[ts(optional)]
+    pub category: Option<String>,
+    /// Case-insensitive title search.
+    #[serde(default)]
+    #[ts(optional)]
+    pub q: Option<String>,
+    /// Comma-separated team names.
+    #[serde(default)]
+    #[ts(optional)]
     pub team: Option<String>,
-    pub collaborator: Option<String>,
-    pub search: Option<String>,
-    pub no_priority: Option<String>,
-    pub no_team: Option<String>,
-    pub no_collaborator: Option<String>,
+    /// Comma-separated collaborator names (after alias resolution).
+    #[serde(default)]
+    #[ts(optional)]
+    pub person: Option<String>,
+    #[serde(default)]
+    #[ts(optional)]
     pub reach: Option<String>,
+    #[serde(default)]
+    #[ts(optional)]
     pub complexity: Option<String>,
+    #[serde(default)]
+    #[ts(optional)]
     pub role: Option<String>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub no_priority: Option<bool>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub no_team: Option<bool>,
+    #[serde(default)]
+    #[ts(optional)]
+    pub no_person: Option<bool>,
 }
 
-/// Apply in-memory filters that can't be done via SQL (encrypted fields, text search, special filters).
-pub fn apply_in_memory_filters(entries: &mut Vec<BragEntry>, query: &AnalyzePageQuery) {
-    // Text search on title
-    if let Some(ref search) = query.search {
-        let search = search.trim().to_lowercase();
-        if !search.is_empty() {
+fn split_csv(v: &Option<String>) -> Vec<String> {
+    v.as_deref()
+        .unwrap_or("")
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn trimmed(v: &Option<String>) -> Option<&str> {
+    v.as_deref().map(str::trim).filter(|s| !s.is_empty())
+}
+
+fn has_any(csv: &Option<String>, wanted: &[String]) -> bool {
+    let have: Vec<&str> = csv.as_deref().unwrap_or("").split(',').map(str::trim).collect();
+    wanted.iter().any(|w| have.contains(&w.as_str()))
+}
+
+fn is_blank(v: &Option<String>) -> bool {
+    v.as_deref().is_none_or(|s| s.trim().is_empty())
+}
+
+impl LogbookFilter {
+    /// Source names the SQL query filters on.
+    pub fn sources(&self) -> Vec<String> {
+        split_csv(&self.source)
+    }
+
+    /// Applies what SQL cannot do (title, teams and collaborators are encrypted): text search,
+    /// teams, people, reach, complexity, role, entry category and the "missing X" views.
+    pub fn apply_in_memory(&self, entries: &mut Vec<BragEntry>) {
+        if let Some(search) = trimmed(&self.q) {
+            let search = search.to_lowercase();
             entries.retain(|e| e.title.to_lowercase().contains(&search));
         }
-    }
-
-    // Filter by team
-    let filter_teams: Vec<String> = query
-        .team
-        .as_deref()
-        .unwrap_or("")
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-    if !filter_teams.is_empty() {
-        entries.retain(|e| {
-            if let Some(ref teams) = e.teams {
-                let entry_teams: Vec<&str> = teams.split(',').map(|s| s.trim()).collect();
-                filter_teams
-                    .iter()
-                    .any(|ft| entry_teams.contains(&ft.as_str()))
-            } else {
-                false
-            }
-        });
-    }
-
-    // Filter by collaborator
-    let filter_collabs: Vec<String> = query
-        .collaborator
-        .as_deref()
-        .unwrap_or("")
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-    if !filter_collabs.is_empty() {
-        entries.retain(|e| {
-            if let Some(ref collabs) = e.collaborators {
-                let entry_collabs: Vec<&str> = collabs.split(',').map(|s| s.trim()).collect();
-                filter_collabs
-                    .iter()
-                    .any(|fc| entry_collabs.contains(&fc.as_str()))
-            } else {
-                false
-            }
-        });
-    }
-
-    // Filter by reach
-    if let Some(ref reach) = query.reach {
-        let reach = reach.trim();
-        if !reach.is_empty() {
+        let teams = split_csv(&self.team);
+        if !teams.is_empty() {
+            entries.retain(|e| has_any(&e.teams, &teams));
+        }
+        let people = split_csv(&self.person);
+        if !people.is_empty() {
+            entries.retain(|e| has_any(&e.collaborators, &people));
+        }
+        if let Some(reach) = trimmed(&self.reach) {
             entries.retain(|e| e.reach.as_deref() == Some(reach));
         }
-    }
-
-    // Filter by complexity
-    if let Some(ref complexity) = query.complexity {
-        let complexity = complexity.trim();
-        if !complexity.is_empty() {
+        if let Some(complexity) = trimmed(&self.complexity) {
             entries.retain(|e| e.complexity.as_deref() == Some(complexity));
         }
-    }
-
-    // Filter by role
-    if let Some(ref role) = query.role {
-        let role = role.trim();
-        if !role.is_empty() {
+        if let Some(role) = trimmed(&self.role) {
             entries.retain(|e| e.role.as_deref() == Some(role));
         }
-    }
-
-    // Special: unlinked entries (no priority)
-    if query
-        .no_priority
-        .as_deref()
-        .is_some_and(|s| s == "1" || s == "true")
-    {
-        entries.retain(|e| e.priority_id.is_none());
-    }
-
-    // Special: missing team
-    if query
-        .no_team
-        .as_deref()
-        .is_some_and(|s| s == "1" || s == "true")
-    {
-        entries.retain(|e| e.teams.as_deref().is_none_or(|t| t.trim().is_empty()));
-    }
-
-    // Special: missing collaborator
-    if query
-        .no_collaborator
-        .as_deref()
-        .is_some_and(|s| s == "1" || s == "true")
-    {
-        entries.retain(|e| {
-            e.collaborators
-                .as_deref()
-                .is_none_or(|c| c.trim().is_empty())
-        });
+        if let Some(category) = trimmed(&self.category) {
+            let allowed = EntryType::types_for_category(category);
+            entries.retain(|e| allowed.contains(&e.entry_type.as_str()));
+        }
+        if self.no_priority == Some(true) {
+            entries.retain(|e| e.priority_id.is_none());
+        }
+        if self.no_team == Some(true) {
+            entries.retain(|e| is_blank(&e.teams));
+        }
+        if self.no_person == Some(true) {
+            entries.retain(|e| is_blank(&e.collaborators));
+        }
     }
 }

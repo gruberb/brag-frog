@@ -7,7 +7,7 @@
 @font-face { font-family: 'Mozilla Text'; src: url('/fonts/MozillaText-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: 'Mozilla Text'; src: url('/fonts/MozillaTextItalic-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: italic; font-display: swap; }
 
-/* Design tokens: values copied 1:1 from apps/api/static/css/tokens.css (Mozilla New Products Orange-1 light).
+/* Design tokens: values carried over from the previous server-rendered app .
    `static` emits every variable so the /custom/tokens.css overlay can still override them. */
 @theme static {
   --color-*: initial;

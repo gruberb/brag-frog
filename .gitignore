@@ -6,7 +6,6 @@
 .DS_Store
 plan.md
 custom/
-brag-frog-mozilla/
 website/js/analytics.local.js
 # Local database backups
 *.db.backup*

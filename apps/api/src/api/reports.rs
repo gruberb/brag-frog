@@ -21,15 +21,14 @@ use super::scope::{owned_cycle, resolve_cycle};
 use crate::AppState;
 use crate::ai::get_ai_client;
 use crate::ai::prompts::build_report_prompt;
-use crate::cycle::service::logbook_insights::{AnalyzePageQuery, apply_in_memory_filters};
-use crate::identity::model::PeopleAlias;
+use crate::cycle::service::logbook_insights::LogbookFilter;
+use super::entries::filtered_entries;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::review::model::{NewReport, Report, ReportFilters};
+use crate::review::model::{NewReport, Report};
 use crate::review::service::report_stats::{
     KEY_ENTRY_LIMIT, ReportKeyEntry, ReportStats, compute_report_stats, default_title,
     describe_filters, pick_key_entries,
 };
-use crate::worklog::model::BragEntry;
 
 #[derive(Deserialize, TS)]
 #[ts(export)]
@@ -39,7 +38,7 @@ pub struct CreateReportRequest {
     #[ts(optional)]
     pub title: Option<String>,
     #[serde(default)]
-    pub filters: ReportFilters,
+    pub filters: LogbookFilter,
     #[serde(default)]
     pub with_ai: bool,
 }
@@ -57,7 +56,7 @@ pub struct ReportListItem {
     pub id: i64,
     pub cycle_id: i64,
     pub title: String,
-    pub filters: ReportFilters,
+    pub filters: LogbookFilter,
     pub entry_count: usize,
     pub generated_at: String,
 }
@@ -76,7 +75,7 @@ pub struct ReportDto {
     pub id: i64,
     pub cycle_id: i64,
     pub title: String,
-    pub filters: ReportFilters,
+    pub filters: LogbookFilter,
     pub entry_count: usize,
     pub generated_at: String,
     pub updated_at: String,
@@ -95,7 +94,7 @@ struct Snapshot {
     key_entries: Vec<ReportKeyEntry>,
 }
 
-fn parse_filters(report: &Report) -> Result<ReportFilters, ApiError> {
+fn parse_filters(report: &Report) -> Result<LogbookFilter, ApiError> {
     serde_json::from_str(&report.filters_json)
         .map_err(|e| internal(format!("stored report filters are unreadable: {e}")))
 }
@@ -140,68 +139,6 @@ fn check_date(field: &str, value: &Option<String>) -> Result<(), ApiError> {
     }
 }
 
-fn csv(value: &Option<String>) -> Vec<String> {
-    value
-        .as_deref()
-        .unwrap_or("")
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect()
-}
-
-/// Runs the Logbook query for a filter set: SQL for dates, priority, goal, type and source,
-/// then the in-memory filters for the encrypted fields. Future synced entries (upcoming
-/// calendar events) are left out, as in the Logbook.
-async fn filtered_entries(
-    state: &AppState,
-    user_id: i64,
-    cycle_id: i64,
-    from: &str,
-    to: &str,
-    f: &ReportFilters,
-    crypto: &crate::kernel::crypto::UserCrypto,
-) -> Result<Vec<BragEntry>, ApiError> {
-    let mut entries = BragEntry::list_for_phase_filtered(
-        &state.db,
-        cycle_id,
-        f.priority_id,
-        f.goal_id,
-        &csv(&f.entry_type),
-        Some(from),
-        Some(to),
-        &csv(&f.source),
-        crypto,
-    )
-    .await?;
-
-    let today = chrono::Local::now().format("%Y-%m-%d").to_string();
-    entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today.as_str());
-
-    // Aliases first so `person` and `team` match the names the Logbook shows.
-    let alias_map = PeopleAlias::alias_map(&state.db, user_id).await?;
-    let team_map = PeopleAlias::team_map(&state.db, user_id).await?;
-    PeopleAlias::apply_to_entries(&mut entries, &alias_map, &team_map);
-
-    let query = AnalyzePageQuery {
-        department_goal_id: None,
-        priority_id: None,
-        category: None,
-        source: None,
-        team: f.team.clone(),
-        collaborator: f.person.clone(),
-        search: f.q.clone(),
-        no_priority: None,
-        no_team: None,
-        no_collaborator: None,
-        reach: f.reach.clone(),
-        complexity: f.complexity.clone(),
-        role: f.role.clone(),
-    };
-    apply_in_memory_filters(&mut entries, &query);
-    Ok(entries)
-}
-
 /// `POST /api/v1/reports`
 pub async fn create_report(
     ApiAuth(auth): ApiAuth,
@@ -235,16 +172,7 @@ pub async fn create_report(
         return Err(ApiError::not_found("Department goal not found"));
     }
 
-    let entries = filtered_entries(
-        &state,
-        auth.user_id,
-        cycle.id,
-        &from,
-        &to,
-        &filters,
-        &auth.crypto,
-    )
-    .await?;
+    let entries = filtered_entries(&state, auth.user_id, &auth.crypto, &cycle, &filters).await?;
     if entries.is_empty() {
         return Err(ApiError::new(
             StatusCode::UNPROCESSABLE_ENTITY,

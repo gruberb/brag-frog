@@ -3,7 +3,8 @@ use std::collections::{HashMap, HashSet};
 use crate::cycle::model::MeetingPrepNote;
 use crate::identity::clg::ClgLevel;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::review::model::{AiDocument, ContributionExample, get_section};
+use crate::archive::ContributionExample;
+use crate::review::model::{AiDocument, get_section};
 use crate::worklog::model::BragEntry;
 
 /// Assembles a complete prompt for one self-review section.
@@ -1196,9 +1197,6 @@ mod tests {
             learnings: None,
             assessment_type: None,
             status: "draft".to_string(),
-            sort_order: id,
-            created_at: "2026-01-01".to_string(),
-            updated_at: "2026-01-01".to_string(),
         }
     }
 

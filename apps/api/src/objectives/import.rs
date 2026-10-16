@@ -12,8 +12,6 @@ pub struct LatticeRow {
     pub goal_type: Option<String>,
     #[serde(alias = "Status", default)]
     pub status: Option<String>,
-    #[serde(alias = "Start date", alias = "Start Date", default)]
-    pub start_date: Option<String>,
     #[serde(alias = "Due date", alias = "Due Date", alias = "End date", alias = "End Date", default)]
     pub due_date: Option<String>,
     #[serde(alias = "Goal ID", alias = "Goal Id", alias = "ID", alias = "Id", default)]

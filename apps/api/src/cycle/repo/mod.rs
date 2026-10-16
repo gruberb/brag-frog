@@ -1,9 +1,7 @@
 //! Persistence layer for the cycle bounded context.
 //! All SQL queries live here — `model.rs` contains no SQL.
 
-pub mod last_week_report;
 mod meeting;
-pub mod status_update;
 
 use chrono::{Datelike, NaiveDate};
 use sqlx::SqlitePool;

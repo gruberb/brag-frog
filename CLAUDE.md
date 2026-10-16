@@ -31,7 +31,7 @@ custom/          operator overrides (gitignored)
 website/         landing page (separate from the app)
 ```
 
-`apps/api/src/`: `app.rs` (state, router, web app serving), `lib.rs` (modules + `AppState`), `main.rs`. Modules: `api/` (JSON handlers, DTOs, one file per area), `ai/` (client, prompts), `cycle/` (cycles, weeks, meeting prep, trends, logbook insights), `reflections/` (legacy check-in data), `review/` (summaries, reports, AI documents), `db/`, `identity/` (OAuth redirects, users, career levels), `integrations/` (external service sync), `kernel/` (config, crypto, errors, middleware), `objectives/` (priorities, department goals), `worklog/` (entries, entry types).
+`apps/api/src/`: `app.rs` (state, router, web app serving), `lib.rs` (modules + `AppState`), `main.rs`. Modules: `api/` (JSON handlers, DTOs, one file per area), `ai/` (client, prompts), `cycle/` (cycles, weeks, meeting prep, trends, logbook insights), `archive.rs` (read-only legacy data: check-ins, contribution examples, status updates, last-week reports), `review/` (summaries, reports, AI documents), `db/`, `identity/` (OAuth redirects, users, career levels), `integrations/` (external service sync), `kernel/` (config, crypto, errors, middleware), `objectives/` (priorities, department goals), `worklog/` (entries, entry types).
 
 `apps/web/src/`: `app/` (router, routes, provider), `components/` (ui, layout, editor), `features/` (auth, cycles, entries, integrations, logbook, priorities, review, settings, today, trends), `hooks/ lib/ stores/ utils/ config/ testing/`, `types/api/` (generated).
 

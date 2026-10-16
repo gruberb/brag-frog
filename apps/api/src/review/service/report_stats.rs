@@ -7,7 +7,7 @@ use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::review::model::ReportFilters;
+use crate::cycle::service::logbook_insights::LogbookFilter;
 use crate::worklog::model::BragEntry;
 
 /// How many names the `*_top` lists keep.
@@ -254,10 +254,10 @@ pub fn default_title(priority_name: Option<&str>, from: &str, to: &str) -> Strin
 
 /// One line describing the active filters, for the AI prompt. Dates and the priority are
 /// described separately by the caller.
-pub fn describe_filters(f: &ReportFilters) -> String {
+pub fn describe_filters(f: &LogbookFilter) -> String {
     let parts: Vec<String> = [
         ("source", &f.source),
-        ("type", &f.entry_type),
+        ("category", &f.category),
         ("title contains", &f.q),
         ("team", &f.team),
         ("person", &f.person),
@@ -330,11 +330,11 @@ mod tests {
     fn counts_distinct_people_repos_and_teams() {
         let mut a = entry(1, "2025-01-14");
         a.collaborators = Some("Ann, Bob, Ann".into());
-        a.repository = Some("mozilla/foo".into());
+        a.repository = Some("acme/foo".into());
         a.teams = Some("Search".into());
         let mut b = entry(2, "2025-01-15");
         b.collaborators = Some("Ann".into());
-        b.repository = Some("mozilla/foo".into());
+        b.repository = Some("acme/foo".into());
         b.teams = Some("Search, Ads".into());
         let mut c = entry(3, "2025-01-16");
         c.repository = Some("  ".into());
@@ -359,7 +359,7 @@ mod tests {
         assert_eq!(
             s.repos_top,
             vec![NameCount {
-                name: "mozilla/foo".into(),
+                name: "acme/foo".into(),
                 count: 2
             }]
         );
@@ -479,8 +479,8 @@ mod tests {
 
     #[test]
     fn describes_only_set_filters() {
-        assert_eq!(describe_filters(&ReportFilters::default()), "none");
-        let f = ReportFilters {
+        assert_eq!(describe_filters(&LogbookFilter::default()), "none");
+        let f = LogbookFilter {
             source: Some("github".into()),
             team: Some(" ".into()),
             q: Some("search".into()),

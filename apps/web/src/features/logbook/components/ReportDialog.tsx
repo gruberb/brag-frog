@@ -14,7 +14,7 @@ import { useCycleContext, useSession } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
 import type { Report } from '@/types/api/models';
 import { parseFilters } from '@/utils/entry-filters';
-import { describeFilters, hasListOnlyFilters, toReportFilters } from '../utils/describe-filters';
+import { describeFilters } from '../utils/describe-filters';
 import { shortDate } from '@/utils/dates';
 import { fetchReport, useCreateReport, useDeleteReport, useReports } from '../api/reports';
 import type { ExportFormat } from '@/lib/export';
@@ -64,7 +64,7 @@ export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Pr
     setError(null);
     setNote(null);
     try {
-      const report = await create.mutateAsync({ cycle_id: cycle.id, title: title.trim() || defaultTitle, filters: toReportFilters(filters), with_ai: has_ai && withAi });
+      const report = await create.mutateAsync({ cycle_id: cycle.id, title: title.trim() || defaultTitle, filters, with_ai: has_ai && withAi });
       await download(format, report, jiraBase);
       if (report.ai_error) setNote(`Report saved without an AI summary: ${report.ai_error}`);
       else toast('Report saved and downloaded');
@@ -114,7 +114,6 @@ export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Pr
             <label>Format</label>
             <Seg label="Format" options={FORMATS} value={format} onChange={setFormat} />
           </div>
-          {hasListOnlyFilters(filters) && <div className="small muted" role="note">The category and “no …” views are not applied to reports, so the report may contain more entries than the list.</div>}
           <div className="small muted">Contains: summary, entries per week, who you worked with, projects, key entries. Saved to Past reports.</div>
           {error && <div className="err-text" role="alert">{error}</div>}
           {note && <div className="small" role="status">{note}</div>}

@@ -2,6 +2,7 @@
 
 pub mod ai;
 pub mod api;
+pub mod archive;
 pub mod app;
 pub mod cycle;
 pub mod db;
@@ -9,7 +10,6 @@ pub mod identity;
 pub mod integrations;
 pub mod kernel;
 pub mod objectives;
-pub mod reflections;
 pub mod review;
 pub mod worklog;
 

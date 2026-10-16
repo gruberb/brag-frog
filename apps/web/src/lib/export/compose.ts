@@ -18,7 +18,7 @@ async function contentToDoc(content: string, format: ContentFormat, jiraBase: st
 
 export function describeFilterEntries(r: Pick<Report, 'filters' | 'entry_count'>): string {
   const f = r.filters;
-  const parts = [f.from || f.to ? `${f.from ?? 'start'} to ${f.to ?? 'today'}` : 'Whole cycle', f.q && `search “${f.q}”`, f.source, f.type, f.team && `team ${f.team}`, f.person && `with ${f.person}`].filter(Boolean);
+  const parts = [f.from || f.to ? `${f.from ?? 'start'} to ${f.to ?? 'today'}` : 'Whole cycle', f.q && `search “${f.q}”`, f.source, f.category, f.team && `team ${f.team}`, f.person && `with ${f.person}`].filter(Boolean);
   return `${parts.join(' · ')} · ${r.entry_count} entries`;
 }
 
