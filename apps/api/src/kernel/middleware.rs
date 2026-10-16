@@ -28,11 +28,24 @@ pub async fn security_headers(request: Request, next: Next) -> Response {
     response
 }
 
-/// CSRF protection: reject state-changing requests that lack the HX-Request header.
-/// HTMX sends this header automatically. Cross-origin requests cannot set custom
-/// headers without a CORS preflight, which the server does not allow.
+/// Header the SPA sends on every API request. Cross-origin pages cannot set a custom
+/// header without a CORS preflight, which the server never allows.
+pub const API_CSRF_HEADER: &str = "X-Requested-With";
+pub const API_CSRF_VALUE: &str = "brag-frog";
+
+/// CSRF protection for state-changing requests. `/api/` paths need
+/// `X-Requested-With: brag-frog`; legacy HTML paths need the `HX-Request` header that HTMX
+/// sends. Requests the browser marks `Sec-Fetch-Site: cross-site` are always refused.
 pub async fn csrf_protection(request: Request, next: Next) -> Response {
     let method = request.method().clone();
+
+    let cross_site = request
+        .headers()
+        .get("Sec-Fetch-Site")
+        .is_some_and(|v| v == "cross-site");
+    if cross_site && method != Method::GET && method != Method::HEAD && method != Method::OPTIONS {
+        return (StatusCode::FORBIDDEN, "CSRF validation failed").into_response();
+    }
 
     // Only check state-changing methods
     if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
@@ -42,6 +55,22 @@ pub async fn csrf_protection(request: Request, next: Next) -> Response {
     // Allow OAuth callback (GET-only, but be safe) and logout
     let path = request.uri().path().to_string();
     if path.starts_with("/auth/") {
+        return next.run(request).await;
+    }
+
+    if path.starts_with("/api/") {
+        let ok = request
+            .headers()
+            .get(API_CSRF_HEADER)
+            .is_some_and(|v| v == API_CSRF_VALUE);
+        if !ok {
+            return (
+                StatusCode::FORBIDDEN,
+                [(axum::http::header::CONTENT_TYPE, "application/json")],
+                r#"{"error":{"code":"csrf","message":"CSRF validation failed"}}"#,
+            )
+                .into_response();
+        }
         return next.run(request).await;
     }
 

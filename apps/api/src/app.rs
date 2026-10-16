@@ -391,6 +391,8 @@ pub fn create_router() -> Router<AppState> {
         .merge(auth_routes)
         .merge(public_routes)
         .merge(protected_routes)
+        .merge(crate::api::public_router())
+        .merge(crate::api::router())
 }
 
 fn custom_tokens_css_response(path: &std::path::Path) -> Response {

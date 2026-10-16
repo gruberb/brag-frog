@@ -154,6 +154,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "023_remove_legacy_checkins_protocol",
         include_str!("../../migrations/023_remove_legacy_checkins_protocol.sql"),
     ),
+    (
+        "024_perf_and_content_format",
+        include_str!("../../migrations/024_perf_and_content_format.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.

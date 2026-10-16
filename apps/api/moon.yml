@@ -9,3 +9,8 @@ tasks:
   dev:
     command: 'cargo run -p brag-frog'
     preset: 'server'
+  types:
+    command: 'cargo test -p brag-frog export_bindings'
+  types-check:
+    command: 'git diff --exit-code -- ../web/src/types/api'
+    deps: ['~:types']

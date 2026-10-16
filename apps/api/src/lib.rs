@@ -1,6 +1,7 @@
 //! Brag Frog library crate. Declares all modules and the shared application state.
 
 pub mod ai;
+pub mod api;
 pub mod app;
 pub mod cycle;
 pub mod db;
