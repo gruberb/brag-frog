@@ -236,7 +236,7 @@ pub struct UpdateGoalRequest {
     #[ts(optional)]
     pub title: Option<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub description: Patch<String>,
     #[serde(default)]
     #[ts(optional)]
@@ -297,46 +297,46 @@ pub struct UpdatePriorityRequest {
     #[ts(optional)]
     pub status: Option<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub scope: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub impact_narrative: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<i64>")]
+    #[ts(optional = nullable, as = "Option<i64>")]
     pub department_goal_id: Patch<i64>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub started_at: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub completed_at: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub priority_level: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub measure_type: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<f64>")]
+    #[ts(optional = nullable, as = "Option<f64>")]
     pub measure_start: Patch<f64>,
     #[serde(default)]
-    #[ts(optional, as = "Option<f64>")]
+    #[ts(optional = nullable, as = "Option<f64>")]
     pub measure_target: Patch<f64>,
     #[serde(default)]
-    #[ts(optional, as = "Option<f64>")]
+    #[ts(optional = nullable, as = "Option<f64>")]
     pub measure_current: Patch<f64>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub description: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub tracking_status: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub due_date: Patch<String>,
     #[serde(default)]
-    #[ts(optional, as = "Option<String>")]
+    #[ts(optional = nullable, as = "Option<String>")]
     pub tier: Patch<String>,
 }
 
@@ -401,9 +401,12 @@ fn merge_str(patch: Patch<String>, current: Option<String>) -> Option<String> {
 }
 
 /// A department goal the user owns, as a target for `department_goal_id`.
-async fn require_goal(state: &AppState, user_id: i64, goal_id: i64, crypto: &crate::kernel::crypto::UserCrypto)
-    -> Result<DepartmentGoal, ApiError>
-{
+async fn require_goal(
+    state: &AppState,
+    user_id: i64,
+    goal_id: i64,
+    crypto: &crate::kernel::crypto::UserCrypto,
+) -> Result<DepartmentGoal, ApiError> {
     DepartmentGoal::find_by_id(&state.db, goal_id, user_id, crypto)
         .await?
         .ok_or_else(|| ApiError::not_found("Department goal not found"))
@@ -430,7 +433,9 @@ async fn check_goal_in_cycle(
 ) -> Result<(), ApiError> {
     let goal = require_goal(state, user_id, goal_id, crypto).await?;
     if goal.phase_id != cycle_id {
-        return Err(ApiError::invalid("department_goal_id belongs to another cycle"));
+        return Err(ApiError::invalid(
+            "department_goal_id belongs to another cycle",
+        ));
     }
     Ok(())
 }
@@ -677,7 +682,9 @@ pub async fn update_priority(
     }
 
     let priority = Priority::update(&state.db, id, auth.user_id, &input, &auth.crypto).await?;
-    Ok(Json(priority_response(&state, priority, &auth.crypto).await?))
+    Ok(Json(
+        priority_response(&state, priority, &auth.crypto).await?,
+    ))
 }
 
 /// `DELETE /api/v1/priorities/{id}`. Linked entries become unassigned.
@@ -722,7 +729,11 @@ pub async fn post_update(
         is_blocker: req.is_blocker.map(i64::from),
         tradeoff_text: non_blank(req.tradeoff_text),
     };
-    check_enum("tracking_status", input.tracking_status.as_deref(), TRACKING_STATUSES)?;
+    check_enum(
+        "tracking_status",
+        input.tracking_status.as_deref(),
+        TRACKING_STATUSES,
+    )?;
     if input.tracking_status.is_none()
         && input.measure_value.is_none()
         && input.comment.is_none()

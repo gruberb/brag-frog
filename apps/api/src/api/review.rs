@@ -22,7 +22,9 @@ use crate::cycle::model::{LastWeekReport, StatusUpdate, Week};
 use crate::identity::model::User;
 use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::reflections::model::QuarterlyCheckin;
-use crate::review::model::{ContributionExample, ReviewSection, Summary, get_section, review_config};
+use crate::review::model::{
+    ContributionExample, ReviewSection, Summary, get_section, review_config,
+};
 use crate::worklog::model::BragEntry;
 
 const CONTENT_FORMATS: &[&str] = &["markdown", "blocknote"];
@@ -65,7 +67,8 @@ impl ReviewSectionDto {
             focus_priorities: config.focus_priorities,
             focus_priority_help: config.focus_priority_help.clone(),
             content: saved.map(|s| s.content.clone()),
-            content_format: saved.map_or_else(|| "blocknote".to_string(), |s| s.content_format.clone()),
+            content_format: saved
+                .map_or_else(|| "blocknote".to_string(), |s| s.content_format.clone()),
             generated_at: saved.map(|s| s.generated_at.clone()),
         }
     }
@@ -192,13 +195,19 @@ pub async fn draft_section(
     for (example_id, entry_id, _) in
         ContributionExample::linked_entries_for_phase(&state.db, cycle.id, &auth.crypto).await?
     {
-        example_entry_ids.entry(example_id).or_default().push(entry_id);
+        example_entry_ids
+            .entry(example_id)
+            .or_default()
+            .push(entry_id);
     }
 
     let user = User::find_by_id(&state.db, auth.user_id)
         .await?
         .ok_or_else(|| ApiError::not_found("User not found"))?;
-    let clg_level = user.role.as_deref().and_then(crate::identity::clg::get_level);
+    let clg_level = user
+        .role
+        .as_deref()
+        .and_then(crate::identity::clg::get_level);
 
     let prompt = build_self_reflection_prompt(
         &slug,
@@ -313,7 +322,10 @@ pub async fn get_archive(
 
     let mut linked: HashMap<i64, Vec<ArchivedEntryRef>> = HashMap::new();
     for (example_id, id, title) in links {
-        linked.entry(example_id).or_default().push(ArchivedEntryRef { id, title });
+        linked
+            .entry(example_id)
+            .or_default()
+            .push(ArchivedEntryRef { id, title });
     }
 
     Ok(Json(ArchiveResponse {

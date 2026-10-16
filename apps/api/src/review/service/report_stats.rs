@@ -107,7 +107,10 @@ fn ranked<'a>(values: impl Iterator<Item = HashSet<&'a str>>) -> Vec<NameCount> 
     }
     let mut out: Vec<NameCount> = counts
         .into_iter()
-        .map(|(name, count)| NameCount { name: name.to_string(), count })
+        .map(|(name, count)| NameCount {
+            name: name.to_string(),
+            count,
+        })
         .collect();
     out.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.name.cmp(&b.name)));
     out
@@ -125,13 +128,24 @@ pub fn compute_report_stats(
     entries: &[BragEntry],
     priority_names: &HashMap<i64, String>,
 ) -> ReportStats {
-    let people = ranked(entries.iter().map(|e| split_list(e.collaborators.as_deref()).collect()));
-    let repos = ranked(
+    let people = ranked(
         entries
             .iter()
-            .map(|e| e.repository.as_deref().map(str::trim).filter(|r| !r.is_empty()).into_iter().collect()),
+            .map(|e| split_list(e.collaborators.as_deref()).collect()),
     );
-    let teams = ranked(entries.iter().map(|e| split_list(e.teams.as_deref()).collect()));
+    let repos = ranked(entries.iter().map(|e| {
+        e.repository
+            .as_deref()
+            .map(str::trim)
+            .filter(|r| !r.is_empty())
+            .into_iter()
+            .collect()
+    }));
+    let teams = ranked(
+        entries
+            .iter()
+            .map(|e| split_list(e.teams.as_deref()).collect()),
+    );
 
     let mut weeks: BTreeMap<String, usize> = BTreeMap::new();
     for ws in entries.iter().filter_map(|e| week_start(&e.occurred_at)) {
@@ -164,7 +178,10 @@ pub fn compute_report_stats(
         people: people.len(),
         repos: repos.len(),
         teams: teams.len(),
-        per_week: weeks.into_iter().map(|(week_start, count)| WeekCount { week_start, count }).collect(),
+        per_week: weeks
+            .into_iter()
+            .map(|(week_start, count)| WeekCount { week_start, count })
+            .collect(),
         per_project,
         people_top: top(&people),
         repos_top: top(&repos),
@@ -199,11 +216,18 @@ pub fn pick_key_entries(entries: &[BragEntry], limit: usize) -> Vec<ReportKeyEnt
     ranked.sort_by(|a, b| {
         reach_rank(b.reach.as_deref())
             .cmp(&reach_rank(a.reach.as_deref()))
-            .then_with(|| complexity_rank(b.complexity.as_deref()).cmp(&complexity_rank(a.complexity.as_deref())))
+            .then_with(|| {
+                complexity_rank(b.complexity.as_deref())
+                    .cmp(&complexity_rank(a.complexity.as_deref()))
+            })
             .then_with(|| b.occurred_at.cmp(&a.occurred_at))
             .then_with(|| b.id.cmp(&a.id))
     });
-    ranked.into_iter().take(limit).map(ReportKeyEntry::from).collect()
+    ranked
+        .into_iter()
+        .take(limit)
+        .map(ReportKeyEntry::from)
+        .collect()
 }
 
 /// `Jan 1 – Jun 30, 2025`, or with both years when the range crosses a year boundary. Falls
@@ -221,7 +245,11 @@ pub fn range_label(from: &str, to: &str) -> String {
 
 /// `<priority name or "All projects"> · <range label>`
 pub fn default_title(priority_name: Option<&str>, from: &str, to: &str) -> String {
-    format!("{} · {}", priority_name.unwrap_or("All projects"), range_label(from, to))
+    format!(
+        "{} · {}",
+        priority_name.unwrap_or("All projects"),
+        range_label(from, to)
+    )
 }
 
 /// One line describing the active filters, for the AI prompt. Dates and the priority are
@@ -238,9 +266,18 @@ pub fn describe_filters(f: &ReportFilters) -> String {
         ("role", &f.role),
     ]
     .into_iter()
-    .filter_map(|(label, v)| v.as_deref().map(str::trim).filter(|v| !v.is_empty()).map(|v| format!("{label}: {v}")))
+    .filter_map(|(label, v)| {
+        v.as_deref()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(|v| format!("{label}: {v}"))
+    })
     .collect();
-    if parts.is_empty() { "none".to_string() } else { parts.join("; ") }
+    if parts.is_empty() {
+        "none".to_string()
+    } else {
+        parts.join("; ")
+    }
 }
 
 #[cfg(test)]
@@ -304,9 +341,28 @@ mod tests {
 
         let s = compute_report_stats(&[a, b, c], &HashMap::new());
         assert_eq!((s.entries, s.people, s.repos, s.teams), (3, 2, 1, 2));
-        assert_eq!(s.people_top[0], NameCount { name: "Ann".into(), count: 2 }, "duplicate in one entry counts once");
-        assert_eq!(s.people_top[1], NameCount { name: "Bob".into(), count: 1 });
-        assert_eq!(s.repos_top, vec![NameCount { name: "mozilla/foo".into(), count: 2 }]);
+        assert_eq!(
+            s.people_top[0],
+            NameCount {
+                name: "Ann".into(),
+                count: 2
+            },
+            "duplicate in one entry counts once"
+        );
+        assert_eq!(
+            s.people_top[1],
+            NameCount {
+                name: "Bob".into(),
+                count: 1
+            }
+        );
+        assert_eq!(
+            s.repos_top,
+            vec![NameCount {
+                name: "mozilla/foo".into(),
+                count: 2
+            }]
+        );
         assert_eq!(s.teams_top[0].name, "Search");
     }
 
@@ -328,13 +384,24 @@ mod tests {
     #[test]
     fn groups_by_iso_week_starting_monday() {
         // 2025-01-12 is a Sunday, 2025-01-13 a Monday.
-        let entries = [entry(1, "2025-01-12"), entry(2, "2025-01-13"), entry(3, "2025-01-19"), entry(4, "not-a-date")];
+        let entries = [
+            entry(1, "2025-01-12"),
+            entry(2, "2025-01-13"),
+            entry(3, "2025-01-19"),
+            entry(4, "not-a-date"),
+        ];
         let s = compute_report_stats(&entries, &HashMap::new());
         assert_eq!(
             s.per_week,
             vec![
-                WeekCount { week_start: "2025-01-06".into(), count: 1 },
-                WeekCount { week_start: "2025-01-13".into(), count: 2 },
+                WeekCount {
+                    week_start: "2025-01-06".into(),
+                    count: 1
+                },
+                WeekCount {
+                    week_start: "2025-01-13".into(),
+                    count: 2
+                },
             ]
         );
     }
@@ -351,7 +418,14 @@ mod tests {
         let names = HashMap::from([(7, "Search".to_string())]);
 
         let s = compute_report_stats(&[a, b, c, d], &names);
-        assert_eq!(s.per_project[0], ProjectCount { priority_id: Some(7), name: "Search".into(), count: 2 });
+        assert_eq!(
+            s.per_project[0],
+            ProjectCount {
+                priority_id: Some(7),
+                name: "Search".into(),
+                count: 2
+            }
+        );
         let labels: Vec<&str> = s.per_project.iter().map(|p| p.name.as_str()).collect();
         assert_eq!(labels, ["Search", "Unassigned", "Unknown priority"]);
     }
@@ -370,7 +444,13 @@ mod tests {
         let unrated_new = entry(4, "2025-02-01");
         let unrated_old = entry(5, "2025-01-05");
 
-        let all = [team_novel, org_routine, org_complex, unrated_new, unrated_old];
+        let all = [
+            team_novel,
+            org_routine,
+            org_complex,
+            unrated_new,
+            unrated_old,
+        ];
         let ids: Vec<i64> = pick_key_entries(&all, 4).iter().map(|e| e.id).collect();
         assert_eq!(ids, [3, 2, 1, 4]);
         assert_eq!(pick_key_entries(&all, 99).len(), 5);
@@ -378,17 +458,37 @@ mod tests {
 
     #[test]
     fn titles_and_range_labels() {
-        assert_eq!(range_label("2025-01-01", "2025-06-30"), "Jan 1 – Jun 30, 2025");
-        assert_eq!(range_label("2024-10-01", "2025-03-31"), "Oct 1, 2024 – Mar 31, 2025");
+        assert_eq!(
+            range_label("2025-01-01", "2025-06-30"),
+            "Jan 1 – Jun 30, 2025"
+        );
+        assert_eq!(
+            range_label("2024-10-01", "2025-03-31"),
+            "Oct 1, 2024 – Mar 31, 2025"
+        );
         assert_eq!(range_label("x", "y"), "x – y");
-        assert_eq!(default_title(None, "2025-01-01", "2025-06-30"), "All projects · Jan 1 – Jun 30, 2025");
-        assert_eq!(default_title(Some("Search"), "2025-01-01", "2025-06-30"), "Search · Jan 1 – Jun 30, 2025");
+        assert_eq!(
+            default_title(None, "2025-01-01", "2025-06-30"),
+            "All projects · Jan 1 – Jun 30, 2025"
+        );
+        assert_eq!(
+            default_title(Some("Search"), "2025-01-01", "2025-06-30"),
+            "Search · Jan 1 – Jun 30, 2025"
+        );
     }
 
     #[test]
     fn describes_only_set_filters() {
         assert_eq!(describe_filters(&ReportFilters::default()), "none");
-        let f = ReportFilters { source: Some("github".into()), team: Some(" ".into()), q: Some("search".into()), ..Default::default() };
-        assert_eq!(describe_filters(&f), "source: github; title contains: search");
+        let f = ReportFilters {
+            source: Some("github".into()),
+            team: Some(" ".into()),
+            q: Some("search".into()),
+            ..Default::default()
+        };
+        assert_eq!(
+            describe_filters(&f),
+            "source: github; title contains: search"
+        );
     }
 }

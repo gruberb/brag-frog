@@ -58,11 +58,12 @@ impl Report {
         user_id: i64,
         crypto: &UserCrypto,
     ) -> Result<Option<Self>, AppError> {
-        let row = sqlx::query_as::<_, ReportRow>("SELECT * FROM reports WHERE id = ? AND user_id = ?")
-            .bind(id)
-            .bind(user_id)
-            .fetch_optional(pool)
-            .await?;
+        let row =
+            sqlx::query_as::<_, ReportRow>("SELECT * FROM reports WHERE id = ? AND user_id = ?")
+                .bind(id)
+                .bind(user_id)
+                .fetch_optional(pool)
+                .await?;
         row.map(|r| r.decrypt(crypto)).transpose()
     }
 

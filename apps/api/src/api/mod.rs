@@ -6,6 +6,7 @@ pub mod dto;
 pub mod error;
 pub mod me;
 pub mod priorities;
+pub mod reports;
 pub mod review;
 pub mod scope;
 
@@ -51,6 +52,14 @@ pub fn router() -> Router<AppState> {
         .route("/api/v1/cycles/{id}/review/{slug}", put(review::save_section))
         .route("/api/v1/cycles/{id}/review/{slug}/draft", post(review::draft_section))
         .route("/api/v1/cycles/{id}/archive", get(review::get_archive))
+        .route(
+            "/api/v1/reports",
+            get(reports::list_reports).post(reports::create_report),
+        )
+        .route(
+            "/api/v1/reports/{id}",
+            get(reports::get_report).delete(reports::delete_report),
+        )
         .layer(middleware::from_fn(auth::require_auth_api))
         .layer(middleware::from_fn(csrf_protection))
 }
