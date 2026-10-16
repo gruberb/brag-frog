@@ -61,6 +61,8 @@ pub struct ConnectionStatus {
 
 /// Trait for services that sync external work items into `BragEntry` records.
 /// Uses `async_trait` for object safety (`Box<dyn SyncService>`).
+// Newer clippy flags the `#[must_use]` that `async_trait` generates on `Result` returns.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait SyncService: Send + Sync {
     /// Fetches work items from the external service within `[start_date, end_date]`.
