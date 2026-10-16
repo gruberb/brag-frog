@@ -117,7 +117,7 @@ export function PriorityDrawer({ priority, goalName, goals, onClose }: Props) {
           {!readOnly && (
             <div className="row between">
               {priority.status !== 'completed' ? (
-                <Button onClick={() => update.mutate({ id: priority.id, input: { status: 'completed', tracking_status: 'complete' } }, { onSuccess: () => toast('Marked as completed'), onError: toastError })}>Mark completed</Button>
+                <Button variant="action" onClick={() => update.mutate({ id: priority.id, input: { status: 'completed', tracking_status: 'complete' } }, { onSuccess: () => toast('Marked as completed'), onError: toastError })}>Mark completed</Button>
               ) : <span />}
               <ConfirmAction
                 title="Delete priority"

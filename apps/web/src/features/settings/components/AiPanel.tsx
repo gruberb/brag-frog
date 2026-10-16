@@ -24,7 +24,7 @@ export function AiPanel() {
         <div className="row wrap">
           <Button variant="primary" size="sm" disabled={!key.trim() || save.isPending} onClick={() => save.mutate(key.trim(), { onSuccess: () => { setKey(''); toast('Key saved'); }, onError: toastError })}>Save key</Button>
           <Button size="sm" disabled={!has_ai || test.isPending} onClick={() => test.mutate(undefined, { onSuccess: setResult, onError: toastError })}>Test</Button>
-          {has_ai && <Button size="sm" variant="ghost" onClick={() => remove.mutate(undefined, { onSuccess: () => toast('Key removed'), onError: toastError })}>Remove key</Button>}
+          {has_ai && <Button size="sm" variant="danger" onClick={() => remove.mutate(undefined, { onSuccess: () => toast('Key removed'), onError: toastError })}>Remove key</Button>}
         </div>
         {result && <div role="status" className={result.ok ? 'small' : 'err-text'}>{result.message}</div>}
       </CardBody>

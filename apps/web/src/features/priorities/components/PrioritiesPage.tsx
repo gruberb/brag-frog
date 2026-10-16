@@ -70,11 +70,15 @@ export function PrioritiesPage() {
             {cycle?.name} · {data ? `${data.goals.length} goals, ${data.counts.total} priorities` : '…'}. Cycles are managed in <Link className="link" to={paths.settings('cycles')}>Settings</Link>.
           </p>
         </div>
-        <div className="row wrap">
+        <div className="head-actions">
           <Seg label="Show" value={filter} onChange={setFilter} options={[{ value: 'active', label: `Active${data ? ` (${data.counts.active + data.counts.not_started + data.counts.on_hold})` : ''}` }, { value: 'done', label: `Done${data ? ` (${data.counts.completed + data.counts.cancelled})` : ''}` }, { value: 'all', label: 'All' }]} />
-          {!readOnly && <Button onClick={() => setDlg('goal')}>+ Goal</Button>}
-          {!readOnly && <Button onClick={() => setDlg('import')}>Import from Lattice</Button>}
-          {!readOnly && <Button variant="primary" onClick={() => setDlg('priority')}>+ Priority</Button>}
+          {!readOnly && <Button variant="transfer" icon="⬆" onClick={() => setDlg('import')}>Import from Lattice</Button>}
+          {!readOnly && (
+            <div className="row">
+              <Button variant="primary" onClick={() => setDlg('goal')}>+ Goal</Button>
+              <Button variant="primary" onClick={() => setDlg('priority')}>+ Priority</Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -97,7 +101,7 @@ export function PrioritiesPage() {
                     onConfirm={() => deleteGoal.mutateAsync(goal.id).then(() => toast('Goal deleted')).catch(toastError)}
                     trigger={(open) => <Button size="sm" variant="danger" onClick={open}>Delete</Button>}
                   />
-                  {goal.status !== 'completed' && <Button size="sm" onClick={() => completeGoal.mutate(goal.id, { onSuccess: () => toast('Goal completed'), onError: toastError })}>Complete goal</Button>}
+                  {goal.status !== 'completed' && <Button size="sm" variant="action" onClick={() => completeGoal.mutate(goal.id, { onSuccess: () => toast('Goal completed'), onError: toastError })}>Complete goal</Button>}
                 </div>
               )}
             </div>

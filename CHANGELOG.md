@@ -2,6 +2,14 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [6.1.1] - 2026-10-16
+
+### Changed
+- Buttons look the same for the same intent everywhere: add (coral, "+" prefix), import/export/download (dashed outline with an arrow), complete/activate (green), delete/remove (red outline), and mode switches such as Bulk edit and More filters (inverted while on).
+- Filters (segmented controls and chips) are pill-shaped and match the height of the buttons next to them.
+- Priorities header: "+ Goal" and "+ Priority" sit together, with Import separate.
+- Logbook: "Report" is now "Generate report", and "Log entry" is "+ Log entry".
+
 ## [6.1.0] - 2026-10-16
 
 ### Added

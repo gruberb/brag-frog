@@ -175,7 +175,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
         <div><h1>Self review</h1><p>{cycle?.name}{review.data ? ` · ${review.data.entry_count} entries` : ''}</p></div>
         <div className="row">
           <Menu
-            trigger={<Button disabled={busyExport}>{busyExport ? 'Preparing…' : 'Export ⌄'}</Button>}
+            trigger={<Button variant="transfer" icon={busyExport ? undefined : '⬇'} disabled={busyExport}>{busyExport ? 'Preparing…' : 'Export ⌄'}</Button>}
             items={[
               ...FORMATS.map((f) => ({ label: `This section as ${f.label}`, onSelect: () => void exportDoc(f.value, 'section') })),
               ...FORMATS.map((f) => ({ label: `Whole review as ${f.label}`, onSelect: () => void exportDoc(f.value, 'all') })),

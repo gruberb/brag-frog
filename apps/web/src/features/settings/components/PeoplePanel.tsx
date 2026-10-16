@@ -18,7 +18,7 @@ export function PeoplePanel() {
   const [error, setError] = useState<string | null>(null);
   return (
     <Card>
-      <CardHeader title="People">{!readOnly && <Button size="sm" onClick={() => setAdding((a) => !a)}>＋ Add</Button>}</CardHeader>
+      <CardHeader title="People">{!readOnly && <Button size="sm" variant="primary" onClick={() => setAdding((a) => !a)}>+ Add</Button>}</CardHeader>
       {adding && (
         <form
           className="card-b row wrap"
@@ -43,7 +43,7 @@ export function PeoplePanel() {
         {q.data?.map((p) => (
           <div key={p.id} className="row between">
             <span><b>{p.email}</b> · {p.display_name}{p.team ? ` · ${p.team}` : ''}</span>
-            {!readOnly && <Button size="sm" variant="ghost" onClick={() => remove.mutate(p.id, { onError: toastError })} aria-label={`Remove ${p.email}`}>Remove</Button>}
+            {!readOnly && <Button size="sm" variant="danger" onClick={() => remove.mutate(p.id, { onError: toastError })} aria-label={`Remove ${p.email}`}>Remove</Button>}
           </div>
         ))}
       </div>

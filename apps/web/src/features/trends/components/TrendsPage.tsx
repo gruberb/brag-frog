@@ -61,7 +61,7 @@ export function TrendsPage() {
         <div><h1>Trends</h1><p>Where your time went, with whom, and on what.</p></div>
         <div className="row">
           <Seg label="Range" options={RANGES} value={range} onChange={(r) => setSp((prev) => { const n = new URLSearchParams(prev); n.set('range', r); return n; }, { replace: true })} />
-          <Button disabled={!t} onClick={() => t && downloadFile(`trends-${range}.csv`, toCsv(t), 'text/csv')}>⬇ Export CSV</Button>
+          <Button variant="transfer" icon="⬇" disabled={!t} onClick={() => t && downloadFile(`trends-${range}.csv`, toCsv(t), 'text/csv')}>Export CSV</Button>
         </div>
       </div>
 

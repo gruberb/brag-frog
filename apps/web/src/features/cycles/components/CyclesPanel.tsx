@@ -44,7 +44,7 @@ export function CyclesPanel() {
   return (
     <>
       <Card>
-        <CardHeader title="Performance cycles"><Button variant="primary" size="sm" onClick={() => setCreating(true)}>＋ New cycle</Button></CardHeader>
+        <CardHeader title="Performance cycles"><Button variant="primary" size="sm" onClick={() => setCreating(true)}>+ New cycle</Button></CardHeader>
         {q.isPending && <CardBody><SkeletonRows rows={3} h={52} /></CardBody>}
         {q.error && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
         <div className="list">
@@ -55,10 +55,10 @@ export function CyclesPanel() {
                 <div className="small muted">{shortDate(c.start_date)} to {shortDate(c.end_date)} · {c.entry_count} entries · {c.priority_count} priorities</div>
               </div>
               <div className="row wrap">
-                {!c.is_active && <Button size="sm" disabled={activate.isPending} onClick={() => activate.mutate(c.id, { onSuccess: () => toast(`${c.name} is now active`), onError: toastError })}>Make active</Button>}
+                {!c.is_active && <Button size="sm" variant="action" disabled={activate.isPending} onClick={() => activate.mutate(c.id, { onSuccess: () => toast(`${c.name} is now active`), onError: toastError })}>Make active</Button>}
                 <Link className="btn sm" to={c.is_active ? paths.review(c.id) : { pathname: paths.review(c.id), search: `?cycle=${c.id}` }}>{c.is_active ? 'Review' : 'View'}</Link>
                 <Menu
-                  trigger={<Button size="sm" disabled={busy === c.id} aria-label={`Download ${c.name}`}>{busy === c.id ? 'Preparing…' : '⬇ Download ⌄'}</Button>}
+                  trigger={<Button size="sm" variant="transfer" icon={busy === c.id ? undefined : '⬇'} disabled={busy === c.id} aria-label={`Download ${c.name}`}>{busy === c.id ? 'Preparing…' : 'Download ⌄'}</Button>}
                   items={[
                     { label: 'Markdown', onSelect: () => void download(c, 'markdown') },
                     { label: 'PDF', onSelect: () => void download(c, 'pdf') },

@@ -42,8 +42,8 @@ export function FilterBar({ facets, goals, priorities }: Props) {
         <input type="search" placeholder="Search entries…" aria-label="Search entries" value={draft ?? f.q ?? ''} onChange={(e) => onSearch(e.target.value)} />
         {sel('goal_id', goals, 'All Dept Goals', 'Department goal')}
         {sel('priority_id', priorities, 'All Priorities', 'Priority')}
-        <Button onClick={() => setMore((m) => !m)} aria-expanded={more}>
-          More filters
+        <Button variant="toggle" onClick={() => setMore((m) => !m)} aria-expanded={more}>
+          {more ? 'Fewer filters' : 'More filters'}
         </Button>
       </div>
       {more && (

@@ -16,7 +16,7 @@ async function openDialog(route = '/logbook', opts: Parameters<typeof renderWith
   const user = userEvent.setup();
   renderWithProviders(<Logbook />, { route, ...opts });
   await screen.findByText(/entries/);
-  await user.click(screen.getByRole('button', { name: 'Report' }));
+  await user.click(screen.getByRole('button', { name: 'Generate report' }));
   const dlg = await screen.findByRole('dialog', { name: 'Create report' });
   return { user, dlg };
 }
@@ -77,7 +77,7 @@ describe('Logbook report dialog', () => {
     await waitFor(() => expect(db.reports).toHaveLength(1));
     downloadReport.mockClear();
     // Generating closes the dialog; reopen it for the Past tab.
-    await user.click(await screen.findByRole('button', { name: 'Report' }));
+    await user.click(await screen.findByRole('button', { name: 'Generate report' }));
     const dlg2 = await screen.findByRole('dialog', { name: 'Create report' });
     await user.click(within(dlg2).getByRole('tab', { name: /Past reports/ }));
     await user.click(await within(dlg2).findByRole('button', { name: /as PDF/ }));

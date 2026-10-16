@@ -42,7 +42,7 @@ async function download(format: ExportFormat, report: Report, jiraBase: string |
 
 export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Props) {
   const [tab, setTab] = useState('new');
-  const { cycle, readOnly } = useCycleContext();
+  const { cycle } = useCycleContext();
   const { has_ai } = useSession();
   const jiraBase = useJiraBase();
   const [sp] = useSearchParams();
@@ -119,8 +119,8 @@ export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Pr
           {note && <div className="small" role="status">{note}</div>}
           <div className="row between">
             <span className="small muted">{create.isPending ? (withAi && has_ai ? 'Generating, the AI summary can take up to two minutes…' : 'Generating…') : ''}</span>
-            <Button variant="primary" onClick={generate} disabled={create.isPending || matching === 0 || !cycle}>
-              {create.isPending ? 'Generating…' : readOnly ? 'Generate and download' : 'Generate and download'}
+            <Button variant="primary" icon={create.isPending ? undefined : '⬇'} onClick={generate} disabled={create.isPending || matching === 0 || !cycle}>
+              {create.isPending ? 'Generating…' : 'Generate and download'}
             </Button>
           </div>
         </div>
@@ -138,7 +138,7 @@ export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Pr
                 </div>
                 <div className="row">
                   {FORMATS.map((f) => (
-                    <Button key={f.value} size="sm" disabled={busyId === r.id} onClick={() => redownload(r.id, f.value)} aria-label={`Download ${r.title} as ${f.label}`}>
+                    <Button key={f.value} size="sm" variant="transfer" disabled={busyId === r.id} onClick={() => redownload(r.id, f.value)} aria-label={`Download ${r.title} as ${f.label}`}>
                       {SHORT[f.value]}
                     </Button>
                   ))}
@@ -146,7 +146,7 @@ export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Pr
                     title="Delete report"
                     message={`Delete “${r.title}”? This cannot be undone.`}
                     onConfirm={() => del.mutateAsync(r.id).catch(toastError)}
-                    trigger={(openConfirm) => <Button size="sm" variant="ghost" onClick={openConfirm} aria-label={`Delete ${r.title}`}>Delete</Button>}
+                    trigger={(openConfirm) => <Button size="sm" variant="danger" onClick={openConfirm} aria-label={`Delete ${r.title}`}>Delete</Button>}
                   />
                 </div>
               </div>
