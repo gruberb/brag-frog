@@ -2,6 +2,11 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [6.1.0] - 2026-10-16
+
+### Added
+- Priorities: department goals can be renamed (Edit) and deleted (Delete, with confirmation). Deleting a goal keeps its priorities and moves them to "No goal".
+
 ## [6.0.3] - 2026-10-16
 
 ### Fixed

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmAction } from '@/components/ui/ConfirmAction';
 import { Dialog } from '@/components/ui/Dialog';
 import { EmptyState, ErrorState } from '@/components/ui/EmptyState';
 import { Seg } from '@/components/ui/Seg';
@@ -12,7 +13,7 @@ import { toast, toastError } from '@/stores/toast';
 import type { Priority } from '@/types/api/models';
 import { shortDate } from '@/utils/dates';
 import { isDonePriority, progressPct, trackingMeta } from '@/utils/priorities';
-import { useCompleteGoal, useCreateGoal, useCreatePriority, usePriorities } from '../api/priorities';
+import { useCompleteGoal, useCreateGoal, useCreatePriority, useDeleteGoal, usePriorities, useUpdateGoal } from '../api/priorities';
 import { toCreateRequest, toPriorityFormValues } from '../utils/priority-form-values';
 import { ImportDialog } from './ImportDialog';
 import { PriorityDrawer } from './PriorityDrawer';
@@ -48,7 +49,10 @@ export function PrioritiesPage() {
   const createGoal = useCreateGoal();
   const createPriority = useCreatePriority();
   const completeGoal = useCompleteGoal();
+  const updateGoal = useUpdateGoal();
+  const deleteGoal = useDeleteGoal();
   const [goalTitle, setGoalTitle] = useState('');
+  const [editing, setEditing] = useState<{ id: number; title: string } | null>(null);
 
   const data = q.data;
   const goals = useMemo(() => data?.goals.map((g) => ({ value: String(g.goal.id), label: g.goal.title })) ?? [], [data]);
@@ -84,7 +88,18 @@ export function PrioritiesPage() {
           <section key={goal.id} className="goal" aria-label={goal.title}>
             <div className="goal-h">
               <div><h2>{goal.title}</h2><span className="small muted">Department goal · {priorities.length} priorities{goal.status === 'completed' ? ' · completed' : ''}</span></div>
-              {!readOnly && goal.status !== 'completed' && <Button size="sm" onClick={() => completeGoal.mutate(goal.id, { onSuccess: () => toast('Goal completed'), onError: toastError })}>Complete goal</Button>}
+              {!readOnly && (
+                <div className="row">
+                  <Button size="sm" onClick={() => setEditing({ id: goal.id, title: goal.title })}>Edit</Button>
+                  <ConfirmAction
+                    title="Delete goal"
+                    message={`Delete “${goal.title}”? Its priorities stay and move to “No goal”.`}
+                    onConfirm={() => deleteGoal.mutateAsync(goal.id).then(() => toast('Goal deleted')).catch(toastError)}
+                    trigger={(open) => <Button size="sm" variant="danger" onClick={open}>Delete</Button>}
+                  />
+                  {goal.status !== 'completed' && <Button size="sm" onClick={() => completeGoal.mutate(goal.id, { onSuccess: () => toast('Goal completed'), onError: toastError })}>Complete goal</Button>}
+                </div>
+              )}
             </div>
             <Card>{rows.map((p) => <Row key={p.id} p={p} onOpen={() => setOpenId(p.id)} />)}{rows.length === 0 && <div className="empty small">No priorities in this view</div>}</Card>
           </section>
@@ -123,6 +138,19 @@ export function PrioritiesPage() {
         >
           <div className="field"><label htmlFor="goal-title">Title</label><input id="goal-title" value={goalTitle} onChange={(e) => setGoalTitle(e.target.value)} /></div>
           <div className="row" style={{ justifyContent: 'flex-end' }}><Button onClick={() => setDlg(null)}>Cancel</Button><Button variant="primary" type="submit" disabled={!goalTitle.trim()}>Create goal</Button></div>
+        </form>
+      </Dialog>
+      <Dialog open={editing !== null} onOpenChange={(o) => !o && setEditing(null)} title="Edit department goal" width={440}>
+        <form
+          className="card-b col"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!editing?.title.trim()) return;
+            try { await updateGoal.mutateAsync({ id: editing.id, title: editing.title.trim() }); setEditing(null); toast('Goal updated'); } catch (err) { toastError(err); }
+          }}
+        >
+          <div className="field"><label htmlFor="goal-edit-title">Title</label><input id="goal-edit-title" value={editing?.title ?? ''} onChange={(e) => setEditing((cur) => (cur ? { ...cur, title: e.target.value } : cur))} /></div>
+          <div className="row" style={{ justifyContent: 'flex-end' }}><Button onClick={() => setEditing(null)}>Cancel</Button><Button variant="primary" type="submit" disabled={!editing?.title.trim()}>Save</Button></div>
         </form>
       </Dialog>
       <ImportDialog open={dlg === 'import'} onOpenChange={(o) => !o && setDlg(null)} cycleId={cycle?.id ?? null} />

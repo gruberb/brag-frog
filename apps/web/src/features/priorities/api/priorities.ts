@@ -64,6 +64,16 @@ export function useCreateGoal() {
   return useMutation({ mutationFn: (input: { title: string; cycle_id: number }) => api<Goal>('/goals', { method: 'POST', body: input }), onSuccess: refresh });
 }
 
+export function useUpdateGoal() {
+  const refresh = useRefresh();
+  return useMutation({ mutationFn: ({ id, title }: { id: number; title: string }) => api<Goal>(`/goals/${id}`, { method: 'PUT', body: { title } }), onSuccess: refresh });
+}
+
+export function useDeleteGoal() {
+  const refresh = useRefresh();
+  return useMutation({ mutationFn: (id: number) => api<void>(`/goals/${id}`, { method: 'DELETE' }), onSuccess: refresh });
+}
+
 export function useCompleteGoal() {
   const refresh = useRefresh();
   return useMutation({ mutationFn: (id: number) => api<Goal>(`/goals/${id}`, { method: 'PUT', body: { status: 'completed' } }), onSuccess: refresh });
