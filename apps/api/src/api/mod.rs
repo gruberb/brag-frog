@@ -1,0 +1,123 @@
+//! JSON API under `/api/v1`. Handlers are thin: they reuse the repo and service layers of the
+//! bounded contexts and only translate to and from wire types.
+
+pub mod auth;
+pub mod bundle;
+pub mod config;
+pub mod cycles;
+pub mod dto;
+pub mod entries;
+pub mod error;
+pub mod facets;
+pub mod integrations;
+pub mod me;
+pub mod priorities;
+pub mod reports;
+pub mod review;
+pub mod scope;
+pub mod settings;
+pub mod sync;
+pub mod today;
+pub mod trends;
+
+use axum::{
+    Router, middleware,
+    routing::{delete, get, post, put},
+};
+
+use crate::AppState;
+use crate::kernel::middleware::csrf_protection;
+
+/// Routes that need no session: liveness and sign-in page configuration.
+pub fn public_router() -> Router<AppState> {
+    Router::new()
+        .route("/healthz", get(me::healthz))
+        .route("/api/v1/public-config", get(me::public_config))
+}
+
+/// Authenticated API routes. Layer order: CSRF header check first, then session check.
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .route("/api/v1/me", get(me::me))
+        .route("/api/v1/auth/logout", post(me::logout))
+        // cycles
+        .route("/api/v1/cycles", get(cycles::list).post(cycles::create))
+        .route("/api/v1/cycles/{id}", delete(cycles::delete))
+        .route("/api/v1/cycles/{id}/activate", post(cycles::activate))
+        // settings
+        .route(
+            "/api/v1/settings/profile",
+            get(settings::get_profile).put(settings::put_profile),
+        )
+        .route(
+            "/api/v1/settings/people",
+            get(settings::list_people).post(settings::upsert_person),
+        )
+        .route("/api/v1/settings/people/{id}", delete(settings::delete_person))
+        // entries
+        .route("/api/v1/entries", get(entries::list).post(entries::create))
+        .route("/api/v1/entries/facets", get(entries::facets_handler))
+        .route("/api/v1/entries/bulk", post(entries::bulk))
+        .route(
+            "/api/v1/entries/{id}",
+            get(entries::get).put(entries::update).delete(entries::delete),
+        )
+        .route("/api/v1/entries/{id}/classify", post(entries::classify))
+        .route("/api/v1/entries/{id}/exclude", post(entries::exclude))
+        .route("/api/v1/meta/entry-types", get(entries::entry_types))
+        // today and meeting prep
+        .route("/api/v1/today", get(today::today))
+        .route(
+            "/api/v1/meetings/{entry_id}/prep",
+            get(today::get_prep).put(today::put_prep),
+        )
+        .route("/api/v1/meetings/{entry_id}/prep/draft", post(today::draft_prep))
+        .route(
+            "/api/v1/priorities",
+            get(priorities::list).post(priorities::create_priority),
+        )
+        .route("/api/v1/priorities/import", post(priorities::import_csv))
+        .route(
+            "/api/v1/priorities/{id}",
+            put(priorities::update_priority).delete(priorities::delete_priority),
+        )
+        .route(
+            "/api/v1/priorities/{id}/updates",
+            get(priorities::list_updates).post(priorities::post_update),
+        )
+        .route("/api/v1/goals", post(priorities::create_goal))
+        .route(
+            "/api/v1/goals/{id}",
+            put(priorities::update_goal).delete(priorities::delete_goal),
+        )
+        .route("/api/v1/cycles/{id}/review", get(review::get_review))
+        .route("/api/v1/cycles/{id}/review/{slug}", put(review::save_section))
+        .route("/api/v1/cycles/{id}/review/{slug}/draft", post(review::draft_section))
+        .route("/api/v1/cycles/{id}/archive", get(review::get_archive))
+        .route("/api/v1/cycles/{id}/bundle", get(bundle::get_bundle))
+        .route(
+            "/api/v1/reports",
+            get(reports::list_reports).post(reports::create_report),
+        )
+        .route(
+            "/api/v1/reports/{id}",
+            get(reports::get_report).delete(reports::delete_report),
+        )
+        .route("/api/v1/config", get(config::get_config))
+        .route("/api/v1/trends", get(trends::get_trends))
+        .route("/api/v1/integrations", get(integrations::list))
+        .route(
+            "/api/v1/integrations/{service}",
+            put(integrations::save).delete(integrations::reset),
+        )
+        .route("/api/v1/integrations/{service}/test", post(integrations::test))
+        .route(
+            "/api/v1/integrations/{service}/excluded/{id}",
+            delete(integrations::restore_excluded),
+        )
+        .route("/api/v1/sync", post(sync::sync_all))
+        .route("/api/v1/sync/status", get(sync::status))
+        .route("/api/v1/sync/{service}", post(sync::sync_service))
+        .layer(middleware::from_fn(auth::require_auth_api))
+        .layer(middleware::from_fn(csrf_protection))
+}

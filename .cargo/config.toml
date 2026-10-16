@@ -1,0 +1,5 @@
+[env]
+# ts-rs writes generated API types straight into the web app. Large ints stay plain numbers
+# because every id and count in this API fits in 2^53.
+TS_RS_EXPORT_DIR = { value = "apps/web/src/types/api", relative = true }
+TS_RS_LARGE_INT = "number"

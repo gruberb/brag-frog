@@ -87,6 +87,7 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
         templates: Arc::new(templates),
         crypto: Arc::new(crypto),
         sync_status: crate::integrations::sync_status::new_sync_status_map(),
+        entry_facets: crate::api::facets::new_facet_map(),
     };
 
     (state, session_store)
@@ -391,6 +392,8 @@ pub fn create_router() -> Router<AppState> {
         .merge(auth_routes)
         .merge(public_routes)
         .merge(protected_routes)
+        .merge(crate::api::public_router())
+        .merge(crate::api::router())
 }
 
 fn custom_tokens_css_response(path: &std::path::Path) -> Response {

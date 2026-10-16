@@ -98,6 +98,7 @@ impl TestApp {
             templates: Arc::new(templates),
             crypto: crypto.clone(),
             sync_status: brag_frog::integrations::sync_status::new_sync_status_map(),
+            entry_facets: brag_frog::api::facets::new_facet_map(),
         };
 
         // Build app with a test-only login route
@@ -201,6 +202,36 @@ impl TestApp {
         self.send(req).await
     }
 
+    /// Sends a JSON API request. State-changing methods carry the CSRF header the SPA sends.
+    pub async fn json(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<serde_json::Value>,
+        cookie: Option<&str>,
+    ) -> TestResponse {
+        let mut builder = Request::builder()
+            .uri(path)
+            .method(method)
+            .header("accept", "application/json")
+            .header("X-Requested-With", "brag-frog");
+        if let Some(c) = cookie {
+            builder = builder.header("cookie", c);
+        }
+        let req = match body {
+            Some(v) => builder
+                .header("content-type", "application/json")
+                .body(Body::from(v.to_string())),
+            None => builder.body(Body::empty()),
+        }
+        .unwrap();
+        self.send(req).await
+    }
+
+    pub async fn get_json(&self, path: &str, cookie: Option<&str>) -> TestResponse {
+        self.json("GET", path, None, cookie).await
+    }
+
     async fn send(&self, req: Request<Body>) -> TestResponse {
         let resp = self.app.clone().oneshot(req).await.unwrap();
 
@@ -216,6 +247,14 @@ impl TestApp {
             headers,
             body,
         }
+    }
+}
+
+impl TestResponse {
+    /// Parses the body as JSON, panicking with the body text when it is not JSON.
+    pub fn json(&self) -> serde_json::Value {
+        serde_json::from_str(&self.body)
+            .unwrap_or_else(|e| panic!("body is not JSON ({e}): {}", self.body))
     }
 }
 
@@ -254,6 +293,17 @@ pub fn test_user_crypto(crypto: &Crypto, user_id: i64) -> UserCrypto {
 pub async fn create_test_user(pool: &SqlitePool) -> i64 {
     sqlx::query_scalar(
         "INSERT INTO users (google_id, email, name) VALUES ('g-test-1', 'test@example.com', 'Test User') RETURNING id",
+    )
+    .fetch_one(pool)
+    .await
+    .unwrap()
+}
+
+#[allow(dead_code)] // used by the ownership tests of the domain endpoints
+/// Insert a second, unrelated user (for ownership tests) and return its id.
+pub async fn create_other_user(pool: &SqlitePool) -> i64 {
+    sqlx::query_scalar(
+        "INSERT INTO users (google_id, email, name) VALUES ('g-test-2', 'other@example.com', 'Other User') RETURNING id",
     )
     .fetch_one(pool)
     .await

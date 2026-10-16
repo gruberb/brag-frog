@@ -1,6 +1,7 @@
 //! Brag Frog library crate. Declares all modules and the shared application state.
 
 pub mod ai;
+pub mod api;
 pub mod app;
 pub mod cycle;
 pub mod db;
@@ -61,4 +62,6 @@ pub struct AppState {
     pub crypto: Arc<Crypto>,
     /// In-memory sync status per user, updated by background sync tasks.
     pub sync_status: SyncStatusMap,
+    /// Short-lived per-cycle cache of filter dropdown values (teams, people, sources).
+    pub entry_facets: api::facets::FacetMap<api::entries::Facets>,
 }

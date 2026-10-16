@@ -1050,6 +1050,52 @@ pub fn build_last_week_summary_prompt(
     ctx
 }
 
+/// Builds an AI prompt for a saved report: the entries behind a Logbook filter, grouped by
+/// priority, with the filter and headline numbers up front so the narrative stays on scope.
+#[allow(clippy::too_many_arguments)]
+pub fn build_report_prompt(
+    title: &str,
+    from: &str,
+    to: &str,
+    filter_summary: &str,
+    stats_line: &str,
+    entries: &[BragEntry],
+    priorities: &[Priority],
+    dept_goals: &[DepartmentGoal],
+) -> String {
+    let mut groups: Vec<EntryGroup<'_>> = priorities
+        .iter()
+        .map(|p| EntryGroup {
+            priority: Some(p),
+            dept_goal: p
+                .department_goal_id
+                .and_then(|id| dept_goals.iter().find(|g| g.id == id)),
+            entries: entries
+                .iter()
+                .filter(|e| e.priority_id == Some(p.id))
+                .collect(),
+        })
+        .collect();
+    groups.push(EntryGroup {
+        priority: None,
+        dept_goal: None,
+        entries: entries
+            .iter()
+            .filter(|e| {
+                e.priority_id
+                    .is_none_or(|id| !priorities.iter().any(|p| p.id == id))
+            })
+            .collect(),
+    });
+
+    format!(
+        "You are writing a report titled \"{title}\".\n\
+         Active filters: {filter_summary}\n\
+         Totals: {stats_line}\n\n{}",
+        build_last_week_summary_prompt(&groups, from, to)
+    )
+}
+
 /// Builds an AI prompt for generating a stakeholder status update.
 pub fn build_status_update_prompt(
     entries: &[BragEntry],

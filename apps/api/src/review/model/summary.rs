@@ -15,6 +15,8 @@ pub struct SummaryRow {
     pub prompt_used: Option<Vec<u8>>,
     pub model_used: Option<String>,
     pub generated_at: String,
+    /// `markdown` for legacy rows, `blocknote` once saved from the SPA editor.
+    pub content_format: String,
 }
 
 impl SummaryRow {
@@ -28,6 +30,7 @@ impl SummaryRow {
             prompt_used: crypto.decrypt_opt(&self.prompt_used)?,
             model_used: self.model_used,
             generated_at: self.generated_at,
+            content_format: self.content_format,
         })
     }
 }
@@ -43,6 +46,7 @@ pub struct Summary {
     pub prompt_used: Option<String>,
     pub model_used: Option<String>,
     pub generated_at: String,
+    pub content_format: String,
 }
 
 /// A single review section definition loaded from config.
