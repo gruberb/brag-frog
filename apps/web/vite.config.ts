@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -11,7 +12,18 @@ const proxy = Object.fromEntries(
 );
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      // The MSW service worker is only for `npm run dev:mock`; it must not ship in the production bundle.
+      name: 'drop-msw-worker',
+      apply: 'build',
+      closeBundle() {
+        rmSync(fileURLToPath(new URL('./dist/mockServiceWorker.js', import.meta.url)), { force: true });
+      },
+    },
+  ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: { port: 5173, proxy },
   preview: { proxy },
