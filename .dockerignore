@@ -1,7 +1,11 @@
 target/
 .env
-*.db
-*.db-wal
-*.db-shm
+*.db*
 .DS_Store
 .git/
+.claude/
+node_modules/
+apps/web/node_modules/
+apps/web/dist/
+mocks/
+website/
