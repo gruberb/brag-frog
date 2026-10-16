@@ -1,0 +1,11 @@
+language: 'rust'
+tasks:
+  build:
+    command: 'cargo build --release -p brag-frog'
+  lint:
+    command: 'cargo clippy -p brag-frog --all-targets -- -D warnings'
+  test:
+    command: 'cargo test -p brag-frog'
+  dev:
+    command: 'cargo run -p brag-frog'
+    preset: 'server'

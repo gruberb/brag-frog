@@ -1,0 +1,10 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+   Compiling brag-frog v5.2.12 (/Users/bastian/CodingIsFun/_workspaces/brag-frog/apps/api)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.25s
+     Running unittests src/lib.rs (/Users/bastian/CodingIsFun/_workspaces/brag-frog/target/debug/deps/brag_frog-3c00a1530a203b3a)
+     Running unittests src/main.rs (/Users/bastian/CodingIsFun/_workspaces/brag-frog/target/debug/deps/brag_frog-ab81e000c5a09141)
+     Running tests/integration/main.rs (/Users/bastian/CodingIsFun/_workspaces/brag-frog/target/debug/deps/integration-e424c6634855e8c6)
+   Doc-tests brag_frog

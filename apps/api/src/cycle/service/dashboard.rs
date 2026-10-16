@@ -127,7 +127,7 @@ pub fn compute_focus_days(
         }
 
         free_blocks.retain(|(s, e)| (e - s) >= 120);
-        free_blocks.sort_by(|a, b| (b.1 - b.0).cmp(&(a.1 - a.0)));
+        free_blocks.sort_by_key(|b| std::cmp::Reverse(b.1 - b.0));
         let top_blocks: Vec<FocusBlock> = free_blocks
             .iter()
             .take(2)

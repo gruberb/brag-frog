@@ -1,0 +1,356 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Configures all toolchains. Docs: https://moonrepo.dev/docs/config/toolchain",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "title": "$schema",
+      "default": "./cache/schemas/toolchains.json",
+      "type": "string"
+    },
+    "extends": {
+      "title": "extends",
+      "description": "Extends one or many toolchain configuration files. Supports a relative file path or a secure URL. @since 1.12.0",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ExtendsFrom"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "moon": {
+      "title": "moon",
+      "description": "Configures moon itself.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/MoonConfig"
+        }
+      ]
+    },
+    "proto": {
+      "title": "proto",
+      "description": "Configures how moon integrates with proto.",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ProtoConfig"
+        }
+      ]
+    },
+    "rust": {
+      "title": "rust",
+      "description": "Configures and enables the Rust toolchain. Docs: https://moonrepo.dev/docs/config/toolchain#rust",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/RustToolchainConfig"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/definitions/ToolchainPluginConfig"
+  },
+  "definitions": {
+    "BinConfig": {
+      "description": "Expanded configuration for the binary to install.",
+      "type": "object",
+      "properties": {
+        "args": {
+          "title": "args",
+          "description": "Additional arguments to pass to the install command, like feature flags. Support is dependent on the toolchain. @since 2.6.0",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bin": {
+          "title": "bin",
+          "description": "Name of the binary, with optional version separated by @.",
+          "type": "string",
+          "markdownDescription": "Name of the binary, with optional version separated by `@`."
+        },
+        "force": {
+          "title": "force",
+          "description": "Force install the binary if it already exists.",
+          "type": "boolean"
+        },
+        "local": {
+          "title": "local",
+          "description": "Only install the binary locally, and not within CI.",
+          "type": "boolean"
+        },
+        "name": {
+          "title": "name",
+          "description": "For supported tools, a custom name to use.",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "BinEntry": {
+      "description": "Configures to a tool-specific global binary to install.",
+      "anyOf": [
+        {
+          "description": "Name of the binary to install.",
+          "type": "string"
+        },
+        {
+          "$ref": "#/definitions/BinConfig"
+        }
+      ],
+      "markdownDescription": "Configures to a tool-specific global binary to install."
+    },
+    "ExtendsFrom": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Id": {
+      "type": "string"
+    },
+    "MoonConfig": {
+      "description": "Configures how and where moon updates will be received.",
+      "type": "object",
+      "properties": {
+        "downloadUrl": {
+          "title": "downloadUrl",
+          "description": "A secure URL for downloading the moon binary itself.",
+          "default": "https://github.com/moonrepo/moon/releases/latest/download/{file}",
+          "type": "string"
+        },
+        "manifestUrl": {
+          "title": "manifestUrl",
+          "description": "A secure URL to lookup the latest available version.",
+          "default": "https://launch.moonrepo.app/moon/check_version",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PluginLocator": {
+      "description": "Strategies and protocols for locating plugins.",
+      "type": "string"
+    },
+    "ProtoConfig": {
+      "description": "Configures how moon integrates with proto.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "title": "version",
+          "description": "The version of proto to download and install, and to use for installing and running other toolchains.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/VersionSpec"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "RustToolchainConfig": {
+      "description": "Configures and enables the Rust toolchain. Docs: https://moonrepo.dev/docs/config/toolchain#rust",
+      "type": "object",
+      "properties": {
+        "addMsrvConstraint": {
+          "title": "addMsrvConstraint",
+          "description": "When version is defined, syncs the version as a constraint to Cargo.toml under the workspace.package.rust-version or package.rust-version fields.",
+          "type": "boolean",
+          "markdownDescription": "When `version` is defined, syncs the version as a constraint to `Cargo.toml` under the `workspace.package.rust-version` or `package.rust-version` fields."
+        },
+        "bins": {
+          "title": "bins",
+          "description": "List of binaries to install into the environment using cargo binstall.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BinEntry"
+          },
+          "markdownDescription": "List of binaries to install into the environment using `cargo binstall`."
+        },
+        "binstallVersion": {
+          "title": "binstallVersion",
+          "description": "The fully-qualified version of cargo-binstall to install. Defaults to \"latest\" if not defined.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Version"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "markdownDescription": "The fully-qualified version of `cargo-binstall` to install. Defaults to \"latest\" if not defined."
+        },
+        "components": {
+          "title": "components",
+          "description": "List of Rust components to automatically install with rustup.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "List of Rust components to automatically install with `rustup`."
+        },
+        "inheritAliases": {
+          "title": "inheritAliases",
+          "default": true,
+          "type": "boolean"
+        },
+        "installDependencies": {
+          "title": "installDependencies",
+          "default": true,
+          "type": "boolean"
+        },
+        "plugin": {
+          "title": "plugin",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PluginLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "syncToolchainConfig": {
+          "title": "syncToolchainConfig",
+          "description": "When version is defined, syncs the version to rust-toolchain.toml under the toolchain.channel field.",
+          "type": "boolean",
+          "markdownDescription": "When `version` is defined, syncs the version to `rust-toolchain.toml` under the `toolchain.channel` field."
+        },
+        "targets": {
+          "title": "targets",
+          "description": "List of Rust targets to automatically install with rustup.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "markdownDescription": "List of Rust targets to automatically install with `rustup`."
+        },
+        "version": {
+          "title": "version",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/UnresolvedVersionSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "versionFromPrototools": {
+          "title": "versionFromPrototools",
+          "description": "The strategy in which to inherit a version from .prototools.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ToolchainPluginVersionFrom"
+            }
+          ],
+          "markdownDescription": "The strategy in which to inherit a version from `.prototools`."
+        }
+      },
+      "additionalProperties": false
+    },
+    "ToolchainPluginConfig": {
+      "description": "Configures an individual toolchain.",
+      "type": "object",
+      "properties": {
+        "inheritAliases": {
+          "title": "inheritAliases",
+          "description": "Inherit aliases (name derived from a manifest) for all projects associated with this toolchain. @since 2.1.0",
+          "default": true,
+          "type": "boolean"
+        },
+        "installDependencies": {
+          "title": "installDependencies",
+          "description": "Run the InstallDependencies actions for each running task when changes to lockfiles and manifests are detected. @since 2.1.0",
+          "default": true,
+          "type": "boolean",
+          "markdownDescription": "Run the `InstallDependencies` actions for each running task when changes to lockfiles and manifests are detected. @since 2.1.0"
+        },
+        "plugin": {
+          "title": "plugin",
+          "description": "Location of the WASM plugin to use.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/PluginLocator"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "version": {
+          "title": "version",
+          "description": "The version of the toolchain to download and install.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/UnresolvedVersionSpec"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "versionFromPrototools": {
+          "title": "versionFromPrototools",
+          "description": "Inherit the version from the root .prototools. When true, matches using the same identifier, otherwise a string can be provided for a custom identifier.",
+          "allOf": [
+            {
+              "$ref": "#/definitions/ToolchainPluginVersionFrom"
+            }
+          ],
+          "markdownDescription": "Inherit the version from the root `.prototools`. When true, matches using the same identifier, otherwise a string can be provided for a custom identifier."
+        }
+      },
+      "additionalProperties": {
+        "type": [
+          "boolean",
+          "object",
+          "array",
+          "number",
+          "string",
+          "integer"
+        ]
+      }
+    },
+    "ToolchainPluginVersionFrom": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "UnresolvedVersionSpec": {
+      "description": "Represents an unresolved version or alias that must be resolved to a fully-qualified version.",
+      "type": "string",
+      "markdownDescription": "Represents an unresolved version or alias that must be resolved to a fully-qualified version."
+    },
+    "Version": {
+      "type": "string"
+    },
+    "VersionSpec": {
+      "description": "Represents a resolved version or alias.",
+      "type": "string"
+    }
+  }
+}

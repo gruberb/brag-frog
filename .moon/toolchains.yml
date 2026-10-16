@@ -1,0 +1,2 @@
+# Rust runs with whatever rustup toolchain is active (CI pins it). Node comes from .prototools.
+rust: {}

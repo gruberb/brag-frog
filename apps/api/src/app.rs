@@ -32,16 +32,16 @@ use crate::reflections::routes as reflections_routes;
 use crate::review::routes as review_routes;
 use crate::worklog::routes as worklog_routes;
 
-/// Resolves a config file path: checks `custom/` first, falls back to `config/`.
+/// Resolves a config file path: checks the custom dir first, falls back to the config dir.
 /// This allows organizations to override default config files by placing their
-/// versions in a `custom/` directory without modifying the defaults.
-pub fn config_path(filename: &str) -> String {
-    let custom = format!("custom/{}", filename);
+/// versions in the custom directory without modifying the defaults.
+pub fn config_path(config: &Config, filename: &str) -> String {
+    let custom = format!("{}/{}", config.custom_dir, filename);
     if std::path::Path::new(&custom).exists() {
         tracing::info!(path = %custom, "Using custom config override");
         custom
     } else {
-        format!("config/{}", filename)
+        format!("{}/{}", config.config_dir, filename)
     }
 }
 
@@ -60,12 +60,12 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
         .expect("Failed to migrate session store");
 
     // Config files — check custom/ overlay first, then fall back to config/
-    crate::identity::clg::load_levels(&config_path("clg_levels.toml"));
-    crate::review::model::load_review_config(&config_path("review_sections.toml"));
-    crate::reflections::model::load_checkin_config(&config_path("checkin_sections.toml"));
-    crate::review::model::load_assessment_config(&config_path("assessment_templates.toml"));
-    crate::review::model::load_rating_scale(&config_path("rating_scale.toml"));
-    crate::integrations::services_config::load(&config_path("services.toml"));
+    crate::identity::clg::load_levels(&config_path(&config, "clg_levels.toml"));
+    crate::review::model::load_review_config(&config_path(&config, "review_sections.toml"));
+    crate::reflections::model::load_checkin_config(&config_path(&config, "checkin_sections.toml"));
+    crate::review::model::load_assessment_config(&config_path(&config, "assessment_templates.toml"));
+    crate::review::model::load_rating_scale(&config_path(&config, "rating_scale.toml"));
+    crate::integrations::services_config::load(&config_path(&config, "services.toml"));
 
     // Templates
     let mut templates = Tera::new("templates/**/*.html").expect("Failed to load templates");
@@ -415,8 +415,17 @@ fn custom_tokens_css_response(path: &std::path::Path) -> Response {
     }
 }
 
-async fn custom_tokens_css() -> Response {
-    custom_tokens_css_response(std::path::Path::new("custom/tokens.css"))
+/// Serves only `tokens.css` from the custom directory. The directory also holds operator
+/// config (including AI prompts), so it must never be exposed as a static file tree.
+fn custom_router<S: Clone + Send + Sync + 'static>(custom_dir: &str) -> Router<S> {
+    let tokens = std::path::PathBuf::from(custom_dir).join("tokens.css");
+    Router::new().route(
+        "/tokens.css",
+        get(move || {
+            let tokens = tokens.clone();
+            async move { custom_tokens_css_response(&tokens) }
+        }),
+    )
 }
 
 /// Assembles the full Axum application: router, static files, sessions, security headers.
@@ -428,9 +437,7 @@ pub fn build_app(state: AppState, session_store: SqliteStore) -> Router {
         .with_same_site(SameSite::Lax)
         .with_expiry(Expiry::OnInactivity(time::Duration::hours(12)));
 
-    let custom_files = Router::new()
-        .route("/tokens.css", get(custom_tokens_css))
-        .fallback_service(ServeDir::new("custom").append_index_html_on_directories(false));
+    let custom_files = custom_router(&state.config.custom_dir);
 
     Router::new()
         .merge(create_router())
@@ -465,5 +472,28 @@ mod tests {
 
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         assert!(body.is_empty());
+    }
+
+    #[tokio::test]
+    async fn custom_router_does_not_expose_config_files() {
+        use tower::ServiceExt;
+
+        let dir = std::env::temp_dir().join(format!("bragfrog-custom-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("review_sections.toml"), "prompt = \"secret\"").unwrap();
+
+        let app: Router = custom_router(dir.to_str().unwrap());
+        let request = |uri: &str| {
+            axum::http::Request::builder()
+                .uri(uri)
+                .body(axum::body::Body::empty())
+                .unwrap()
+        };
+
+        let toml = app.clone().oneshot(request("/review_sections.toml")).await.unwrap();
+        assert_eq!(toml.status(), StatusCode::NOT_FOUND);
+
+        let css = app.oneshot(request("/tokens.css")).await.unwrap();
+        assert_eq!(css.status(), StatusCode::OK);
     }
 }

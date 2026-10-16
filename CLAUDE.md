@@ -10,14 +10,14 @@ Daily workflow and check-in tool for engineering teams. Log work across GitHub, 
 
 ```bash
 cp .env.example .env   # fill in GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ENCRYPTION_KEY
-cargo run              # http://localhost:8080
-cargo test             # in-memory SQLite, no external deps
-cargo clippy           # must pass before committing
+moon run api:dev       # http://localhost:8080 (runs from apps/api)
+moon run api:test      # in-memory SQLite, no external deps
+moon run api:lint      # clippy -D warnings, must pass before committing
 ```
 
 ## Project Structure
 
-`src/`: `app.rs` (router + state + route assembly), `lib.rs` (module declarations), `main.rs` (entrypoint). Modules: `ai/` (AI client, prompts, shared helpers), `cycle/` (phases, weeks, focus, dashboard, logbook, meeting prep, trends), `reflections/` (weekly & quarterly check-ins, checkin config), `review/` (summaries, contribution examples, AI documents, export, assessment/rating config), `db/`, `identity/`, `integrations/` (external service sync), `kernel/` (config, crypto, errors, middleware), `objectives/` (priorities, department goals), `worklog/` (entries, entry types).
+`apps/api/src/` (Rust backend; `apps/web` is added in the redesign, see implementation.md): `app.rs` (router + state + route assembly), `lib.rs` (module declarations), `main.rs` (entrypoint). Modules: `ai/` (AI client, prompts, shared helpers), `cycle/` (phases, weeks, focus, dashboard, logbook, meeting prep, trends), `reflections/` (weekly & quarterly check-ins, checkin config), `review/` (summaries, contribution examples, AI documents, export, assessment/rating config), `db/`, `identity/`, `integrations/` (external service sync), `kernel/` (config, crypto, errors, middleware), `objectives/` (priorities, department goals), `worklog/` (entries, entry types).
 
 ## Key Conventions
 

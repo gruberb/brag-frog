@@ -29,6 +29,10 @@ pub struct Config {
     /// Optional org/instance name (e.g., `Acme Corp`). When set, the login page shows
     /// "Brag Frog | {name}" in the nav bar.
     pub instance_name: Option<String>,
+    /// Directory with the default TOML configs. Default: `config`.
+    pub config_dir: String,
+    /// Directory with optional operator overrides (TOML files, `tokens.css`). Default: `custom`.
+    pub custom_dir: String,
 }
 
 impl Config {
@@ -68,6 +72,8 @@ impl Config {
                 .map(|v| v == "true" || v == "1")
                 .unwrap_or(false),
             instance_name: env::var("BRAGFROG_INSTANCE_NAME").ok(),
+            config_dir: env::var("BRAGFROG_CONFIG_DIR").unwrap_or_else(|_| "config".to_string()),
+            custom_dir: env::var("BRAGFROG_CUSTOM_DIR").unwrap_or_else(|_| "custom".to_string()),
         }
     }
 }

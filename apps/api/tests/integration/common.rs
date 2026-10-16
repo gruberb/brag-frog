@@ -51,6 +51,8 @@ fn test_config() -> Config {
         ai_model: "test-model".to_string(),
         public_only: false,
         instance_name: None,
+        config_dir: "config".to_string(),
+        custom_dir: "custom".to_string(),
     }
 }
 
