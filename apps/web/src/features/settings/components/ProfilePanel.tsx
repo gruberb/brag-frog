@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -10,6 +11,7 @@ import { SkeletonRows } from '@/components/ui/Spinner';
 import { useConfig } from '@/hooks/use-config';
 import { toast, toastError } from '@/stores/toast';
 import type { User } from '@/types/api/models';
+import { logout } from '@/lib/session';
 import { useProfile, useSaveProfile } from '../api/settings';
 
 const time = z.string().refine((v) => v === '' || /^\d{2}:\d{2}$/.test(v), 'Use HH:MM');
@@ -67,9 +69,34 @@ function ProfileForm({ profile }: { profile: User }) {
   );
 }
 
+function SignOut() {
+  const qc = useQueryClient();
+  return (
+    <div className="row" style={{ justifyContent: 'flex-end', marginTop: 16 }}>
+      <Button
+        onClick={async () => {
+          try {
+            await logout();
+          } finally {
+            qc.clear();
+            window.location.assign('/signin');
+          }
+        }}
+      >
+        Sign out
+      </Button>
+    </div>
+  );
+}
+
 export function ProfilePanel() {
   const q = useProfile();
   if (q.isPending) return <SkeletonRows rows={3} h={60} />;
   if (q.error) return <ErrorState error={q.error} onRetry={() => q.refetch()} />;
-  return <ProfileForm profile={q.data} />;
+  return (
+    <>
+      <ProfileForm profile={q.data} />
+      <SignOut />
+    </>
+  );
 }

@@ -8,6 +8,7 @@ import { usePriorityOptions } from '@/hooks/use-priority-options';
 import { useCycleContext } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
 import { useDeleteEntry, useEntry, useEntryFacets, useUpdateEntry } from '../api/entries';
+import { EntryActions } from './EntryActions';
 import { EntryForm } from './EntryForm';
 import { toFormValues } from '../utils/entry-form-values';
 
@@ -69,6 +70,7 @@ export function EntryDrawer({ entryId, onClose }: Props) {
           }
         />
       )}
+      {e && !readOnly && <EntryActions entry={e} onDone={onClose} />}
       {e?.source_url && (
         <a className="link small" href={e.source_url} target="_blank" rel="noreferrer">
           Open source ↗

@@ -8,5 +8,3 @@ export const useMe = () => useQuery({ queryKey: authKeys.me, queryFn: ({ signal 
 
 export const usePublicConfig = () =>
   useQuery({ queryKey: authKeys.publicConfig, queryFn: ({ signal }) => api<PublicConfig>('/public-config', { signal }), staleTime: 5 * 60_000 });
-
-export const logout = () => api<void>('/auth/logout', { method: 'POST' });
