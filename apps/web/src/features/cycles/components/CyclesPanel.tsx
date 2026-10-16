@@ -8,6 +8,7 @@ import { ErrorState } from '@/components/ui/EmptyState';
 import { Menu } from '@/components/ui/Menu';
 import { SkeletonRows } from '@/components/ui/Spinner';
 import { paths } from '@/config/paths';
+import { useConfig } from '@/hooks/use-config';
 import type { ExportFormat } from '@/lib/export';
 import { shortDate } from '@/utils/dates';
 import { toast, toastError } from '@/stores/toast';
@@ -19,6 +20,7 @@ type Kind = ExportFormat | 'json';
 
 export function CyclesPanel() {
   const q = useCycles();
+  const jiraBase = useConfig().data?.atlassian_base_url;
   const activate = useActivateCycle();
   const del = useDeleteCycle();
   const [creating, setCreating] = useState(false);
@@ -30,7 +32,7 @@ export function CyclesPanel() {
       const bundle = await fetchCycleBundle(c.id);
       // PDF/DOCX libraries are loaded only when a download is requested.
       const { downloadCycleBundle } = await import('@/lib/export');
-      await downloadCycleBundle(kind, bundle);
+      await downloadCycleBundle(kind, bundle, jiraBase);
       toast(`${c.name} downloaded`);
     } catch (e) {
       toastError(e);

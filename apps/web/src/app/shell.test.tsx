@@ -35,7 +35,8 @@ describe('font guard', () => {
     return statSync(p).isDirectory() ? walk(p) : [p];
   });
   const src = join(__dirname, '..');
-  const files = walk(src).filter((f) => /\.(css|tsx?)$/.test(f) && !f.includes('.test.') && !f.includes('/types/api/'));
+  // PDF/DOCX documents embed IBM Plex Sans and Courier: that is document output, not the app UI.
+  const files = walk(src).filter((f) => /\.(css|tsx?)$/.test(f) && !f.includes('.test.') && !f.includes('/types/api/') && !f.includes('/lib/export/'));
 
   it('declares Mozilla Text first in the body font stack', () => {
     const css = readFileSync(join(src, 'app/app.css'), 'utf8');

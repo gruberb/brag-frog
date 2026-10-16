@@ -8,6 +8,7 @@ import { EmptyState, ErrorState } from '@/components/ui/EmptyState';
 import { Seg } from '@/components/ui/Seg';
 import { SkeletonRows } from '@/components/ui/Spinner';
 import { TabList } from '@/components/ui/Tabs';
+import { useConfig } from '@/hooks/use-config';
 import { ApiError } from '@/lib/api-client';
 import { useCycleContext, useSession } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
@@ -33,16 +34,17 @@ const FORMATS: { value: ExportFormat; label: string }[] = [
 ];
 const SHORT: Record<ExportFormat, string> = { pdf: 'PDF', docx: 'DOCX', markdown: 'MD' };
 
-async function download(format: ExportFormat, report: Report) {
+async function download(format: ExportFormat, report: Report, jiraBase: string | null | undefined) {
   // Heavy PDF/DOCX libraries load only when a download is requested.
   const { downloadReport } = await import('@/lib/export');
-  await downloadReport(format, report);
+  await downloadReport(format, report, jiraBase);
 }
 
 export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Props) {
   const [tab, setTab] = useState('new');
   const { cycle, readOnly } = useCycleContext();
   const { has_ai } = useSession();
+  const jiraBase = useConfig().data?.atlassian_base_url;
   const [sp] = useSearchParams();
   const filters = useMemo(() => parseFilters(sp), [sp]);
   const chips = describeFilters(filters, priorityNames);
@@ -63,7 +65,7 @@ export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Pr
     setNote(null);
     try {
       const report = await create.mutateAsync({ cycle_id: cycle.id, title: title.trim() || defaultTitle, filters: filters as ReportFilters, with_ai: has_ai && withAi });
-      await download(format, report);
+      await download(format, report, jiraBase);
       if (report.ai_error) setNote(`Report saved without an AI summary: ${report.ai_error}`);
       else toast('Report saved and downloaded');
       if (!report.ai_error) onOpenChange(false);
@@ -76,7 +78,7 @@ export function ReportDialog({ open, onOpenChange, matching, priorityNames }: Pr
   const redownload = async (id: number, f: ExportFormat) => {
     setBusyId(id);
     try {
-      await download(f, await fetchReport(id));
+      await download(f, await fetchReport(id), jiraBase);
     } catch (e) {
       toastError(e);
     } finally {

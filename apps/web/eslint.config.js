@@ -20,7 +20,7 @@ const featureZones = features.map((name) => ({
 }));
 
 export default defineConfig([
-  globalIgnores(['dist', 'src/types/api/**']),
+  globalIgnores(['dist', 'public/**', 'src/types/api/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended, reactRefresh.configs.vite],

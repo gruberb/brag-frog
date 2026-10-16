@@ -173,12 +173,6 @@
   .signin .box { width: 380px; max-width: 100%; text-align: center; padding: 32px; }
   .signin h1 { margin: 12px 0 6px; font-size: 1.5rem; }
 
-  /* BlockNote host: Tailwind preflight must not leak into it and fonts follow the app stack */
-  .editor-host .bn-editor, .editor-host .bn-container, .editor-host .ProseMirror { font-family: var(--font-stack); }
-  .editor-host .bn-container { --bn-font-family: var(--font-stack); --bn-colors-editor-background: transparent; }
-  .editor-host { font-size: 1.05rem; line-height: 1.75; }
-  .editor-host h1, .editor-host h2, .editor-host h3 { font-family: var(--font-stack-heading); }
-
   @media (max-width: 860px) {
     .app { grid-template-columns: 1fr; }
     .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: nowrap; align-items: center; padding: 8px 12px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--color-border); gap: 8px; }

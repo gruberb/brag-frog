@@ -15,7 +15,7 @@ import { useProfile, useSaveProfile } from '../api/settings';
 const time = z.string().refine((v) => v === '' || /^\d{2}:\d{2}$/.test(v), 'Use HH:MM');
 const schema = z.object({
   display_name: z.string().trim().min(1, 'Display name is required'),
-  career_level: z.string(),
+  role: z.string(),
   team: z.string(),
   manager_name: z.string(),
   timezone: z.string(),
@@ -27,7 +27,7 @@ const schema = z.object({
 type Values = z.infer<typeof schema>;
 
 const toValues = (p: Profile): Values => ({
-  display_name: p.display_name ?? '', career_level: p.career_level ?? '', team: p.team ?? '', manager_name: p.manager_name ?? '', timezone: p.timezone ?? '',
+  display_name: p.display_name ?? '', role: p.role ?? '', team: p.team ?? '', manager_name: p.manager_name ?? '', timezone: p.timezone ?? '',
   week_start: p.week_start ?? 'monday', work_start_time: p.work_start_time ?? '', work_end_time: p.work_end_time ?? '', wants_promotion: p.wants_promotion,
 });
 
@@ -42,7 +42,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
     <form
       onSubmit={handleSubmit((v) =>
         save.mutate(
-          { ...profile, ...v, display_name: v.display_name.trim(), career_level: v.career_level || null, team: v.team || null, manager_name: v.manager_name || null, timezone: v.timezone || null, work_start_time: v.work_start_time || null, work_end_time: v.work_end_time || null },
+          { ...profile, ...v, display_name: v.display_name.trim(), role: v.role || null, team: v.team || null, manager_name: v.manager_name || null, timezone: v.timezone || null, work_start_time: v.work_start_time || null, work_end_time: v.work_end_time || null },
           { onSuccess: () => toast('Profile saved'), onError: toastError },
         ),
       )}
@@ -52,7 +52,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
         <CardHeader title="Profile"><Button variant="primary" size="sm" type="submit" disabled={save.isPending || !isDirty}>Save</Button></CardHeader>
         <CardBody className="grid g2">
           <div className="field"><label htmlFor="p-name">Display name</label><input id="p-name" {...register('display_name')} aria-invalid={!!errors.display_name} />{errors.display_name && <div className="err" role="alert">{errors.display_name.message}</div>}</div>
-          <div className="field"><label htmlFor="p-level">Career level</label><Select id="p-level" {...register('career_level')} options={levels} placeholder="Not set" /></div>
+          <div className="field"><label htmlFor="p-level">Career level</label><Select id="p-level" {...register('role')} options={levels} placeholder="Not set" /></div>
           <div className="field"><label htmlFor="p-team">Team</label><input id="p-team" {...register('team')} /></div>
           <div className="field"><label htmlFor="p-mgr">Manager</label><input id="p-mgr" {...register('manager_name')} /></div>
           <div className="field"><label htmlFor="p-tz">Timezone</label><input id="p-tz" list="tz-list" {...register('timezone')} /><datalist id="tz-list">{tz.map((z) => <option key={z} value={z} />)}</datalist></div>

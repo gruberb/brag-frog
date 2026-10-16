@@ -12,6 +12,8 @@ export type User = {
   name: string;
   display_name: string | null;
   avatar_url: string | null;
+  /** Career level id (matches `clg_levels[].id`); stored as `users.role` in the backend. */
+  role: string | null;
 };
 
 export type Cycle = {
@@ -244,7 +246,7 @@ export type Trends = {
 // ── Settings, config, integrations ───────────────────────────────────────────────────────
 export type Profile = {
   display_name: string | null;
-  career_level: string | null;
+  role: string | null;
   team: string | null;
   manager_name: string | null;
   skip_level_name: string | null;

@@ -96,7 +96,7 @@ function createDb() {
     { id: 1, email: 'sam@example.com', display_name: 'Sam Okafor', team: 'Platform', relationship_type: null },
     { id: 2, email: 'priya@example.com', display_name: 'Priya Rao', team: 'Infra', relationship_type: null },
   ];
-  const profile: Profile = { display_name: 'Bastian Gruber', career_level: 'senior', team: 'Platform', manager_name: 'Alex Chen', skip_level_name: null, direct_reports: null, timezone: 'Europe/Berlin', week_start: 'monday', work_start_time: '09:00', work_end_time: '17:00', wants_promotion: false };
+  const profile: Profile = { display_name: 'Bastian Gruber', role: 'senior', team: 'Platform', manager_name: 'Alex Chen', skip_level_name: null, direct_reports: null, timezone: 'Europe/Berlin', week_start: 'monday', work_start_time: '09:00', work_end_time: '17:00', wants_promotion: false };
   const archive: Archive = {
     checkins: [{ id: 1, title: 'Q2 check-in', period: '2026 Q2', content: 'Shipped storage refactor.' }],
     contribution_examples: [{ id: 1, title: 'Autoscaling', content: 'Cut CI time.', entry_titles: ['Merged runner autoscaling'] }],

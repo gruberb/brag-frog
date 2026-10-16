@@ -143,7 +143,7 @@ function trends(range: TrendRange, cycleId?: number): Trends {
 
 export const handlers = [
   http.get(`${BASE}/me`, () =>
-    HttpResponse.json({ user: { id: 1, email: 'bgruber@example.com', name: 'Bastian Gruber', display_name: 'Bastian', avatar_url: null }, active_cycle: activeCycle() && withCounts(activeCycle()!), has_ai: db.hasAi, public_only: false }),
+    HttpResponse.json({ user: { id: 1, email: 'bgruber@example.com', name: 'Bastian Gruber', display_name: 'Bastian', avatar_url: null, role: 'senior' }, active_cycle: activeCycle() && withCounts(activeCycle()!), has_ai: db.hasAi, public_only: false }),
   ),
   http.get(`${BASE}/public-config`, () => HttpResponse.json({ instance_name: 'Brag Frog', allowed_domain_hint: '@example.com', public_only: false })),
   http.post(`${BASE}/auth/logout`, noContent),

@@ -12,7 +12,7 @@ import type { Cycle, Me } from '@/types/api/models';
 export const activeCycle: Cycle = { id: 2, name: 'H2 2026', start_date: '2026-07-01', end_date: '2026-12-31', is_active: true, entry_count: 90, priority_count: 4 };
 export const pastCycle: Cycle = { id: 1, name: 'H1 2026', start_date: '2026-01-01', end_date: '2026-06-30', is_active: false, entry_count: 6, priority_count: 0 };
 
-export const testMe: Me = { user: { id: 1, email: 'bgruber@example.com', name: 'Bastian Gruber', display_name: 'Bastian', avatar_url: null }, active_cycle: activeCycle, has_ai: true, public_only: false };
+export const testMe: Me = { user: { id: 1, email: 'bgruber@example.com', name: 'Bastian Gruber', display_name: 'Bastian', avatar_url: null, role: 'senior' }, active_cycle: activeCycle, has_ai: true, public_only: false };
 
 type Opts = { route?: string; me?: Partial<Me>; cycle?: Cycle; readOnly?: boolean };
 
