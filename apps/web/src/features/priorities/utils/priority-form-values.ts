@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Priority, PriorityInput } from '@/types/api/models';
+import type { CreatePriorityRequest, Priority, UpdatePriorityRequest } from '@/types/api/models';
 
 const optionalNumber = z.string().refine((v) => v === '' || !Number.isNaN(Number(v)), 'Enter a number');
 
@@ -34,13 +34,30 @@ export const toPriorityFormValues = (p?: Partial<Priority>): PriorityFormValues 
 
 const num = (v: string) => (v === '' ? null : Number(v));
 
-export const toPriorityInput = (v: PriorityFormValues): PriorityInput => ({
+const text = (v: string) => (v === '' ? undefined : v);
+const numOrUndef = (v: string) => (v === '' ? undefined : Number(v));
+
+/** Create: empty fields are omitted (the API has no nulls here). */
+export const toCreateRequest = (v: PriorityFormValues): CreatePriorityRequest => ({
+  title: v.title.trim(),
+  description: text(v.description),
+  department_goal_id: numOrUndef(v.department_goal_id),
+  tier: text(v.tier),
+  due_date: text(v.due_date),
+  status: v.status,
+  measure_type: text(v.measure_type),
+  measure_start: numOrUndef(v.measure_start),
+  measure_target: numOrUndef(v.measure_target),
+});
+
+/** Update: empty fields are sent as null so they can be cleared. */
+export const toUpdateRequest = (v: PriorityFormValues): UpdatePriorityRequest => ({
   title: v.title.trim(),
   description: v.description || null,
   department_goal_id: v.department_goal_id ? Number(v.department_goal_id) : null,
-  tier: (v.tier || null) as PriorityInput['tier'],
+  tier: v.tier || null,
   due_date: v.due_date || null,
-  status: v.status as PriorityInput['status'],
+  status: v.status,
   measure_type: v.measure_type || null,
   measure_start: num(v.measure_start),
   measure_target: num(v.measure_target),

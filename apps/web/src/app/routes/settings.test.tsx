@@ -100,7 +100,7 @@ describe('Settings', () => {
     renderWithProviders(ui, { route: '/settings/integrations' });
     await user.click(await screen.findByRole('button', { name: 'Configure Google Calendar' }));
     await user.click(await screen.findByRole('button', { name: 'Restore Lunch' }));
-    await waitFor(() => expect(db.integrations.find((i) => i.service === 'google_calendar')?.excluded).toHaveLength(1));
+    await waitFor(() => expect(db.integrations.find((i) => i.service === 'google_calendar')?.excluded_events).toHaveLength(1));
   });
 
   it('saves the AI key', async () => {

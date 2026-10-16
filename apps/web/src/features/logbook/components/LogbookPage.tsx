@@ -7,7 +7,7 @@ import { ReportDialog } from './ReportDialog';
 
 type Props = {
   cycleName: string;
-  cycleEntryCount: number;
+  cycleEntryCount: number | undefined;
   matching: number;
   facets?: EntryFacets;
   goals: Option[];
@@ -29,7 +29,7 @@ export function LogbookPage({ cycleName, cycleEntryCount, matching, facets, goal
         <div>
           <h1>Logbook</h1>
           <p>
-            {cycleName} · {matching} of {cycleEntryCount} entries
+            {cycleName} · {cycleEntryCount == null ? `${matching}` : `${matching} of ${cycleEntryCount}`} entries
             {!readOnly && (
               <button type="button" className="pill" onClick={onToggleSelect} aria-pressed={selectMode}>
                 {selectMode ? 'Done' : 'Bulk Edit'}

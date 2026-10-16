@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { ErrorState } from '@/components/ui/EmptyState';
 import { SkeletonRows } from '@/components/ui/Spinner';
-import { useConfig } from '@/hooks/use-config';
 import { useCycleContext } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
 import type { Integration } from '@/types/api/models';
 import { relativeTime } from '@/utils/dates';
 import { useIntegrations, useSync, useSyncStatus } from '../api/integrations';
+import { integrationState } from '../utils/integration-status';
 import { ConfigureDrawer } from './ConfigureDrawer';
 
 const ICON: Record<string, { abbr: string; cls: string }> = {
@@ -18,23 +18,23 @@ const ICON: Record<string, { abbr: string; cls: string }> = {
 };
 
 function subtitle(i: Integration): string {
-  if (i.status === 'error') return `last sync failed: ${i.last_error ?? 'unknown error'}`;
-  if (i.status === 'not_connected') return '';
+  const state = integrationState(i);
+  if (state === 'error') return `last sync failed: ${i.last_sync_error ?? 'unknown error'}`;
+  if (state === 'not_connected') return '';
+  const excluded = i.excluded_files.length + i.excluded_events.length;
   const parts = [i.last_sync_at ? `synced ${relativeTime(i.last_sync_at)}` : 'not synced yet', i.entry_count ? `${i.entry_count} entries` : ''];
-  if (i.excluded.length) parts.push(`${i.excluded.length} excluded`);
+  if (excluded) parts.push(`${excluded} excluded`);
   return parts.filter(Boolean).join(' · ');
 }
 
 export function IntegrationsPanel() {
   const list = useIntegrations();
-  const cfg = useConfig();
   const status = useSyncStatus();
   const sync = useSync();
   const { readOnly } = useCycleContext();
   const [openService, setOpenService] = useState<string | null>(null);
   // The AI key has its own tab; it shares the integrations API but is not a sync source.
-  const items = list.data?.filter((i) => i.service !== 'claude') ?? [];
-  const label = (s: string) => cfg.data?.services.find((x) => x.service === s)?.label ?? s;
+  const items = list.data?.filter((i) => !i.token_only) ?? [];
   const running = status.data?.running ?? false;
 
   return (
@@ -51,13 +51,14 @@ export function IntegrationsPanel() {
         {list.error && <ErrorState error={list.error} onRetry={() => list.refetch()} />}
         {items.map((i) => {
           const icon = ICON[i.service] ?? { abbr: i.service.slice(0, 2), cls: 's-man' };
+          const state = integrationState(i);
           return (
             <div key={i.service} className="svc">
               <span className={`src ${icon.cls}`}>{icon.abbr}</span>
-              <div><b>{label(i.service)}</b><div className="small muted">{subtitle(i)}</div></div>
-              <Badge tone={i.status === 'connected' ? 'green' : i.status === 'error' ? 'red' : 'gray'}>{i.status === 'connected' ? 'Connected' : i.status === 'error' ? 'Error' : 'Not connected'}</Badge>
-              <Button size="sm" variant={i.status === 'connected' ? 'default' : 'primary'} onClick={() => setOpenService(i.service)} aria-label={`${i.status === 'connected' ? 'Configure' : i.status === 'error' ? 'Fix token for' : 'Connect'} ${label(i.service)}`}>
-                {i.status === 'connected' ? 'Configure' : i.status === 'error' ? 'Fix token' : 'Connect'}
+              <div><b>{i.display_name}</b><div className="small muted">{subtitle(i)}</div></div>
+              <Badge tone={state === 'connected' ? 'green' : state === 'error' ? 'red' : 'gray'}>{state === 'connected' ? 'Connected' : state === 'error' ? 'Error' : 'Not connected'}</Badge>
+              <Button size="sm" variant={state === 'connected' ? 'default' : 'primary'} onClick={() => setOpenService(i.service)} aria-label={`${state === 'connected' ? 'Configure' : state === 'error' ? 'Fix token for' : 'Connect'} ${i.display_name}`}>
+                {state === 'connected' ? 'Configure' : state === 'error' ? 'Fix token' : 'Connect'}
               </Button>
             </div>
           );

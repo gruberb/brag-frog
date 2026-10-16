@@ -136,7 +136,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Today */
-  .week { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .week { display: grid; grid-template-columns: repeat(var(--days, 5), minmax(0, 1fr)); gap: 8px; }
   .day { background: var(--color-bg-secondary); border-radius: var(--radius-md); padding: 8px; min-height: 150px; }
   .day.today { outline: 2px solid var(--color-primary); background: #fff; }
   .day h4 { margin: 0 0 6px; font-family: var(--font-stack); font-size: 12px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }

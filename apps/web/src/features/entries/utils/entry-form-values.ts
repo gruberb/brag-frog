@@ -12,7 +12,6 @@ export const entryFormSchema = z.object({
   complexity: z.string(),
   role: z.string(),
   description: z.string(),
-  outcome_statement: z.string(),
 });
 export type EntryFormValues = z.infer<typeof entryFormSchema>;
 
@@ -30,23 +29,21 @@ export function toFormValues(e: Partial<Entry> & { title?: string }, today: stri
     complexity: e.complexity ?? '',
     role: e.role ?? '',
     description: e.description ?? '',
-    outcome_statement: e.outcome_statement ?? '',
   };
 }
 
+/** PUT replaces the entry, so every editable field is sent; empty ones are omitted (the API has no nulls here). */
 export function toEntryInput(v: EntryFormValues): EntryInput {
   return {
     title: v.title.trim(),
     entry_type: v.entry_type,
     occurred_at: v.occurred_at,
-    priority_id: v.priority_id ? Number(v.priority_id) : null,
+    description: v.description,
+    priority_id: v.priority_id ? Number(v.priority_id) : undefined,
     teams: list(v.teams),
     collaborators: list(v.collaborators),
-    reach: v.reach || null,
-    complexity: v.complexity || null,
-    role: v.role || null,
-    description: v.description,
-    outcome_statement: v.outcome_statement || null,
+    reach: v.reach || undefined,
+    complexity: v.complexity || undefined,
+    role: v.role || undefined,
   };
 }
-

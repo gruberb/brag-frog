@@ -11,12 +11,12 @@ import { SkeletonRows } from '@/components/ui/Spinner';
 import { LazyRichEditor } from '@/components/editor/LazyRichEditor';
 import type { EntryRefCandidate, RichEditorHandle } from '@/components/editor/types';
 import { paths } from '@/config/paths';
-import { useConfig } from '@/hooks/use-config';
+import { useJiraBase } from '@/hooks/use-config';
 import { usePriorityOptions } from '@/hooks/use-priority-options';
 import type { ExportFormat } from '@/lib/export';
 import { useCycleContext, useSession } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
-import type { ReviewSection } from '@/types/api/models';
+import type { ContentFormat, ReviewSection } from '@/types/api/models';
 import { useDraftSection, useReview, useSaveSection } from '../api/review';
 import { CareerLevelDrawer } from './CareerLevelDrawer';
 
@@ -54,7 +54,7 @@ function SectionEditor({ cycleId, section, readOnly, jiraBase, Evidence, EntryDr
   }, [handleRef]);
   const save = useSaveSection(cycleId);
   // Remember whether this section started as old markdown; the notice goes away after the first save as blocknote.
-  const [startedAsMarkdown] = useState(section.content_format === 'markdown' && !!section.content.trim());
+  const [startedAsMarkdown] = useState(section.content_format === 'markdown' && !!section.content?.trim());
   const converted = startedAsMarkdown && section.content_format === 'markdown';
   const [initial] = useState(section);
 
@@ -62,7 +62,7 @@ function SectionEditor({ cycleId, section, readOnly, jiraBase, Evidence, EntryDr
     let cancelled = false;
     // Content is parsed once per document; later cache patches from our own saves must not reset the editor.
     void import('@/components/editor/convert').then(async (m) => {
-      const b = await m.contentToBlocks(initial.content, initial.content_format, jiraBase);
+      const b = await m.contentToBlocks(initial.content ?? '', initial.content_format as ContentFormat, jiraBase);
       if (!cancelled) setBlocks(b);
     });
     return () => { cancelled = true; };
@@ -95,7 +95,7 @@ function SectionEditor({ cycleId, section, readOnly, jiraBase, Evidence, EntryDr
         </div>
       )}
       <Drawer open={original} onOpenChange={setOriginal} title="Original text">
-        <pre className="small" style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>{initial.content}</pre>
+        <pre className="small" style={{ whiteSpace: 'pre-wrap', margin: 0, fontFamily: 'inherit' }}>{initial.content ?? ''}</pre>
       </Drawer>
       <Evidence open={evidence} onOpenChange={setEvidence} onInsert={onInsert} />
       <EntryDrawerView entryId={openEntry} onClose={() => setOpenEntry(null)} />
@@ -107,7 +107,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
   const { cycle } = useCycleContext();
   const { has_ai } = useSession();
   const review = useReview(cycleId);
-  const cfg = useConfig();
+  const jiraBase = useJiraBase();
   const { goals } = usePriorityOptions(cycleId);
   const draft = useDraftSection(cycleId);
   const handle = useRef<RichEditorHandle>(null);
@@ -118,17 +118,16 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
 
   const sections = useMemo(() => review.data?.sections ?? [], [review.data]);
   const active = sections.find((s) => s.slug === sectionSlug) ?? sections[0];
-  const jiraBase = cfg.data?.atlassian_base_url ?? null;
 
   const exportDoc = async (format: ExportFormat, scope: 'section' | 'all') => {
       if (!review.data) return;
       setBusyExport(true);
       try {
         handle.current?.flush();
-        const chosen = (scope === 'section' && active ? [active] : sections).filter((s) => s.content.trim());
+        const chosen = (scope === 'section' && active ? [active] : sections).filter((s) => s.content?.trim());
         if (chosen.length === 0) return toast('Nothing written yet to export');
         const { downloadReview } = await import('@/lib/export');
-        await downloadReview(format, `Self review · ${cycle?.name ?? ''}`.trim(), chosen.map((s) => ({ title: s.title, content: s.content, content_format: s.content_format })), jiraBase);
+        await downloadReview(format, `Self review · ${cycle?.name ?? ''}`.trim(), chosen.map((s) => ({ title: s.title, content: s.content ?? '', content_format: s.content_format as ContentFormat })), jiraBase);
       } catch (e) {
         toastError(e);
       } finally {
@@ -198,7 +197,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
           <div className="pills" role="tablist" aria-label="Review sections" style={{ marginBottom: 12 }}>
             {sections.map((s) => (
               <button key={s.slug} type="button" role="tab" aria-selected={s.slug === active.slug} data-state={s.slug === active.slug ? 'active' : 'inactive'} onClick={() => onSectionChange(s.slug)}>
-                {s.title}{!s.content.trim() && <small>empty</small>}
+                {s.title}{!s.content?.trim() && <small>empty</small>}
               </button>
             ))}
           </div>
@@ -210,7 +209,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
           </div>
           {guidance && (
             <Card className="card-b" style={{ marginBottom: 12 }}>
-              <b>{active.form_question}</b>
+              <b>{active.form_question ?? active.question}</b>
               {active.form_guidance && <p style={{ margin: '8px 0 4px' }}>{active.form_guidance}</p>}
               {active.form_bullets.length > 0 && <ul style={{ margin: 0, paddingLeft: 20 }}>{active.form_bullets.map((b) => <li key={b}>{b}</li>)}</ul>}
               {active.form_tip && <p className="small muted" style={{ marginBottom: 0 }}>{active.form_tip}</p>}

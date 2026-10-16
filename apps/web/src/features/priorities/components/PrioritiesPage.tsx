@@ -9,21 +9,20 @@ import { SkeletonRows } from '@/components/ui/Spinner';
 import { paths } from '@/config/paths';
 import { useCycleContext } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
-import type { PriorityCard } from '@/types/api/models';
+import type { Priority } from '@/types/api/models';
 import { shortDate } from '@/utils/dates';
-import { progressPct, trackingMeta } from '@/utils/priorities';
+import { isDonePriority, progressPct, trackingMeta } from '@/utils/priorities';
 import { useCompleteGoal, useCreateGoal, useCreatePriority, usePriorities } from '../api/priorities';
-import { toPriorityFormValues } from '../utils/priority-form-values';
+import { toCreateRequest, toPriorityFormValues } from '../utils/priority-form-values';
 import { ImportDialog } from './ImportDialog';
 import { PriorityDrawer } from './PriorityDrawer';
 import { PriorityForm } from './PriorityForm';
 
 type Filter = 'active' | 'done' | 'all';
-const isDone = (p: PriorityCard) => p.status === 'completed' || p.status === 'cancelled';
-const keep = (f: Filter) => (p: PriorityCard) => f === 'all' || (f === 'done' ? isDone(p) : !isDone(p));
+const keep = (f: Filter) => (p: Priority) => f === 'all' || (f === 'done' ? isDonePriority(p) : !isDonePriority(p));
 
-function Row({ p, onOpen }: { p: PriorityCard; onOpen: () => void }) {
-  const meta = trackingMeta[p.tracking_status ?? 'no_update'];
+function Row({ p, onOpen }: { p: Priority; onOpen: () => void }) {
+  const meta = trackingMeta(p.tracking_status);
   const pct = progressPct(p);
   return (
     <button type="button" className="prow" onClick={onOpen}>
@@ -32,8 +31,8 @@ function Row({ p, onOpen }: { p: PriorityCard; onOpen: () => void }) {
         <div className="small muted">{p.entry_count} entries{p.latest_update ? ` · last update ${shortDate(p.latest_update.created_at.slice(0, 10))}` : ''}</div>
       </div>
       {pct != null ? <div className="bar"><i style={{ width: `${pct}%`, background: meta.bar }} /></div> : <div />}
-      <span className={`badge b-${meta.tone}`} style={{ justifySelf: 'start' }}>{meta.label}{p.blocker_count > 0 && p.status !== 'completed' ? ' · blocker' : ''}</span>
-      <span className="small muted">{p.status === 'completed' && p.completed_at ? shortDate(p.completed_at) : p.due_date ? `Due ${shortDate(p.due_date)}` : 'Ongoing'}</span>
+      <span className={`badge b-${meta.tone}`} style={{ justifySelf: 'start' }}>{meta.label}{p.latest_update?.is_blocker && !isDonePriority(p) ? ' · blocker' : ''}</span>
+      <span className="small muted">{p.status === 'completed' && p.completed_at ? shortDate(p.completed_at.slice(0, 10)) : p.due_date ? `Due ${shortDate(p.due_date)}` : 'Ongoing'}</span>
     </button>
   );
 }
@@ -55,7 +54,7 @@ export function PrioritiesPage() {
   const goals = useMemo(() => data?.goals.map((g) => ({ value: String(g.goal.id), label: g.goal.title })) ?? [], [data]);
   const all = useMemo(() => (data ? [...data.goals.flatMap((g) => g.priorities), ...data.unassigned] : []), [data]);
   const open = all.find((p) => p.id === openId) ?? null;
-  const goalNameOf = (p: PriorityCard | null) => data?.goals.find((g) => g.goal.id === p?.department_goal_id)?.goal.title;
+  const goalNameOf = (p: Priority | null) => data?.goals.find((g) => g.goal.id === p?.department_goal_id)?.goal.title;
   const f = keep(filter);
 
   return (
@@ -64,11 +63,11 @@ export function PrioritiesPage() {
         <div>
           <h1>Priorities</h1>
           <p>
-            {cycle?.name} · {data ? `${data.goals.length} goals, ${data.counts.all} priorities` : '…'}. Cycles are managed in <Link className="link" to={paths.settings('cycles')}>Settings</Link>.
+            {cycle?.name} · {data ? `${data.goals.length} goals, ${data.counts.total} priorities` : '…'}. Cycles are managed in <Link className="link" to={paths.settings('cycles')}>Settings</Link>.
           </p>
         </div>
         <div className="row wrap">
-          <Seg label="Show" value={filter} onChange={setFilter} options={[{ value: 'active', label: `Active${data ? ` (${data.counts.active})` : ''}` }, { value: 'done', label: `Done${data ? ` (${data.counts.done})` : ''}` }, { value: 'all', label: 'All' }]} />
+          <Seg label="Show" value={filter} onChange={setFilter} options={[{ value: 'active', label: `Active${data ? ` (${data.counts.active + data.counts.not_started + data.counts.on_hold})` : ''}` }, { value: 'done', label: `Done${data ? ` (${data.counts.completed + data.counts.cancelled})` : ''}` }, { value: 'all', label: 'All' }]} />
           {!readOnly && <Button onClick={() => setDlg('goal')}>+ Goal</Button>}
           {!readOnly && <Button onClick={() => setDlg('import')}>Import from Lattice</Button>}
           {!readOnly && <Button variant="primary" onClick={() => setDlg('priority')}>+ Priority</Button>}
@@ -107,8 +106,8 @@ export function PrioritiesPage() {
             goals={goals}
             submitLabel="Create priority"
             onCancel={() => setDlg(null)}
-            onSubmit={async (input) => {
-              try { await createPriority.mutateAsync({ ...input, cycle_id: cycle?.id }); toast('Priority created'); setDlg(null); } catch (e) { toastError(e); }
+            onSubmit={async (values) => {
+              try { await createPriority.mutateAsync({ ...toCreateRequest(values), cycle_id: cycle?.id }); toast('Priority created'); setDlg(null); } catch (e) { toastError(e); }
             }}
           />
         </div>

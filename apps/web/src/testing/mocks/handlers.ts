@@ -1,28 +1,61 @@
 import { http, HttpResponse, delay } from 'msw';
 import { addDays, format, parseISO, startOfISOWeek, subWeeks } from 'date-fns';
-import type { AppConfig, BulkPatch, Cycle, Entry, EntrySummary, PriorityCard, ReportInput, ReportStats, Today, Trends, TrendRange } from '@/types/api/models';
+import type { BulkRequest } from '@/types/api/BulkRequest';
+import type { ConfigResponse } from '@/types/api/ConfigResponse';
+import type { CreatePriorityRequest } from '@/types/api/CreatePriorityRequest';
+import type { CreateReportRequest } from '@/types/api/CreateReportRequest';
+import type { CycleDto } from '@/types/api/CycleDto';
+import type { CycleSummaryDto } from '@/types/api/CycleSummaryDto';
+import type { EntryDto } from '@/types/api/EntryDto';
+import type { EntryInput } from '@/types/api/EntryInput';
+import type { EntryTypeDto } from '@/types/api/EntryTypeDto';
+import type { IntegrationInput } from '@/types/api/IntegrationInput';
+import type { MeetingDto } from '@/types/api/MeetingDto';
+import type { PostUpdateRequest } from '@/types/api/PostUpdateRequest';
+import type { PrepResponse } from '@/types/api/PrepResponse';
+import type { PriorityDto } from '@/types/api/PriorityDto';
+import type { ReportKeyEntry } from '@/types/api/ReportKeyEntry';
+import type { ReportStats } from '@/types/api/ReportStats';
+import type { SavePrepRequest } from '@/types/api/SavePrepRequest';
+import type { SyncStatus } from '@/types/api/SyncStatus';
+import type { TodayResponse } from '@/types/api/TodayResponse';
+import type { TrendRange } from '@/types/api/TrendRange';
+import type { TrendsResponse } from '@/types/api/TrendsResponse';
+import type { UpdatePriorityRequest } from '@/types/api/UpdatePriorityRequest';
+import type { UpdateProfileRequest } from '@/types/api/UpdateProfileRequest';
 import { db, sectionFor, type DbEntry } from './db';
 
 const BASE = '/api/v1';
 const err = (status: number, code: string, message: string) => HttpResponse.json({ error: { code, message } }, { status });
 const noContent = () => new HttpResponse(null, { status: 204 });
-const summary = (e: Entry): EntrySummary => ({
-  id: e.id, source: e.source, source_url: e.source_url, title: e.title, entry_type: e.entry_type, status: e.status, repository: e.repository, occurred_at: e.occurred_at,
-  teams: e.teams, collaborators: e.collaborators, priority_id: e.priority_id, reach: e.reach, complexity: e.complexity, role: e.role, meeting_role: e.meeting_role,
-});
 const num = (v: string | null) => (v ? Number(v) : undefined);
+const dto = ({ cycle_id: _c, ...e }: DbEntry): EntryDto => (void _c, e);
 
+const CATEGORY: Record<string, string> = {
+  pr_authored: 'code', pr_merged: 'code', revision_authored: 'code', development: 'code', bug_fixed: 'code', bug_filed: 'code', jira_completed: 'code', jira_story: 'code', jira_task: 'code', jira_epic: 'code',
+  pr_reviewed: 'reviews', revision_reviewed: 'reviews', code_review: 'reviews',
+  design_doc: 'docs', document: 'docs', confluence_page: 'docs', drive_created: 'docs', drive_edited: 'docs', drive_commented: 'docs',
+  meeting: 'meetings', workshop: 'collaboration', mentoring: 'collaboration', presentation: 'collaboration', pairing: 'collaboration', cross_team: 'collaboration', interview: 'collaboration',
+  learning: 'learning', onboarding: 'learning',
+};
+const ENTRY_TYPES: EntryTypeDto[] = [
+  ...['development', 'code_review', 'design_doc', 'document', 'meeting', 'workshop', 'mentoring', 'presentation', 'pairing', 'cross_team', 'interview', 'learning', 'onboarding', 'decision', 'process_improvement', 'unblocking', 'incident_response', 'investigation', 'other'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: CATEGORY[v] ?? null, manual: true })),
+  ...['pr_authored', 'pr_merged', 'pr_reviewed', 'bug_fixed', 'bug_filed', 'revision_authored', 'revision_reviewed', 'jira_completed', 'jira_story', 'jira_task', 'jira_epic', 'confluence_page', 'drive_created', 'drive_edited', 'drive_commented'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: CATEGORY[v] ?? null, manual: false })),
+];
+
+/** Mirrors the API's `LogbookFilter` semantics (source is a comma list, category is derived from the type). */
 function filterEntries(sp: URLSearchParams): DbEntry[] {
   const cycleId = num(sp.get('cycle_id')) ?? db.cycles.find((c) => c.is_active)?.id;
   const q = sp.get('q')?.toLowerCase();
   const pid = num(sp.get('priority_id'));
   const gid = num(sp.get('goal_id'));
   const goalPriorities = gid ? db.priorities.filter((p) => p.department_goal_id === gid).map((p) => p.id) : null;
+  const sources = sp.get('source')?.split(',');
   return db.entries
     .filter((e) => e.cycle_id === cycleId)
-    .filter((e) => !q || e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q))
-    .filter((e) => !sp.get('source') || e.source === sp.get('source'))
-    .filter((e) => !sp.get('type') || e.entry_type === sp.get('type'))
+    .filter((e) => !q || e.title.toLowerCase().includes(q) || (e.description ?? '').toLowerCase().includes(q))
+    .filter((e) => !sources || sources.includes(e.source))
+    .filter((e) => !sp.get('category') || CATEGORY[e.entry_type] === sp.get('category'))
     .filter((e) => !sp.get('reach') || e.reach === sp.get('reach'))
     .filter((e) => !sp.get('complexity') || e.complexity === sp.get('complexity'))
     .filter((e) => !sp.get('role') || e.role === sp.get('role'))
@@ -34,7 +67,7 @@ function filterEntries(sp: URLSearchParams): DbEntry[] {
     .filter((e) => !goalPriorities || (e.priority_id != null && goalPriorities.includes(e.priority_id)))
     .filter((e) => !sp.get('no_priority') || e.priority_id == null)
     .filter((e) => !sp.get('no_team') || e.teams.length === 0)
-    .filter((e) => !sp.get('needs_classify') || (e.entry_type === 'meeting' && !e.meeting_role))
+    .filter((e) => !sp.get('no_person') || e.collaborators.length === 0)
     .sort((a, b) => (a.occurred_at === b.occurred_at ? b.id - a.id : a.occurred_at < b.occurred_at ? 1 : -1));
 }
 
@@ -63,66 +96,80 @@ function stats(list: DbEntry[]): ReportStats {
   };
 }
 
-function priorityCard(p: (typeof db.priorities)[number]): PriorityCard {
+/** Priorities as the API returns them: entry count and latest update are computed on read. */
+function priorityView(p: PriorityDto): PriorityDto {
   const ups = db.updates.filter((u) => u.priority_id === p.id).sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-  return { ...p, entry_count: db.entries.filter((e) => e.priority_id === p.id).length, latest_update: ups[0] ?? null, blocker_count: ups.filter((u) => u.is_blocker).length };
+  return { ...p, entry_count: db.entries.filter((e) => e.priority_id === p.id).length, latest_update: ups[0] ?? null };
 }
 
+const cycleDto = ({ id, name, start_date, end_date, is_active }: CycleSummaryDto): CycleDto => ({ id, name, start_date, end_date, is_active });
+const withCounts = (c: CycleSummaryDto): CycleSummaryDto => ({ ...c, entry_count: db.entries.filter((e) => e.cycle_id === c.id).length, priority_count: db.priorities.filter((p) => p.cycle_id === c.id).length });
 const activeCycle = () => db.cycles.find((c) => c.is_active) ?? null;
-const withCounts = (c: Cycle): Cycle => ({ ...c, entry_count: db.entries.filter((e) => e.cycle_id === c.id).length, priority_count: db.priorities.filter((p) => p.cycle_id === c.id).length });
 
-const svc = (service: string, label: string, extra: Partial<AppConfig['services'][number]> = {}) => ({
-  service, label, token_url: null, note: null, base_url_placeholder: null, email_placeholder: null, org_placeholder: null, default_orgs: null, default_base_url: null, ...extra,
-});
-const config = (): AppConfig => ({
+const config = (): ConfigResponse => ({
   instance_name: 'Brag Frog',
-  atlassian_base_url: 'https://example.atlassian.net',
+  review_platform: 'Lattice',
   review_sections: db.sections,
-  services: [
-    svc('github', 'GitHub', { token_url: 'https://github.com/settings/tokens/new', note: 'Create a classic token.', org_placeholder: 'my-org' }),
-    svc('phabricator', 'Phabricator', { base_url_placeholder: 'https://phabricator.example.com', default_base_url: 'https://phabricator.example.com' }),
-    svc('bugzilla', 'Bugzilla', { note: 'API key is optional.', base_url_placeholder: 'https://bugzilla.example.com', email_placeholder: 'you@example.com' }),
-    svc('atlassian', 'Atlassian', { token_url: 'https://id.atlassian.com/manage-profile/security/api-tokens', note: 'Syncs Jira and Confluence.', base_url_placeholder: 'https://your-org.atlassian.net', email_placeholder: 'you@example.com' }),
-    svc('google_calendar', 'Google Calendar'),
-    svc('google_drive', 'Google Drive'),
-  ],
+  services: db.integrations.map((i) => ({ service: i.service, display_name: i.display_name, token_url: i.token_url, note: i.note, token_only: i.token_only, oauth_connect: i.oauth_connect, fields: i.fields })),
   clg_levels: [
-    { id: 'senior', title: 'Senior Engineer (IC5)', one_liner: 'Own complex problems end to end.', problems: { task_size: 'Months', complexity: 'Ambiguous, cross-team problems.' }, people: { influence: 'Team and adjacent teams', communication: 'Aligns stakeholders proactively.' } },
-    { id: 'staff', title: 'Staff Engineer (IC6)', one_liner: 'Set direction across teams.', problems: { task_size: 'Quarters', complexity: 'Org-wide ambiguity.' }, people: { influence: 'Organization', communication: 'Shapes strategy.' } },
+    {
+      id: 'senior', title: 'Senior Engineer (IC5)', one_liner: 'Own complex problems end to end.',
+      problems: { task_size: 'Months', complexity: 'Ambiguous, cross-team problems.', risk_management: 'Plans rollouts.', domain_expertise: 'Deep in one area.', strategy: 'Shapes team plans.' },
+      people: { influence: 'Team and adjacent teams', responsibility: 'Owns outcomes.', communication: 'Aligns stakeholders proactively.', change_management: '', team_contributions: 'Mentors.', dei: '' },
+    },
+    {
+      id: 'staff', title: 'Staff Engineer (IC6)', one_liner: 'Set direction across teams.',
+      problems: { task_size: 'Quarters', complexity: 'Org-wide ambiguity.', risk_management: '', domain_expertise: '', strategy: 'Sets direction.' },
+      people: { influence: 'Organization', responsibility: '', communication: 'Shapes strategy.', change_management: '', team_contributions: '', dei: '' },
+    },
   ],
 });
 
-function todayPayload(): Today {
-  const w = db.week;
-  const start = parseISO(w.week_start);
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const fixed = [
-    [{ entry_id: 7000, title: 'Platform sync', start_time: '10:00', end_time: '10:30' }],
-    [{ entry_id: 7002, title: '1:1 with Sam', start_time: '11:00', end_time: '11:30' }, { entry_id: 7003, title: 'Design review', start_time: '14:00', end_time: '15:00' }],
-    [{ entry_id: 7004, title: 'Standup', start_time: '09:30', end_time: '09:45' }, { entry_id: 7005, title: 'Quarterly planning', start_time: '15:00', end_time: '16:00' }],
-    [{ entry_id: 7006, title: 'Eng leads', start_time: '13:00', end_time: '14:00' }],
-    [{ entry_id: 7007, title: 'Demo', start_time: '10:00', end_time: '11:00' }],
-  ];
-  const days = fixed.map((ms, i) => {
-    const d = format(addDays(start, i), 'yyyy-MM-dd');
-    return { date: d, label: format(addDays(start, i), 'EEE') + (d === todayStr ? ' · today' : ''), is_today: d === todayStr, meetings: ms.map((m) => ({ ...m, recurring_group: null })) };
-  });
+// Meetings on Today are separate from the logbook rows so the logbook counts stay stable in tests.
+const MEETINGS: [number, number, string, string][] = [[7000, 0, 'Platform sync', '10:00'], [7002, 1, '1:1 with Sam', '11:00'], [7003, 1, 'Design review', '14:00'], [7004, 2, 'Standup', '09:30'], [7005, 2, 'Quarterly planning', '15:00'], [7006, 3, 'Eng leads', '13:00'], [7007, 4, 'Demo', '10:00']];
+function meetingEntry(id: number): DbEntry | undefined {
+  const m = MEETINGS.find((x) => x[0] === id);
+  if (!m) return undefined;
+  const now = new Date().toISOString();
   return {
-    week: w,
-    meetings_by_day: days,
-    prep_map: { '7002': true, '7006': true, ...Object.fromEntries(Object.keys(db.preps).map((k) => [k, true])) },
-    active_work: db.entries.filter((e) => e.cycle_id === 2 && ['github', 'phabricator', 'jira', 'bugzilla'].includes(e.source)).slice(0, 8).map(summary),
-    priorities: db.priorities.filter((p) => p.cycle_id === 2 && p.status === 'active').map(priorityCard),
-    focus_days: days.map((d) => ({ date: d.date, focus_hours: 2.5, meeting_hours: d.meetings.length })),
-    counts: { meetings: days.reduce((n, d) => n + d.meetings.length, 0), focus_hours: 11 },
+    id, week_id: db.week.id, cycle_id: 2, source: 'google_calendar', source_id: `cal-${id}`, source_url: null, title: m[2], description: null, entry_type: 'meeting', status: null, repository: null,
+    occurred_at: format(addDays(parseISO(db.week.start_date), m[1]), 'yyyy-MM-dd'), teams: [], collaborators: [], outcome_statement: null, role: null, reach: null, complexity: null, priority_id: null,
+    meeting_role: null, recurring_group: null, start_time: m[3], end_time: null, evidence_urls: null, impact_tags: null, decision: null, is_synced: true, created_at: now, updated_at: now,
   };
 }
 
-function trends(range: TrendRange, cycleId?: number): Trends {
-  const list = db.entries.filter((e) => e.cycle_id === (cycleId ?? 2));
+function todayPayload(): TodayResponse {
+  const w = db.week;
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const days = Array.from({ length: 5 }, (_, i) => {
+    const date = format(addDays(parseISO(w.start_date), i), 'yyyy-MM-dd');
+    const meetings: MeetingDto[] = MEETINGS.filter((m) => m[1] === i).map((m) => ({ ...(meetingEntry(m[0]) as DbEntry), has_prep: !!db.preps[m[0]] })).map(({ cycle_id: _c, ...rest }) => (void _c, rest));
+    return { date, label: format(parseISO(date), 'EEEE'), is_today: date === todayStr, meetings };
+  });
+  return {
+    cycle: cycleDto(activeCycle()!),
+    week: w,
+    today: todayStr,
+    days,
+    active_work: db.entries.filter((e) => e.cycle_id === 2 && ['github', 'phabricator', 'jira', 'bugzilla'].includes(e.source)).slice(0, 8).map(dto),
+    priorities: db.priorities
+      .filter((p) => p.cycle_id === 2 && p.status === 'active')
+      .map(priorityView)
+      .map((p) => ({
+        id: p.id, title: p.title, status: p.status, tracking_status: p.tracking_status, due_date: p.due_date, goal_title: db.goals.find((g) => g.id === p.department_goal_id)?.title ?? null,
+        measure_type: p.measure_type, measure_start: p.measure_start, measure_target: p.measure_target, measure_current: p.measure_current, has_blocker: !!p.latest_update?.is_blocker,
+        last_update_at: p.latest_update?.created_at ?? null,
+      })),
+    meeting_count: MEETINGS.length,
+    focus_minutes: 660,
+  };
+}
+
+function trends(range: TrendRange, cycleId: number): TrendsResponse {
+  const list = db.entries.filter((e) => e.cycle_id === cycleId);
   const weeks = range === '4w' ? 4 : range === 'quarter' ? 13 : 16;
   const monday = startOfISOWeek(new Date());
-  const kind = (e: Entry) => (/review/.test(e.entry_type) ? 'review' : e.entry_type === 'meeting' ? 'meeting' : ['github', 'phabricator', 'bugzilla', 'jira'].includes(e.source) ? 'code' : 'other');
+  const kind = (e: EntryDto) => (/review/.test(e.entry_type) ? 'review' : e.entry_type === 'meeting' ? 'meeting' : ['github', 'phabricator', 'bugzilla', 'jira'].includes(e.source) ? 'code' : 'other');
   const weekly = Array.from({ length: weeks }, (_, i) => {
     const k = format(subWeeks(monday, weeks - 1 - i), 'yyyy-MM-dd');
     const inWeek = list.filter((e) => weekStart(e.occurred_at) === k);
@@ -130,44 +177,58 @@ function trends(range: TrendRange, cycleId?: number): Trends {
     return { week_start: k, by_type: { code: n('code'), review: n('review'), meeting: n('meeting'), other: n('other') } };
   });
   const s = stats(list);
+  const cat = new Map<string, number>();
+  list.forEach((e) => cat.set(CATEGORY[e.entry_type] ?? 'other', (cat.get(CATEGORY[e.entry_type] ?? 'other') ?? 0) + 1));
+  const count = (k: keyof EntryDto, v: string) => list.filter((e) => e[k] === v).length;
   return {
-    kpis: { entries: list.length, entries_delta_pct: 8, people: s.people, repos: s.repos, priority_linked_pct: Math.round((list.filter((e) => e.priority_id != null).length / Math.max(1, list.length)) * 100) },
+    cycle_id: cycleId, range, from: weekly[0].week_start, to: format(new Date(), 'yyyy-MM-dd'),
+    kpis: { total: list.length, prs_merged: count('entry_type', 'pr_merged'), prs_reviewed: count('entry_type', 'pr_reviewed'), jira_closed: count('entry_type', 'jira_completed'), docs_worked_on: list.filter((e) => CATEGORY[e.entry_type] === 'docs').length, meetings: count('entry_type', 'meeting') },
     weekly,
-    priority_share: s.per_project.sort((a, b) => b.count - a.count),
-    people: s.people_top,
-    repos: s.repos_top,
-    teams: s.teams_top,
-    weekday_hour: null,
+    categories: [...cat].map(([name, c]) => ({ name, count: c, types: [] })),
+    priority_share: s.per_project.sort((a, b) => b.count - a.count).map((p) => ({ priority_id: p.priority_id, title: p.name, color: null, status: null, department_goal_id: null, department_goal_title: null, department_goal_status: null, count: p.count })),
+    impact: { reach: [], complexity: [], role: [] },
+    people: s.people_top, repos: s.repos_top, teams: s.teams_top,
+    weekday: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((name, d) => ({ name, count: list.filter((e) => (parseISO(e.occurred_at).getDay() + 6) % 7 === d).length })),
   };
 }
 
+const prepResponse = (id: number): PrepResponse | null => {
+  const e = meetingEntry(id);
+  if (!e) return null;
+  const note = db.preps[id];
+  return { entry: dto(e), note: note ?? null };
+};
+
 export const handlers = [
   http.get(`${BASE}/me`, () =>
-    HttpResponse.json({ user: { id: 1, email: 'bgruber@example.com', name: 'Bastian Gruber', display_name: 'Bastian', avatar_url: null, role: 'senior' }, active_cycle: activeCycle() && withCounts(activeCycle()!), has_ai: db.hasAi, public_only: false }),
+    HttpResponse.json({ user: db.profile, active_cycle: activeCycle() && cycleDto(activeCycle()!), has_ai: db.hasAi, public_only: false }),
   ),
-  http.get(`${BASE}/public-config`, () => HttpResponse.json({ instance_name: 'Brag Frog', allowed_domain_hint: '@example.com', public_only: false })),
+  http.get(`${BASE}/public-config`, () => HttpResponse.json({ instance_name: 'Brag Frog', allowed_domain: 'example.com', public_only: false })),
   http.post(`${BASE}/auth/logout`, noContent),
   http.get(`${BASE}/config`, () => HttpResponse.json(config())),
+  http.get(`${BASE}/meta/entry-types`, () => HttpResponse.json(ENTRY_TYPES)),
 
   // Cycles
   http.get(`${BASE}/cycles`, () => HttpResponse.json(db.cycles.map(withCounts))),
   http.post(`${BASE}/cycles`, async ({ request }) => {
-    const b = (await request.json()) as { name: string; start_date: string; end_date: string; activate: boolean };
-    if (!b.name) return err(422, 'invalid_input', 'Name is required');
-    if (b.activate) db.cycles.forEach((c) => (c.is_active = false));
-    const c: Cycle = { id: db.nextId++, name: b.name, start_date: b.start_date, end_date: b.end_date, is_active: b.activate, entry_count: 0, priority_count: 0 };
+    const b = (await request.json()) as { name: string; start_date: string; end_date: string };
+    if (!b.name?.trim()) return err(422, 'invalid_input', 'Name is required');
+    if (b.end_date < b.start_date) return err(422, 'invalid_input', 'end_date must not be before start_date');
+    const c: CycleSummaryDto = { id: db.nextId++, name: b.name, start_date: b.start_date, end_date: b.end_date, is_active: false, entry_count: 0, priority_count: 0 };
     db.cycles.unshift(c);
-    return HttpResponse.json(c, { status: 201 });
+    return HttpResponse.json(cycleDto(c), { status: 201 });
   }),
   http.post(`${BASE}/cycles/:id/activate`, ({ params }) => {
-    db.cycles.forEach((c) => (c.is_active = c.id === Number(params.id)));
-    return noContent();
+    const target = db.cycles.find((c) => c.id === Number(params.id));
+    if (!target) return err(404, 'not_found', 'Cycle not found');
+    db.cycles.forEach((c) => (c.is_active = c.id === target.id));
+    return HttpResponse.json(cycleDto(target));
   }),
   http.delete(`${BASE}/cycles/:id`, async ({ params, request }) => {
     const c = db.cycles.find((x) => x.id === Number(params.id));
     const b = (await request.json()) as { confirm_name: string };
     if (!c) return err(404, 'not_found', 'Cycle not found');
-    if (b.confirm_name !== c.name) return err(422, 'invalid_input', 'Name does not match');
+    if (b.confirm_name !== c.name) return err(422, 'invalid_input', 'confirm_name does not match the cycle name');
     db.cycles.splice(db.cycles.indexOf(c), 1);
     return noContent();
   }),
@@ -175,14 +236,23 @@ export const handlers = [
     const id = Number(params.id);
     const c = db.cycles.find((x) => x.id === id);
     if (!c) return err(404, 'not_found', 'Cycle not found');
-    const weeks = new Map<string, Entry[]>();
+    const weeks = new Map<string, DbEntry[]>();
     db.entries.filter((e) => e.cycle_id === id).forEach((e) => weeks.set(weekStart(e.occurred_at), [...(weeks.get(weekStart(e.occurred_at)) ?? []), e]));
+    const ps = db.priorities.filter((p) => p.cycle_id === id).map(priorityView);
     return HttpResponse.json({
-      cycle: withCounts(c),
-      review: db.sections.map((s) => { const r = sectionFor(id, s); return { slug: s.slug, title: s.title, content: r.content, content_format: r.content_format }; }).filter((r) => r.content),
-      goals: db.goals.filter((g) => g.cycle_id === id),
-      priorities: db.priorities.filter((p) => p.cycle_id === id).map((p) => ({ ...p, updates: db.updates.filter((u) => u.priority_id === p.id) })),
-      weeks: [...weeks].sort().map(([week_start, entries], i) => ({ week_start, iso_week: i + 1, entries })),
+      cycle: cycleDto(c),
+      exported_at: new Date().toISOString(),
+      review: { cycle_id: id, sections: db.sections.map((s) => sectionFor(id, s)), entry_count: db.entries.filter((e) => e.cycle_id === id).length },
+      priorities: {
+        cycle_id: id,
+        goals: db.goals.filter((g) => g.cycle_id === id).map((goal) => ({ goal, priorities: ps.filter((p) => p.department_goal_id === goal.id) })),
+        unassigned: ps.filter((p) => !db.goals.some((g) => g.id === p.department_goal_id)),
+        counts: { total: ps.length, active: ps.filter((p) => p.status === 'active').length, not_started: 0, on_hold: 0, completed: ps.filter((p) => p.status === 'completed').length, cancelled: 0 },
+      },
+      timelines: ps.map((p) => ({ priority_id: p.id, updates: db.updates.filter((u) => u.priority_id === p.id) })),
+      weeks: [...weeks].sort().map(([start, entries]) => ({
+        iso_week: Number(format(parseISO(start), 'I')), year: Number(format(parseISO(start), 'R')), start_date: start, end_date: format(addDays(parseISO(start), 6), 'yyyy-MM-dd'), entries: entries.map(dto),
+      })),
     });
   }),
 
@@ -190,11 +260,13 @@ export const handlers = [
   http.get(`${BASE}/entries/facets`, ({ request }) => {
     const cycleId = num(new URL(request.url).searchParams.get('cycle_id')) ?? 2;
     const es = db.entries.filter((e) => e.cycle_id === cycleId);
+    const sources = new Map<string, number>();
+    es.forEach((e) => sources.set(e.source, (sources.get(e.source) ?? 0) + 1));
     return HttpResponse.json({
       teams: [...new Set(es.flatMap((e) => e.teams))].sort(),
       people: [...new Set(es.flatMap((e) => e.collaborators))].sort(),
-      sources: [...new Set(es.map((e) => e.source))],
-      counts: { total: es.length, no_priority: es.filter((e) => e.priority_id == null).length, no_team: es.filter((e) => e.teams.length === 0).length, needs_classify: es.filter((e) => e.entry_type === 'meeting' && !e.meeting_role).length },
+      sources: [...sources].map(([source, count]) => ({ source, count })),
+      total: es.length,
     });
   }),
   http.get(`${BASE}/entries`, async ({ request }) => {
@@ -203,37 +275,43 @@ export const handlers = [
     const limit = num(sp.get('limit')) ?? 50;
     const offset = Number(sp.get('cursor') || 0);
     await delay(20);
-    return HttpResponse.json({ items: all.slice(offset, offset + limit).map(summary), next_cursor: offset + limit < all.length ? String(offset + limit) : null, total_matching: all.length });
+    return HttpResponse.json({ items: all.slice(offset, offset + limit).map(dto), next_cursor: offset + limit < all.length ? String(offset + limit) : null, total_matching: all.length });
   }),
   http.post(`${BASE}/entries/bulk`, async ({ request }) => {
-    const { ids, patch } = (await request.json()) as { ids: number[]; patch: BulkPatch };
-    db.entries.filter((e) => ids.includes(e.id)).forEach((e) => Object.assign(e, patch));
-    return noContent();
+    const { ids, merge_mode, teams, collaborators, ...patch } = (await request.json()) as BulkRequest;
+    const merge = (a: string[], b?: string[]) => (b ? (merge_mode === 'replace' ? b : [...new Set([...a, ...b])]) : a);
+    const hit = db.entries.filter((e) => ids.includes(e.id));
+    hit.forEach((e) => Object.assign(e, patch, { teams: merge(e.teams, teams), collaborators: merge(e.collaborators, collaborators) }));
+    return HttpResponse.json({ updated: hit.length });
   }),
   http.post(`${BASE}/entries`, async ({ request }) => {
-    const b = (await request.json()) as Partial<Entry> & { cycle_id?: number };
+    const b = (await request.json()) as EntryInput;
     if (!b.title?.trim()) return err(422, 'invalid_input', 'Title is required');
     const now = new Date().toISOString();
     const e: DbEntry = {
-      id: db.nextId++, week_id: 1, cycle_id: b.cycle_id ?? 2, source: 'manual', source_id: null, source_url: null, title: b.title, description: b.description ?? '', entry_type: b.entry_type ?? 'other', status: null,
-      repository: null, occurred_at: b.occurred_at ?? format(new Date(), 'yyyy-MM-dd'), teams: b.teams ?? [], collaborators: b.collaborators ?? [], outcome_statement: b.outcome_statement ?? null, role: b.role ?? null,
-      reach: b.reach ?? null, complexity: b.complexity ?? null, priority_id: b.priority_id ?? null, meeting_role: null, recurring_group: null, start_time: null, end_time: null, evidence_urls: [], impact_tags: [], decision: null,
-      created_at: now, updated_at: now,
+      id: db.nextId++, week_id: 1, cycle_id: activeCycle()!.id, source: 'manual', source_id: null, source_url: b.source_url ?? null, title: b.title, description: b.description ?? null, entry_type: b.entry_type,
+      status: null, repository: null, occurred_at: b.occurred_at ?? format(new Date(), 'yyyy-MM-dd'), teams: b.teams ?? [], collaborators: b.collaborators ?? [], outcome_statement: null, role: b.role ?? null,
+      reach: b.reach ?? null, complexity: b.complexity ?? null, priority_id: b.priority_id ?? null, meeting_role: null, recurring_group: null, start_time: null, end_time: null, evidence_urls: null,
+      impact_tags: null, decision: null, is_synced: false, created_at: now, updated_at: now,
     };
     db.entries.unshift(e);
-    return HttpResponse.json(e, { status: 201 });
+    return HttpResponse.json(dto(e), { status: 201 });
   }),
   http.get(`${BASE}/entries/:id`, ({ params }) => {
     const e = db.entries.find((x) => x.id === Number(params.id));
-    return e ? HttpResponse.json(e) : err(404, 'not_found', 'Entry not found');
+    return e ? HttpResponse.json(dto(e)) : err(404, 'not_found', 'Entry not found');
   }),
   http.put(`${BASE}/entries/:id`, async ({ params, request }) => {
     const e = db.entries.find((x) => x.id === Number(params.id));
     if (!e) return err(404, 'not_found', 'Entry not found');
-    const b = (await request.json()) as Partial<Entry>;
-    if (b.title !== undefined && !b.title.trim()) return err(422, 'invalid_input', 'Title is required');
-    Object.assign(e, b, { updated_at: new Date().toISOString() });
-    return HttpResponse.json(e);
+    const b = (await request.json()) as EntryInput;
+    if (!b.title?.trim()) return err(422, 'invalid_input', 'Title is required');
+    // PUT replaces the editable fields: absent ones are cleared.
+    Object.assign(e, {
+      title: b.title, entry_type: e.is_synced ? e.entry_type : b.entry_type, occurred_at: b.occurred_at ?? e.occurred_at, description: b.description ?? null, priority_id: b.priority_id ?? null,
+      teams: b.teams ?? [], collaborators: b.collaborators ?? [], reach: b.reach ?? null, complexity: b.complexity ?? null, role: b.role ?? null, updated_at: new Date().toISOString(),
+    });
+    return HttpResponse.json(dto(e));
   }),
   http.delete(`${BASE}/entries/:id`, ({ params }) => {
     const i = db.entries.findIndex((x) => x.id === Number(params.id));
@@ -244,7 +322,8 @@ export const handlers = [
   http.post(`${BASE}/entries/:id/classify`, async ({ params, request }) => {
     const e = db.entries.find((x) => x.id === Number(params.id));
     if (!e) return err(404, 'not_found', 'Entry not found');
-    Object.assign(e, (await request.json()) as object);
+    const { meeting_role, teams } = (await request.json()) as { meeting_role: string; teams?: string[] };
+    Object.assign(e, { meeting_role, ...(teams && { teams }) });
     return noContent();
   }),
   http.post(`${BASE}/entries/:id/exclude`, ({ params }) => {
@@ -254,11 +333,16 @@ export const handlers = [
 
   // Today and meeting prep
   http.get(`${BASE}/today`, () => HttpResponse.json(todayPayload())),
-  http.get(`${BASE}/meetings/:id/prep`, ({ params }) => HttpResponse.json(db.preps[Number(params.id)] ?? { entry_id: Number(params.id), notes: '', doc_urls: [], meeting_goal: '', priority_id: null })),
+  http.get(`${BASE}/meetings/:id/prep`, ({ params }) => {
+    const r = prepResponse(Number(params.id));
+    return r ? HttpResponse.json(r) : err(404, 'not_found', 'Meeting not found');
+  }),
   http.put(`${BASE}/meetings/:id/prep`, async ({ params, request }) => {
     const id = Number(params.id);
-    db.preps[id] = { entry_id: id, notes: '', doc_urls: [], meeting_goal: '', priority_id: null, ...((await request.json()) as object) };
-    return HttpResponse.json(db.preps[id]);
+    if (!meetingEntry(id)) return err(404, 'not_found', 'Meeting not found');
+    const b = (await request.json()) as SavePrepRequest;
+    db.preps[id] = { notes: b.notes || null, meeting_goal: b.meeting_goal || null, doc_urls: b.doc_urls || null, updated_at: new Date().toISOString() };
+    return HttpResponse.json(prepResponse(id));
   }),
   http.post(`${BASE}/meetings/:id/prep/draft`, async () => {
     await delay(50);
@@ -268,30 +352,34 @@ export const handlers = [
   // Priorities and goals
   http.get(`${BASE}/priorities`, ({ request }) => {
     const cycleId = num(new URL(request.url).searchParams.get('cycle_id')) ?? 2;
-    const ps = db.priorities.filter((p) => p.cycle_id === cycleId).map(priorityCard);
-    const goals = db.goals.filter((g) => g.cycle_id === cycleId).map((g) => ({ goal: g, priorities: ps.filter((p) => p.department_goal_id === g.id) }));
+    const ps = db.priorities.filter((p) => p.cycle_id === cycleId).map(priorityView);
+    const n = (s: string) => ps.filter((p) => p.status === s).length;
     return HttpResponse.json({
-      goals,
+      cycle_id: cycleId,
+      goals: db.goals.filter((g) => g.cycle_id === cycleId).map((goal) => ({ goal, priorities: ps.filter((p) => p.department_goal_id === goal.id) })),
       unassigned: ps.filter((p) => p.department_goal_id == null || !db.goals.some((g) => g.id === p.department_goal_id)),
-      counts: { active: ps.filter((p) => p.status === 'active').length, done: ps.filter((p) => p.status === 'completed').length, all: ps.length },
+      counts: { total: ps.length, active: n('active'), not_started: n('not_started'), on_hold: n('on_hold'), completed: n('completed'), cancelled: n('cancelled') },
     });
   }),
   http.post(`${BASE}/priorities/import`, () => HttpResponse.json({ created: 2, updated: 1, skipped: 1, errors: ['Row 5: missing title'] })),
   http.post(`${BASE}/priorities`, async ({ request }) => {
-    const b = (await request.json()) as Record<string, unknown> & { title?: string; cycle_id?: number };
+    const b = (await request.json()) as CreatePriorityRequest;
     if (!b.title?.trim()) return err(422, 'invalid_input', 'Title is required');
-    const p = {
-      id: db.nextId++, cycle_id: b.cycle_id ?? 2, description: null, status: 'active', tracking_status: 'on_track', tier: null, due_date: null, department_goal_id: null, measure_type: null, measure_start: null,
-      measure_target: null, measure_current: null, completed_at: null, ...b,
-    } as (typeof db.priorities)[number];
+    const p: PriorityDto = {
+      id: db.nextId++, cycle_id: b.cycle_id ?? 2, title: b.title, status: b.status ?? 'active', color: null, sort_order: 99, scope: b.scope ?? null, started_at: null, completed_at: null,
+      impact_narrative: b.impact_narrative ?? null, department_goal_id: b.department_goal_id ?? null, created_at: new Date().toISOString(), priority_level: b.priority_level ?? null,
+      measure_type: b.measure_type ?? null, measure_start: b.measure_start ?? null, measure_target: b.measure_target ?? null, measure_current: null, description: b.description ?? null,
+      tracking_status: b.tracking_status ?? 'on_track', due_date: b.due_date ?? null, tier: b.tier ?? null, entry_count: 0, latest_update: null,
+    };
     db.priorities.push(p);
-    return HttpResponse.json(p, { status: 201 });
+    return HttpResponse.json(priorityView(p), { status: 201 });
   }),
   http.put(`${BASE}/priorities/:id`, async ({ params, request }) => {
     const p = db.priorities.find((x) => x.id === Number(params.id));
     if (!p) return err(404, 'not_found', 'Priority not found');
-    Object.assign(p, (await request.json()) as object);
-    return HttpResponse.json(p);
+    const b = (await request.json()) as UpdatePriorityRequest;
+    Object.assign(p, Object.fromEntries(Object.entries(b).filter(([, v]) => v !== undefined)));
+    return HttpResponse.json(priorityView(p));
   }),
   http.delete(`${BASE}/priorities/:id`, ({ params }) => {
     db.priorities = db.priorities.filter((x) => x.id !== Number(params.id));
@@ -299,13 +387,13 @@ export const handlers = [
   }),
   http.get(`${BASE}/priorities/:id/updates`, ({ params }) => HttpResponse.json(db.updates.filter((u) => u.priority_id === Number(params.id)).sort((a, b) => (a.created_at < b.created_at ? 1 : -1)))),
   http.post(`${BASE}/priorities/:id/updates`, async ({ params, request }) => {
-    const b = (await request.json()) as { tracking_status: never; measure_value: number | null; comment: string; is_blocker: boolean };
+    const b = (await request.json()) as PostUpdateRequest;
     if (!b.comment?.trim()) return err(422, 'invalid_input', 'Say what changed');
-    const u = { id: db.nextId++, priority_id: Number(params.id), created_at: new Date().toISOString(), ...b };
+    const u = { id: db.nextId++, priority_id: Number(params.id), tracking_status: b.tracking_status ?? null, measure_value: b.measure_value ?? null, comment: b.comment, is_blocker: !!b.is_blocker, tradeoff_text: null, created_at: new Date().toISOString() };
     db.updates.push(u);
     const p = db.priorities.find((x) => x.id === Number(params.id));
     if (p) {
-      p.tracking_status = b.tracking_status;
+      if (b.tracking_status) p.tracking_status = b.tracking_status;
       if (b.measure_value != null) p.measure_current = b.measure_value;
     }
     return HttpResponse.json(u, { status: 201 });
@@ -313,16 +401,16 @@ export const handlers = [
   http.post(`${BASE}/goals`, async ({ request }) => {
     const b = (await request.json()) as { title?: string; cycle_id?: number };
     if (!b.title?.trim()) return err(422, 'invalid_input', 'Title is required');
-    const g = { id: db.nextId++, cycle_id: b.cycle_id ?? 2, title: b.title, description: null, status: 'active', completed_at: null };
+    const g = { id: db.nextId++, cycle_id: b.cycle_id ?? 2, title: b.title, description: null, status: 'active', sort_order: 99, source: 'manual', created_at: new Date().toISOString() };
     db.goals.push(g);
     return HttpResponse.json(g, { status: 201 });
   }),
   http.put(`${BASE}/goals/:id`, async ({ params, request }) => {
     const g = db.goals.find((x) => x.id === Number(params.id));
     if (!g) return err(404, 'not_found', 'Goal not found');
-    const b = (await request.json()) as { status?: string };
+    const b = (await request.json()) as { title?: string; status?: string };
     Object.assign(g, b);
-    if (b.status === 'completed') db.priorities.filter((p) => p.department_goal_id === g.id).forEach((p) => Object.assign(p, { status: 'completed', tracking_status: 'complete' }));
+    if (b.status === 'completed') db.priorities.filter((p) => p.department_goal_id === g.id && p.status === 'active').forEach((p) => Object.assign(p, { status: 'completed', tracking_status: 'complete' }));
     return HttpResponse.json(g);
   }),
   http.delete(`${BASE}/goals/:id`, ({ params }) => {
@@ -332,35 +420,37 @@ export const handlers = [
 
   // Review
   http.get(`${BASE}/cycles/:id/review`, ({ params }) =>
-    HttpResponse.json({ sections: db.sections.map((s) => sectionFor(Number(params.id), s)), entry_count: db.entries.filter((e) => e.cycle_id === Number(params.id)).length }),
+    HttpResponse.json({ cycle_id: Number(params.id), sections: db.sections.map((s) => sectionFor(Number(params.id), s)), entry_count: db.entries.filter((e) => e.cycle_id === Number(params.id)).length }),
   ),
   http.put(`${BASE}/cycles/:id/review/:slug`, async ({ params, request }) => {
-    const b = (await request.json()) as { content: string; content_format: 'markdown' | 'blocknote' };
+    const b = (await request.json()) as { content: string; content_format: string };
     db.reviews[`${params.id}:${params.slug}`] = { ...b, generated_at: null };
-    return HttpResponse.json({ ok: true });
+    const cfg = db.sections.find((s) => s.slug === params.slug);
+    if (!cfg) return err(404, 'not_found', 'Unknown section');
+    return HttpResponse.json(sectionFor(Number(params.id), cfg));
   }),
   http.post(`${BASE}/cycles/:id/review/:slug/draft`, async () => {
     await delay(60);
     return HttpResponse.json({ markdown: '## 1. Drafted example\n\nA first draft from your logbook and priorities.' });
   }),
-  http.get(`${BASE}/cycles/:id/archive`, () => HttpResponse.json(db.archive)),
+  http.get(`${BASE}/cycles/:id/archive`, ({ params }) => HttpResponse.json({ ...db.archive, cycle_id: Number(params.id) })),
 
   // Reports
   http.get(`${BASE}/reports`, ({ request }) => {
     const cycleId = num(new URL(request.url).searchParams.get('cycle_id')) ?? 2;
-    return HttpResponse.json(
-      db.reports.filter((r) => r.cycle_id === cycleId).map(({ id, title, filters, entry_count, generated_at }) => ({ id, title, filters, entry_count, generated_at })).reverse(),
-    );
+    return HttpResponse.json(db.reports.filter((r) => r.cycle_id === cycleId).map(({ id, cycle_id, title, filters, entry_count, generated_at }) => ({ id, cycle_id, title, filters, entry_count, generated_at })).reverse());
   }),
   http.post(`${BASE}/reports`, async ({ request }) => {
-    const b = (await request.json()) as ReportInput;
+    const b = (await request.json()) as CreateReportRequest;
     const sp = new URLSearchParams(Object.entries({ ...b.filters, cycle_id: b.cycle_id }).filter(([, v]) => v != null && v !== '').map(([k, v]) => [k, String(v)]));
     const list = filterEntries(sp);
     if (list.length === 0) return err(422, 'empty_selection', 'No entries match these filters');
     await delay(30);
+    const key: ReportKeyEntry[] = list.slice(0, 10).map((e) => ({ id: e.id, title: e.title, entry_type: e.entry_type, source: e.source, source_url: e.source_url, occurred_at: e.occurred_at, priority_id: e.priority_id, repository: e.repository, reach: e.reach, complexity: e.complexity }));
     const r = {
-      id: db.nextId++, cycle_id: b.cycle_id, title: b.title || 'All projects · report', filters: b.filters, entry_count: list.length, generated_at: new Date().toISOString(), stats: stats(list),
-      narrative: { content: b.with_ai ? 'Focused on CI reliability and platform work with several collaborators.' : '', content_format: 'markdown' as const }, key_entries: list.slice(0, 10), ai_error: null,
+      id: db.nextId++, cycle_id: b.cycle_id, title: b.title || 'All projects · report', filters: b.filters, entry_count: list.length, generated_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      model_used: b.with_ai ? 'mock' : null, stats: stats(list), narrative: { content: b.with_ai ? 'Focused on CI reliability and platform work with several collaborators.' : '', content_format: 'markdown' },
+      key_entries: key, ai_error: null,
     };
     db.reports.push(r);
     return HttpResponse.json(r, { status: 201 });
@@ -377,64 +467,77 @@ export const handlers = [
   // Trends
   http.get(`${BASE}/trends`, ({ request }) => {
     const sp = new URL(request.url).searchParams;
-    return HttpResponse.json(trends((sp.get('range') as TrendRange) ?? 'cycle', num(sp.get('cycle_id'))));
+    return HttpResponse.json(trends((sp.get('range') as TrendRange) ?? 'cycle', num(sp.get('cycle_id')) ?? 2));
   }),
 
   // Integrations and sync
-  http.get(`${BASE}/integrations`, () => HttpResponse.json(db.integrations)),
+  http.get(`${BASE}/integrations`, () => HttpResponse.json({ services: db.integrations })),
   http.put(`${BASE}/integrations/:service`, async ({ params, request }) => {
     const i = db.integrations.find((x) => x.service === params.service);
     if (!i) return err(404, 'not_found', 'Unknown service');
-    const b = (await request.json()) as { config?: Record<string, string>; token?: string };
-    if (b.config) i.config = b.config;
-    if (b.token) Object.assign(i, { has_token: true, status: 'connected', last_error: null });
-    return noContent();
+    const b = (await request.json()) as Partial<IntegrationInput>;
+    if (b.token === 'bad') return err(422, 'invalid_input', 'Connection failed: Token rejected');
+    i.fields = i.fields.map((f) => (f.name in b && b[f.name as keyof IntegrationInput] != null ? { ...f, value: b[f.name as keyof IntegrationInput] as string | boolean } : f));
+    Object.assign(i, { is_enabled: true, has_token: i.has_token || !!b.token || i.oauth_connect, last_sync_error: null, last_sync_status: i.last_sync_status === 'error' ? 'success' : i.last_sync_status });
+    return HttpResponse.json(i);
   }),
-  http.post(`${BASE}/integrations/:service/test`, ({ params }) => {
+  http.post(`${BASE}/integrations/:service/test`, async ({ params }) => {
     const i = db.integrations.find((x) => x.service === params.service);
-    return HttpResponse.json(i?.status === 'error' ? { ok: false, message: 'Token rejected' } : { ok: true, message: 'Connection works' });
+    return HttpResponse.json(i?.last_sync_status === 'error' ? { ok: false, message: 'Token rejected' } : { ok: true, message: 'Connection works' });
   }),
   http.delete(`${BASE}/integrations/:service/excluded/:id`, ({ params }) => {
     const i = db.integrations.find((x) => x.service === params.service);
-    if (i) i.excluded = i.excluded.filter((x) => x.id !== Number(params.id));
+    if (i) {
+      i.excluded_events = i.excluded_events.filter((x) => x.id !== params.id);
+      i.excluded_files = i.excluded_files.filter((x) => x.id !== params.id);
+    }
     return noContent();
   }),
   http.delete(`${BASE}/integrations/:service`, ({ params }) => {
     const i = db.integrations.find((x) => x.service === params.service);
-    if (i) Object.assign(i, { status: 'not_connected', has_token: false, config: {}, last_sync_at: null, last_error: null });
+    if (i) Object.assign(i, { is_enabled: false, has_token: false, last_sync_at: null, last_sync_status: null, last_sync_error: null });
     return noContent();
   }),
   http.post(`${BASE}/sync`, () => {
     db.sync = { running: true, since: Date.now() };
-    return new HttpResponse(null, { status: 202 });
+    return HttpResponse.json({ started: true }, { status: 202 });
   }),
   http.post(`${BASE}/sync/:service`, () => {
     db.sync = { running: true, since: Date.now() };
-    return new HttpResponse(null, { status: 202 });
+    return HttpResponse.json({ started: true }, { status: 202 });
   }),
   http.get(`${BASE}/sync/status`, () => {
     // A mock sync "finishes" after 3 s so the polling behaviour is visible.
     if (db.sync.running && Date.now() - db.sync.since > 3000) db.sync.running = false;
-    return HttpResponse.json({
-      running: db.sync.running,
-      services: Object.fromEntries(db.integrations.map((i) => [i.service, { state: i.status === 'error' ? 'error' : 'idle', message: i.last_error, last_sync_at: i.last_sync_at }])),
-      recent_logs: [{ id: 1, service: 'github', status: 'ok', message: '12 new entries', created_at: new Date().toISOString() }],
-    });
+    const failing = db.integrations.find((i) => i.last_sync_status === 'error');
+    const body: SyncStatus = {
+      running: db.sync.running, current_service: db.sync.running ? 'github' : null, services_remaining: db.sync.running ? 2 : 0, services_total: db.integrations.length,
+      last_synced_at: new Date().toISOString(), last_error: failing ? `${failing.display_name}: ${failing.last_sync_error}` : null,
+      services: db.integrations.map((i) => ({ service: i.service, display_name: i.display_name, is_enabled: i.is_enabled, last_sync_at: i.last_sync_at, last_sync_status: i.last_sync_status, last_sync_error: i.last_sync_error })),
+      recent_logs: [{ id: 1, service: 'github', started_at: new Date().toISOString(), completed_at: new Date().toISOString(), status: 'success', entries_created: 12, entries_updated: 3, entries_deleted: 0, entries_fetched: 15, entries_skipped: 0, error_message: null }],
+    };
+    return HttpResponse.json(body);
   }),
 
   // Settings
   http.get(`${BASE}/settings/profile`, () => HttpResponse.json(db.profile)),
   http.put(`${BASE}/settings/profile`, async ({ request }) => {
-    Object.assign(db.profile, await request.json());
+    const b = (await request.json()) as UpdateProfileRequest;
+    const clear = (v: string | undefined) => (v ? v : null);
+    Object.assign(db.profile, {
+      role: clear(b.role), wants_promotion: b.wants_promotion, display_name: clear(b.display_name), team: clear(b.team), manager_name: clear(b.manager_name), skip_level_name: clear(b.skip_level_name),
+      direct_reports: clear(b.direct_reports), timezone: clear(b.timezone), week_start: clear(b.week_start), work_start_time: clear(b.work_start_time), work_end_time: clear(b.work_end_time),
+    });
     return HttpResponse.json(db.profile);
   }),
   http.get(`${BASE}/settings/people`, () => HttpResponse.json(db.people)),
   http.post(`${BASE}/settings/people`, async ({ request }) => {
-    const b = (await request.json()) as { email: string; display_name: string };
+    const b = (await request.json()) as { email: string; display_name: string; team?: string };
     if (!b.email?.includes('@')) return err(422, 'invalid_input', 'Enter a valid email');
-    const p = { id: db.nextId++, team: null, relationship_type: null, ...b };
-    db.people.push(p);
-    return HttpResponse.json(p, { status: 201 });
+    const existing = db.people.find((p) => p.email === b.email);
+    if (existing) Object.assign(existing, { display_name: b.display_name, team: b.team ?? null });
+    else db.people.push({ id: db.nextId++, email: b.email, display_name: b.display_name, team: b.team ?? null });
+    return HttpResponse.json(db.people);
   }),
   http.delete(`${BASE}/settings/people/:id`, ({ params }) => {
     db.people = db.people.filter((x) => x.id !== Number(params.id));

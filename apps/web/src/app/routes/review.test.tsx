@@ -68,7 +68,7 @@ describe('Review', () => {
 
   it('shows the archive', async () => {
     renderWithProviders(ui, { route: '/review/2/archive' });
-    expect(await screen.findByText('Q2 check-in')).toBeInTheDocument();
+    expect(await screen.findByText('Q2 2026')).toBeInTheDocument();
     expect(screen.getByText('Autoscaling')).toBeInTheDocument();
     expect(db.archive.checkins).toHaveLength(1);
   });

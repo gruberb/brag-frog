@@ -53,11 +53,11 @@ export async function downloadReport(format: ExportFormat, report: Report, jiraB
   const md = async () => {
     const s = report.stats;
     const lines = [`# ${report.title}`, '', `_${describeFilterEntries(report)} · generated ${report.generated_at.slice(0, 10)}_`, ''];
-    if (report.narrative.content.trim()) lines.push(await sectionsToMarkdown([{ title: 'Summary', ...report.narrative }], 2, jiraBase));
+    if (report.narrative.content.trim()) lines.push(await sectionsToMarkdown([{ title: 'Summary', content: report.narrative.content, content_format: report.narrative.content_format as ContentFormat }], 2, jiraBase));
     lines.push('## At a glance', '', `- Entries: ${s.entries}`, `- People: ${s.people}`, `- Repositories: ${s.repos}`, `- Teams: ${s.teams}`, '');
     const list = (title: string, items: { name?: string; label?: string; count: number }[]) => items.length ? [`## ${title}`, '', ...items.map((i) => `- ${i.name ?? i.label}: ${i.count}`), ''] : [];
     lines.push(...list('Entries per week', s.per_week.map((w) => ({ label: w.week_start, count: w.count }))), ...list('Projects', s.per_project), ...list('Who you worked with', s.people_top), ...list('Repositories', s.repos_top), ...list('Teams', s.teams_top));
-    if (report.key_entries.length) lines.push('## Key entries', '', ...report.key_entries.map((e) => `- **${e.title}** (${e.occurred_at})${e.outcome_statement ? `: ${e.outcome_statement}` : ''}`), '');
+    if (report.key_entries.length) lines.push('## Key entries', '', ...report.key_entries.map((e) => `- **${e.title}** (${e.occurred_at}, ${e.entry_type.replace(/_/g, ' ')})`), '');
     return lines.join('\n');
   };
   await save(doc, md, format);
@@ -78,18 +78,20 @@ export async function downloadCycleBundle(format: ExportFormat | 'json', bundle:
   const doc = await bundleToDocument(bundle, jiraBase);
   const md = async () => {
     const lines = [`# ${bundle.cycle.name}`, '', `_${bundle.cycle.start_date} to ${bundle.cycle.end_date}_`, ''];
-    if (bundle.review.length) lines.push('## Self review', '', await sectionsToMarkdown(bundle.review, 3, jiraBase));
-    if (bundle.priorities.length) {
+    const written = bundle.review.sections.filter((s) => s.content?.trim()).map((s) => ({ title: s.title, content: s.content ?? '', content_format: s.content_format as ContentFormat }));
+    if (written.length) lines.push('## Self review', '', await sectionsToMarkdown(written, 3, jiraBase));
+    const all = [...bundle.priorities.goals.flatMap((g) => g.priorities), ...bundle.priorities.unassigned];
+    if (all.length) {
       lines.push('## Priorities', '');
-      for (const pr of bundle.priorities) {
+      for (const pr of all) {
         lines.push(`### ${pr.title}`, '');
-        for (const u of pr.updates) lines.push(`- ${u.created_at.slice(0, 10)}${u.is_blocker ? ' (blocker)' : ''}: ${u.comment}`);
+        for (const u of bundle.timelines.find((t) => t.priority_id === pr.id)?.updates ?? []) lines.push(`- ${u.created_at.slice(0, 10)}${u.is_blocker ? ' (blocker)' : ''}: ${u.comment ?? ''}`);
         lines.push('');
       }
     }
     lines.push('## Entries', '');
     for (const w of bundle.weeks) {
-      lines.push(`### Week ${w.iso_week} · ${w.week_start}`, '');
+      lines.push(`### Week ${w.iso_week} · ${w.start_date}`, '');
       for (const e of w.entries) lines.push(`- **${e.title}** · ${e.entry_type.replace(/_/g, ' ')} · ${e.occurred_at}`);
       lines.push('');
     }

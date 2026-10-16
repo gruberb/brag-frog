@@ -1,6 +1,6 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api-client';
-import type { BulkPatch, EntriesPage, Entry, EntryFacets, EntryFilters, EntryInput, EntrySummary } from '@/types/api/models';
+import type { BulkRequest, ClassifyRequest, EntriesPage, Entry, EntryFacets, EntryFilters, EntryInput } from '@/types/api/models';
 
 const PAGE = 50;
 
@@ -14,8 +14,7 @@ export const entryKeys = {
 export function useEntries(cycleId: number | null, filters: EntryFilters, enabled = true) {
   return useInfiniteQuery({
     queryKey: entryKeys.list(cycleId, filters),
-    queryFn: ({ pageParam, signal }) =>
-      api<EntriesPage>('/entries', { query: { ...filters, cycle_id: cycleId ?? undefined, cursor: pageParam || undefined, limit: PAGE }, signal }),
+    queryFn: ({ pageParam, signal }) => api<EntriesPage>('/entries', { query: { ...filters, cycle_id: cycleId ?? undefined, cursor: pageParam || undefined, limit: PAGE }, signal }),
     initialPageParam: '',
     getNextPageParam: (last) => last.next_cursor ?? undefined,
     placeholderData: keepPreviousData,
@@ -31,12 +30,12 @@ export const useEntry = (id: number | null) =>
 
 type Pages = InfiniteData<EntriesPage>;
 
-const SUMMARY_KEYS = ['title', 'entry_type', 'occurred_at', 'teams', 'collaborators', 'priority_id', 'reach', 'complexity', 'role'] as const;
+const SUMMARY_KEYS = ['title', 'entry_type', 'occurred_at', 'teams', 'collaborators', 'priority_id', 'reach', 'complexity', 'role', 'description'] as const;
 /** Only the fields shown in list rows are patched optimistically; the rest arrives with the refetch. */
-function toSummaryPatch(input: EntryInput): Partial<EntrySummary> {
+function toSummaryPatch(input: EntryInput): Partial<Entry> {
   const out: Record<string, unknown> = {};
   for (const k of SUMMARY_KEYS) if (k in input) out[k] = input[k];
-  return out as Partial<EntrySummary>;
+  return out as Partial<Entry>;
 }
 
 /** Applies `fn` to every cached entries list and returns the previous values for rollback. */
@@ -60,10 +59,12 @@ export function useCreateEntry() {
     onMutate: async (input) => {
       await qc.cancelQueries({ queryKey: entryKeys.all });
       // Optimistic insert at the top of every list; the refetch below replaces the temporary row.
-      const temp: EntrySummary = {
-        id: -Date.now(), source: 'manual', source_url: null, title: input.title ?? '', entry_type: input.entry_type ?? 'other', status: null, repository: null,
-        occurred_at: input.occurred_at ?? new Date().toISOString().slice(0, 10), teams: input.teams ?? [], collaborators: input.collaborators ?? [],
-        priority_id: input.priority_id ?? null, reach: input.reach ?? null, complexity: input.complexity ?? null, role: input.role ?? null, meeting_role: null,
+      const now = new Date().toISOString();
+      const temp: Entry = {
+        id: -Date.now(), week_id: 0, source: 'manual', source_id: null, source_url: input.source_url ?? null, title: input.title, description: input.description ?? null, entry_type: input.entry_type,
+        status: null, repository: null, occurred_at: input.occurred_at ?? now.slice(0, 10), teams: input.teams ?? [], collaborators: input.collaborators ?? [], outcome_statement: null,
+        role: input.role ?? null, reach: input.reach ?? null, complexity: input.complexity ?? null, priority_id: input.priority_id ?? null, meeting_role: null, recurring_group: null,
+        start_time: null, end_time: null, evidence_urls: null, impact_tags: null, decision: null, is_synced: false, created_at: now, updated_at: now,
       };
       return patchLists(qc, (d) => ({ ...d, pages: d.pages.map((p, i) => (i === 0 ? { ...p, items: [temp, ...p.items], total_matching: p.total_matching + 1 } : p)) }));
     },
@@ -96,13 +97,13 @@ export function useDeleteEntry() {
 
 export function useBulkUpdate() {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: (v: { ids: number[]; patch: BulkPatch }) => api<void>('/entries/bulk', { method: 'POST', body: v }), onSuccess: () => refreshEntryViews(qc) });
+  return useMutation({ mutationFn: (v: BulkRequest) => api<{ updated: number }>('/entries/bulk', { method: 'POST', body: v }), onSuccess: () => refreshEntryViews(qc) });
 }
 
 export function useClassifyEntry() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, ...body }: { id: number; meeting_role?: string; teams?: string[]; create_rule?: boolean }) => api<void>(`/entries/${id}/classify`, { method: 'POST', body }),
+    mutationFn: ({ id, ...body }: ClassifyRequest & { id: number }) => api<void>(`/entries/${id}/classify`, { method: 'POST', body }),
     onSuccess: () => refreshEntryViews(qc),
   });
 }

@@ -37,7 +37,7 @@ export function Component() {
     <>
       <LogbookPage
         cycleName={cycle?.name ?? 'No cycle'}
-        cycleEntryCount={cycle?.entry_count ?? 0}
+        cycleEntryCount={facets.data?.total}
         matching={query.data?.pages[0]?.total_matching ?? 0}
         facets={facets.data}
         goals={goals}

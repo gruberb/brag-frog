@@ -8,11 +8,11 @@ import { ErrorState } from '@/components/ui/EmptyState';
 import { Menu } from '@/components/ui/Menu';
 import { SkeletonRows } from '@/components/ui/Spinner';
 import { paths } from '@/config/paths';
-import { useConfig } from '@/hooks/use-config';
+import { useJiraBase } from '@/hooks/use-config';
 import type { ExportFormat } from '@/lib/export';
 import { shortDate } from '@/utils/dates';
 import { toast, toastError } from '@/stores/toast';
-import type { Cycle } from '@/types/api/models';
+import type { CycleSummary } from '@/types/api/models';
 import { fetchCycleBundle, useActivateCycle, useCycles, useDeleteCycle } from '../api/cycles';
 import { CycleDialog } from './CycleDialog';
 
@@ -20,13 +20,13 @@ type Kind = ExportFormat | 'json';
 
 export function CyclesPanel() {
   const q = useCycles();
-  const jiraBase = useConfig().data?.atlassian_base_url;
+  const jiraBase = useJiraBase();
   const activate = useActivateCycle();
   const del = useDeleteCycle();
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
 
-  const download = async (c: Cycle, kind: Kind) => {
+  const download = async (c: CycleSummary, kind: Kind) => {
     setBusy(c.id);
     try {
       const bundle = await fetchCycleBundle(c.id);

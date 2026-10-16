@@ -8,7 +8,7 @@ import { Seg } from '@/components/ui/Seg';
 import { SkeletonRows } from '@/components/ui/Spinner';
 import { paths } from '@/config/paths';
 import { useCycleContext, useSession } from '@/stores/session';
-import type { EntrySummary, Meeting, PriorityCard } from '@/types/api/models';
+import type { Entry, MeetingDto, TodayPriority } from '@/types/api/models';
 import { humanize, sourceMeta, workKind, type WorkKind } from '@/utils/entries';
 import { progressPct, trackingMeta } from '@/utils/priorities';
 import { useToday } from '../api/today';
@@ -28,26 +28,26 @@ const TABS: { value: 'all' | WorkKind; label: string }[] = [
   { value: 'ticket', label: 'Tickets' },
 ];
 
-function PriorityRow({ p }: { p: PriorityCard }) {
-  const meta = trackingMeta[p.tracking_status ?? 'no_update'];
+function PriorityRow({ p }: { p: TodayPriority }) {
+  const meta = trackingMeta(p.tracking_status);
   const pct = progressPct(p);
   return (
     <div className="prio">
       <div className="row between"><b>{p.title}</b><span className={`badge b-${meta.tone}`}>{meta.label}</span></div>
-      {p.due_date && <div className="small muted">due {format(parseISO(p.due_date), 'MMM d')}</div>}
+      {(p.goal_title || p.due_date) && <div className="small muted">{[p.goal_title && `Goal: ${p.goal_title}`, p.due_date && `due ${format(parseISO(p.due_date), 'MMM d')}`].filter(Boolean).join(' · ')}</div>}
       {pct != null && <div className="bar" style={{ marginTop: 8 }}><i style={{ width: `${pct}%`, background: meta.bar }} /></div>}
-      {(pct != null || p.blocker_count > 0) && (
+      {(pct != null || p.has_blocker) && (
         <div className="small muted" style={{ marginTop: 4 }}>
           {pct != null && `${pct}%`}
-          {p.blocker_count > 0 && ` · ${p.blocker_count} blocker${p.blocker_count > 1 ? 's' : ''}${p.latest_update?.is_blocker ? `: ${p.latest_update.comment.slice(0, 40)}` : ''}`}
+          {p.has_blocker && `${pct != null ? ' · ' : ''}blocker`}
         </div>
       )}
     </div>
   );
 }
 
-function WorkRow({ e }: { e: EntrySummary }) {
-  const m = sourceMeta[e.source];
+function WorkRow({ e }: { e: Entry }) {
+  const m = sourceMeta(e.source);
   const k = kindBadge[workKind(e)];
   return (
     <div className="row">
@@ -67,7 +67,7 @@ export function TodayPage({ composer }: { composer: ReactNode }) {
   const { user } = useSession();
   const today = useToday(cycle?.id ?? null);
   const [tab, setTab] = useState<'all' | WorkKind>('all');
-  const [prepFor, setPrepFor] = useState<Meeting | null>(null);
+  const [prepFor, setPrepFor] = useState<MeetingDto | null>(null);
   const d = today.data;
   const name = user.display_name ?? user.name.split(' ')[0];
 
@@ -76,7 +76,7 @@ export function TodayPage({ composer }: { composer: ReactNode }) {
       <div className="page-head">
         <div>
           <h1>{greeting(new Date().getHours())}, {name}</h1>
-          <p>{d ? `Week ${d.week.iso_week} · ${format(parseISO(d.week.week_start), 'MMM d')} to ${format(parseISO(d.week.week_end), 'd')}` : 'This week'}{cycle ? ` · ${cycle.name}` : ''}</p>
+          <p>{d ? `Week ${d.week.iso_week} · ${format(parseISO(d.week.start_date), 'MMM d')} to ${format(parseISO(d.week.end_date), 'd')}` : 'This week'}{cycle ? ` · ${cycle.name}` : ''}</p>
         </div>
       </div>
 
@@ -87,16 +87,16 @@ export function TodayPage({ composer }: { composer: ReactNode }) {
       {d && (
         <>
           <Card style={{ marginBottom: 16 }}>
-            <CardHeader title="This week"><span className="muted small">{d.counts.meetings} meetings · {d.counts.focus_hours}h focus time</span></CardHeader>
+            <CardHeader title="This week"><span className="muted small">{d.meeting_count} meetings · {Math.round(d.focus_minutes / 60)}h focus time</span></CardHeader>
             <CardBody>
-              <div className="week">
-                {d.meetings_by_day.map((day) => (
+              <div className="week" style={{ '--days': Math.max(d.days.length, 1) } as React.CSSProperties}>
+                {d.days.map((day) => (
                   <div key={day.date} className={`day ${day.is_today ? 'today' : ''}`}>
-                    <h4>{day.label}</h4>
+                    <h4>{format(parseISO(day.date), 'EEE')}{day.is_today ? ' · today' : ''}</h4>
                     {day.meetings.map((m) => {
-                      const prepped = d.prep_map[String(m.entry_id)];
+                      const prepped = m.has_prep;
                       return (
-                        <button key={m.entry_id} type="button" className={`mtg ${prepped ? 'prep' : ''}`} onClick={() => setPrepFor(m)}>
+                        <button key={m.id} type="button" className={`mtg ${prepped ? 'prep' : ''}`} onClick={() => setPrepFor(m)}>
                           <time>{m.start_time}</time>
                           {m.title}
                           {prepped && <> · <b>prep ready</b></>}

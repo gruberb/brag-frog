@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { SkeletonRows } from '@/components/ui/Spinner';
 import { useConfig } from '@/hooks/use-config';
 import { toast, toastError } from '@/stores/toast';
-import type { Profile } from '@/types/api/models';
+import type { User } from '@/types/api/models';
 import { useProfile, useSaveProfile } from '../api/settings';
 
 const time = z.string().refine((v) => v === '' || /^\d{2}:\d{2}$/.test(v), 'Use HH:MM');
@@ -26,12 +26,12 @@ const schema = z.object({
 });
 type Values = z.infer<typeof schema>;
 
-const toValues = (p: Profile): Values => ({
+const toValues = (p: User): Values => ({
   display_name: p.display_name ?? '', role: p.role ?? '', team: p.team ?? '', manager_name: p.manager_name ?? '', timezone: p.timezone ?? '',
   week_start: p.week_start ?? 'monday', work_start_time: p.work_start_time ?? '', work_end_time: p.work_end_time ?? '', wants_promotion: p.wants_promotion,
 });
 
-function ProfileForm({ profile }: { profile: Profile }) {
+function ProfileForm({ profile }: { profile: User }) {
   const cfg = useConfig();
   const save = useSaveProfile();
   const { register, handleSubmit, reset, formState: { errors, isDirty } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: toValues(profile) });
@@ -41,8 +41,9 @@ function ProfileForm({ profile }: { profile: Profile }) {
   return (
     <form
       onSubmit={handleSubmit((v) =>
+        // The API replaces the profile and an empty string clears a field, so unedited fields are sent back as they are.
         save.mutate(
-          { ...profile, ...v, display_name: v.display_name.trim(), role: v.role || null, team: v.team || null, manager_name: v.manager_name || null, timezone: v.timezone || null, work_start_time: v.work_start_time || null, work_end_time: v.work_end_time || null },
+          { ...v, display_name: v.display_name.trim(), skip_level_name: profile.skip_level_name ?? '', direct_reports: profile.direct_reports ?? '' },
           { onSuccess: () => toast('Profile saved'), onError: toastError },
         ),
       )}

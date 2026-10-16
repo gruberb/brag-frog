@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
-import { allTypeOptions, complexityOptions, manualTypeOptions, reachOptions, roleOptions } from '@/utils/entries';
+import { useEntryTypes } from '@/hooks/use-entry-types';
+import { complexityOptions, reachOptions, roleOptions } from '@/utils/entries';
 import type { EntryInput } from '@/types/api/models';
 import { entryFormSchema, toEntryInput, type EntryFormValues } from '../utils/entry-form-values';
 
@@ -25,6 +26,7 @@ export function EntryForm({ defaults, priorities, teamSuggestions = [], peopleSu
   const { register, handleSubmit, reset, formState } = useForm<EntryFormValues>({ resolver: zodResolver(entryFormSchema), defaultValues: defaults });
   useEffect(() => reset(defaults), [defaults, reset]);
   const { errors, isSubmitting } = formState;
+  const types = useEntryTypes();
   return (
     <form className="col" style={{ gap: 14 }} onSubmit={handleSubmit(async (v) => void (await onSubmit(toEntryInput(v))))} noValidate>
       <fieldset disabled={readOnly} style={{ display: 'contents' }}>
@@ -40,7 +42,7 @@ export function EntryForm({ defaults, priorities, teamSuggestions = [], peopleSu
           </div>
           <div className="field">
             <label htmlFor="ef-type">Type</label>
-            <Select id="ef-type" {...register('entry_type')} options={synced ? allTypeOptions : manualTypeOptions} disabled={readOnly || synced} />
+            <Select id="ef-type" {...register('entry_type')} options={synced ? types.all : types.manual} disabled={readOnly || synced} />
           </div>
         </div>
         <div className="grid g2" style={{ gap: 12 }}>
@@ -68,10 +70,6 @@ export function EntryForm({ defaults, priorities, teamSuggestions = [], peopleSu
         <div className="field">
           <label htmlFor="ef-desc">Notes</label>
           <textarea id="ef-desc" rows={4} {...register('description')} />
-        </div>
-        <div className="field">
-          <label htmlFor="ef-outcome">Outcome</label>
-          <input id="ef-outcome" placeholder="What changed because of this?" {...register('outcome_statement')} />
         </div>
       </fieldset>
       <div className="row between">

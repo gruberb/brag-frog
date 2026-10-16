@@ -12,17 +12,17 @@ import { SkeletonRows } from '@/components/ui/Spinner';
 import { paths } from '@/config/paths';
 import { useCycleContext } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
-import type { PriorityCard, TrackingStatus } from '@/types/api/models';
+import type { Priority } from '@/types/api/models';
 import { trackingMeta, trackingOptions } from '@/utils/priorities';
 import { useDeletePriority, usePostUpdate, usePriorityUpdates, useUpdatePriority } from '../api/priorities';
-import { toPriorityFormValues } from '../utils/priority-form-values';
+import { toPriorityFormValues, toUpdateRequest } from '../utils/priority-form-values';
 import { PriorityForm } from './PriorityForm';
 
-type Props = { priority: PriorityCard | null; goalName?: string; goals: Option[]; onClose: () => void };
+type Props = { priority: Priority | null; goalName?: string; goals: Option[]; onClose: () => void };
 
-function UpdateForm({ priority }: { priority: PriorityCard }) {
+function UpdateForm({ priority }: { priority: Priority }) {
   const post = usePostUpdate(priority.id);
-  const [status, setStatus] = useState<TrackingStatus>(priority.tracking_status ?? 'on_track');
+  const [status, setStatus] = useState<string>(priority.tracking_status ?? 'on_track');
   const [measure, setMeasure] = useState(priority.measure_current != null ? String(priority.measure_current) : '');
   const [comment, setComment] = useState('');
   const [blocker, setBlocker] = useState(false);
@@ -36,7 +36,7 @@ function UpdateForm({ priority }: { priority: PriorityCard }) {
         if (measure !== '' && Number.isNaN(Number(measure))) return setError('Measure must be a number');
         setError(null);
         post.mutate(
-          { tracking_status: status, measure_value: measure === '' ? null : Number(measure), comment: comment.trim(), is_blocker: blocker },
+          { tracking_status: status, measure_value: measure === '' ? undefined : Number(measure), comment: comment.trim(), is_blocker: blocker },
           { onSuccess: () => { setComment(''); setBlocker(false); toast('Update posted'); }, onError: toastError },
         );
       }}
@@ -44,7 +44,7 @@ function UpdateForm({ priority }: { priority: PriorityCard }) {
       <div className="card-b col">
         <b className="small">Post an update</b>
         <div className="grid g2" style={{ gap: 12 }}>
-          <div className="field"><label htmlFor="up-status">Status</label><Select id="up-status" value={status} onChange={(e) => setStatus(e.target.value as TrackingStatus)} options={trackingOptions} /></div>
+          <div className="field"><label htmlFor="up-status">Status</label><Select id="up-status" value={status} onChange={(e) => setStatus(e.target.value)} options={trackingOptions} /></div>
           <div className="field"><label htmlFor="up-measure">Measure{priority.measure_type ? ` (${priority.measure_type})` : ''}</label><input id="up-measure" inputMode="decimal" value={measure} onChange={(e) => setMeasure(e.target.value)} /></div>
         </div>
         <textarea rows={3} aria-label="Update" placeholder="What changed? What do you need?" value={comment} onChange={(e) => setComment(e.target.value)} />
@@ -63,7 +63,7 @@ export function PriorityDrawer({ priority, goalName, goals, onClose }: Props) {
   const updates = usePriorityUpdates(priority?.id ?? null);
   const update = useUpdatePriority();
   const del = useDeletePriority();
-  const meta = trackingMeta[priority?.tracking_status ?? 'no_update'];
+  const meta = trackingMeta(priority?.tracking_status);
   const search = cycle && !cycle.is_active ? `&cycle=${cycle.id}` : '';
 
   return (
@@ -84,7 +84,7 @@ export function PriorityDrawer({ priority, goalName, goals, onClose }: Props) {
             {updates.data?.map((u) => (
               <div key={u.id} className={u.is_blocker ? 'blk' : u.tracking_status === 'off_track' ? 'warn' : ''}>
                 <b className="small">
-                  {format(parseISO(u.created_at), 'MMM d')} · {trackingMeta[u.tracking_status ?? 'no_update'].label}
+                  {format(parseISO(u.created_at), 'MMM d')} · {trackingMeta(u.tracking_status).label}
                   {u.measure_value != null ? ` · ${u.measure_value}${priority.measure_type ? ` ${priority.measure_type}` : ''}` : ''}
                 </b>
                 <div>{u.comment}</div>
@@ -103,9 +103,9 @@ export function PriorityDrawer({ priority, goalName, goals, onClose }: Props) {
                 goals={goals}
                 readOnly={readOnly}
                 submitLabel="Save"
-                onSubmit={async (input) => {
+                onSubmit={async (values) => {
                   try {
-                    await update.mutateAsync({ id: priority.id, input });
+                    await update.mutateAsync({ id: priority.id, input: toUpdateRequest(values) });
                     toast('Priority saved');
                   } catch (e) {
                     toastError(e);

@@ -20,7 +20,6 @@ const RANGES: { value: TrendRange; label: string }[] = [
   { value: 'quarter', label: 'Quarter' },
   { value: 'cycle', label: 'Cycle' },
 ];
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function ShowData({ children, summary }: { children: React.ReactNode; summary: string }) {
   const [open, setOpen] = useState(false);
@@ -69,10 +68,13 @@ export function TrendsPage() {
       {t && (
         <div style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
           <div className="grid g4" style={{ marginBottom: 16 }}>
-            <Kpi n={t.kpis.entries} l={`entries${t.kpis.entries_delta_pct != null ? ` · ${t.kpis.entries_delta_pct >= 0 ? '+' : ''}${t.kpis.entries_delta_pct}% vs previous` : ''}`} />
-            <Kpi n={t.kpis.people} l="people worked with" />
-            <Kpi n={t.kpis.repos} l="repos" />
-            <Kpi n={`${t.kpis.priority_linked_pct}%`} l="linked to a priority" />
+            <Kpi n={t.kpis.total} l="entries" />
+            <Kpi n={t.kpis.prs_merged} l="PRs merged" />
+            <Kpi n={t.kpis.prs_reviewed + t.kpis.jira_closed} l="reviews and tickets closed" />
+            <Kpi n={`{(() => {
+              const total = Math.max(1, t.priority_share.reduce((n, p) => n + p.count, 0));
+              return Math.round((t.priority_share.filter((p) => p.priority_id != null).reduce((n, p) => n + p.count, 0) / total) * 100);
+            })()}%`} l="linked to a priority" />
           </div>
 
           <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', marginBottom: 16 }}>
@@ -105,46 +107,44 @@ export function TrendsPage() {
                     const pct = Math.round((p.count / total) * 100);
                     return (
                       <div key={p.priority_id ?? 'none'}>
-                        <div className="row between small"><span>{p.name}</span><b>{pct}%</b></div>
-                        <div className="bar" role="img" aria-label={`${p.name}: ${pct}%`}><i style={{ width: `${pct}%`, background: p.priority_id == null ? 'var(--color-gray-40)' : palette[i % palette.length] }} /></div>
+                        <div className="row between small"><span>{p.title}</span><b>{pct}%</b></div>
+                        <div className="bar" role="img" aria-label={`${p.title}: ${pct}%`}><i style={{ width: `${pct}%`, background: p.priority_id == null ? 'var(--color-gray-40)' : palette[i % palette.length] }} /></div>
                       </div>
                     );
                   });
                 })()}
-                <ShowData summary={`Share of entries by priority: ${t.priority_share.map((p) => `${p.name} ${p.count}`).join(', ')}.`}>
-                  <table className="small"><tbody>{t.priority_share.map((p) => <tr key={p.priority_id ?? 'none'}><td style={{ padding: '2px 8px' }}>{p.name}</td><td>{p.count}</td></tr>)}</tbody></table>
+                <ShowData summary={`Share of entries by priority: ${t.priority_share.map((p) => `${p.title} ${p.count}`).join(', ')}.`}>
+                  <table className="small"><tbody>{t.priority_share.map((p) => <tr key={p.priority_id ?? 'none'}><td style={{ padding: '2px 8px' }}>{p.title}</td><td>{p.count}</td></tr>)}</tbody></table>
                 </ShowData>
               </CardBody>
             </Card>
           </div>
 
-          <div className="grid g3" style={{ marginBottom: 16 }}>
+          <div className="grid g4" style={{ marginBottom: 16 }}>
+            <RankList title="Categories" items={t.categories} color="var(--color-primary)" to={(n) => logbook(`category=${encodeURIComponent(n.toLowerCase())}`)} />
             <RankList title="People" items={t.people} color="var(--color-blue-30)" to={(n) => logbook(`person=${encodeURIComponent(n)}`)} />
             <RankList title="Repositories" items={t.repos} color="var(--color-success)" mono to={(n) => logbook(`q=${encodeURIComponent(n)}`)} />
             <RankList title="Teams" items={t.teams} color="var(--color-orange-40)" to={(n) => logbook(`team=${encodeURIComponent(n)}`)} />
           </div>
 
-          {t.weekday_hour && (
-            <Card>
-              <CardHeader title="When you log"><span className="small muted">logged at, by weekday</span></CardHeader>
-              <CardBody>
-                {(() => {
-                  const byDay = WEEKDAYS.map((_, d) => t.weekday_hour!.filter((x) => x.weekday === d).reduce((n, x) => n + x.count, 0));
-                  const max = Math.max(1, ...byDay);
-                  return (
-                    <div className="row" style={{ gap: 6 }} role="img" aria-label={`Entries by weekday: ${WEEKDAYS.map((d, i) => `${d} ${byDay[i]}`).join(', ')}`}>
-                      {WEEKDAYS.map((d, i) => (
-                        <div key={d} className="grow" style={{ textAlign: 'center' }}>
-                          <div style={{ height: 22, borderRadius: 4, background: 'var(--color-primary)', opacity: 0.12 + 0.7 * (byDay[i] / max) }} title={`${d}: ${byDay[i]}`} />
-                          <span className="small muted">{d}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </CardBody>
-            </Card>
-          )}
+          <Card>
+            <CardHeader title="When you log"><span className="small muted">logged at, by weekday</span></CardHeader>
+            <CardBody>
+              {(() => {
+                const max = Math.max(1, ...t.weekday.map((d) => d.count));
+                return (
+                  <div className="row" style={{ gap: 6 }} role="img" aria-label={`Entries by weekday: ${t.weekday.map((d) => `${d.name} ${d.count}`).join(', ')}`}>
+                    {t.weekday.map((d) => (
+                      <div key={d.name} className="grow" style={{ textAlign: 'center' }}>
+                        <div style={{ height: 22, borderRadius: 4, background: 'var(--color-primary)', opacity: 0.12 + 0.7 * (d.count / max) }} title={`${d.name}: ${d.count}`} />
+                        <span className="small muted">{d.name.slice(0, 3)}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </CardBody>
+          </Card>
         </div>
       )}
     </>

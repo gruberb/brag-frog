@@ -5,7 +5,7 @@ import { Select } from '@/components/ui/Select';
 import { usePriorityOptions } from '@/hooks/use-priority-options';
 import { useCycleContext } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
-import { manualTypeOptions } from '@/utils/entries';
+import { useEntryTypes } from '@/hooks/use-entry-types';
 import { isoDay } from '@/utils/dates';
 import { useCreateEntry, useEntryFacets } from '../api/entries';
 import { EntryForm } from './EntryForm';
@@ -31,7 +31,7 @@ export function ComposerDialog({ open, onOpenChange, initialTitle = '' }: { open
           onCancel={() => onOpenChange(false)}
           onSubmit={async (input) => {
             try {
-              await create.mutateAsync({ ...input, cycle_id: cycle?.id });
+              await create.mutateAsync(input);
               toast('Entry logged');
               onOpenChange(false);
             } catch (err) {
@@ -52,6 +52,7 @@ export function QuickComposer() {
   const { cycle, readOnly } = useCycleContext();
   const { priorities } = usePriorityOptions(cycle?.id);
   const create = useCreateEntry();
+  const types = useEntryTypes();
   const [title, setTitle] = useState('');
   const [type, setType] = useState('development');
   const [priority, setPriority] = useState('');
@@ -70,7 +71,7 @@ export function QuickComposer() {
     const t = title.trim();
     if (!t) return;
     try {
-      await create.mutateAsync({ title: t, entry_type: type, priority_id: priority ? Number(priority) : null, occurred_at: isoDay(new Date()), cycle_id: cycle?.id });
+      await create.mutateAsync({ title: t, entry_type: type, priority_id: priority ? Number(priority) : undefined, occurred_at: isoDay(new Date()) });
       setTitle('');
     } catch (err) {
       toastError(err);
@@ -101,7 +102,7 @@ export function QuickComposer() {
           </Button>
         </div>
         <div className="row wrap">
-          <Select aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} options={manualTypeOptions} style={{ padding: '3px 8px', fontSize: 12 }} />
+          <Select aria-label="Type" value={type} onChange={(e) => setType(e.target.value)} options={types.manual} style={{ padding: '3px 8px', fontSize: 12 }} />
           <Select aria-label="Priority" value={priority} onChange={(e) => setPriority(e.target.value)} options={priorities} placeholder="No priority" style={{ padding: '3px 8px', fontSize: 12 }} />
           <span className="small muted">Enter logs · Shift+Enter adds details</span>
         </div>

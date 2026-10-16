@@ -18,7 +18,7 @@ export function SigninPage() {
         </a>
         <p className="small muted" style={{ marginTop: 12 }}>
           {cfg.data?.instance_name ?? 'Brag Frog'}
-          {cfg.data?.allowed_domain_hint ? ` · restricted to ${cfg.data.allowed_domain_hint}` : ''} · <Link to={paths.privacy}>Privacy</Link> ·{' '}
+          {cfg.data?.allowed_domain ? ` · restricted to @${cfg.data.allowed_domain.replace(/^@/, '')}` : ''} · <Link to={paths.privacy}>Privacy</Link> ·{' '}
           <Link to={paths.terms}>Terms</Link>
         </p>
       </div>

@@ -1,8 +1,8 @@
 import type { EntryFilters } from '@/types/api/models';
 
-const STRING_KEYS = ['from', 'to', 'source', 'type', 'reach', 'complexity', 'role', 'q', 'team', 'person'] as const;
+const STRING_KEYS = ['from', 'to', 'source', 'category', 'reach', 'complexity', 'role', 'q', 'team', 'person'] as const;
 const NUM_KEYS = ['priority_id', 'goal_id'] as const;
-const BOOL_KEYS = ['no_priority', 'no_team', 'needs_classify'] as const;
+const BOOL_KEYS = ['no_priority', 'no_team', 'no_person'] as const;
 
 /** URL search params are the single source of truth for Logbook filters, so views are linkable. */
 export function parseFilters(sp: URLSearchParams): EntryFilters {

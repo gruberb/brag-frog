@@ -21,7 +21,7 @@ const ui = (
 describe('Trends', () => {
   it('renders KPIs, the weekly chart, priority share and ranked lists', async () => {
     renderWithProviders(ui, { route: '/trends' });
-    expect(await screen.findByText('people worked with')).toBeInTheDocument();
+    expect(await screen.findByText('PRs merged')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Activity by week' })).toBeInTheDocument();
     expect(screen.getByText('Priority share')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Sam: \d+\. Open in logbook/ })).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe('Trends', () => {
     server.use(http.get('/api/v1/trends', ({ request }) => { seen.push(new URL(request.url).searchParams.get('range')!); return undefined; }));
     const user = userEvent.setup();
     renderWithProviders(ui, { route: '/trends' });
-    await screen.findByText('people worked with');
+    await screen.findByText('PRs merged');
     await user.click(screen.getByRole('button', { name: '4 weeks' }));
     await waitFor(() => expect(seen).toContain('4w'));
     expect(screen.getByRole('button', { name: '4 weeks' })).toHaveAttribute('aria-pressed', 'true');
@@ -48,7 +48,7 @@ describe('Trends', () => {
   it('clicking a week bar opens that week in the logbook', async () => {
     const user = userEvent.setup();
     renderWithProviders(ui, { route: '/trends' });
-    await screen.findByText('people worked with');
+    await screen.findByText('PRs merged');
     const bars = within(screen.getByRole('group', { name: 'Activity by week' })).getAllByRole('link');
     await user.click(bars.at(-1)!);
     expect(await screen.findByTestId('where')).toHaveTextContent(/\/logbook\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
@@ -57,7 +57,7 @@ describe('Trends', () => {
   it('offers the data behind each chart in a table', async () => {
     const user = userEvent.setup();
     renderWithProviders(ui, { route: '/trends' });
-    await screen.findByText('people worked with');
+    await screen.findByText('PRs merged');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: 'Show data' })[0]);
     expect(screen.getByRole('columnheader', { name: 'Week' })).toBeInTheDocument();

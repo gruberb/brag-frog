@@ -3,8 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button } from '@/components/ui/Button';
 import { Select, type Option } from '@/components/ui/Select';
-import type { PriorityInput } from '@/types/api/models';
-import { priorityFormSchema, toPriorityInput, type PriorityFormValues } from '../utils/priority-form-values';
+import { priorityFormSchema, type PriorityFormValues } from '../utils/priority-form-values';
 
 const STATUS: Option[] = [
   { value: 'active', label: 'Active' },
@@ -19,14 +18,14 @@ const TIER: Option[] = [
   { value: 'individual', label: 'Individual' },
 ];
 
-type Props = { defaults: PriorityFormValues; goals: Option[]; readOnly?: boolean; submitLabel: string; onSubmit: (i: PriorityInput) => Promise<unknown> | void; onCancel?: () => void };
+type Props = { defaults: PriorityFormValues; goals: Option[]; readOnly?: boolean; submitLabel: string; onSubmit: (v: PriorityFormValues) => Promise<unknown> | void; onCancel?: () => void };
 
 export function PriorityForm({ defaults, goals, readOnly, submitLabel, onSubmit, onCancel }: Props) {
   const { register, handleSubmit, reset, formState } = useForm<PriorityFormValues>({ resolver: zodResolver(priorityFormSchema), defaultValues: defaults });
   useEffect(() => reset(defaults), [defaults, reset]);
   const { errors, isSubmitting } = formState;
   return (
-    <form className="col" style={{ gap: 12 }} noValidate onSubmit={handleSubmit(async (v) => void (await onSubmit(toPriorityInput(v))))}>
+    <form className="col" style={{ gap: 12 }} noValidate onSubmit={handleSubmit(async (v) => void (await onSubmit(v)))}>
       <fieldset disabled={readOnly} style={{ display: 'contents' }}>
         <div className="field">
           <label htmlFor="pf-title">Title</label>
