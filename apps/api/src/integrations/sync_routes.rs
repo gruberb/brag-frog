@@ -179,22 +179,18 @@ pub async fn sync_status_activity(
     render_sync_log(&state, auth.user_id).await
 }
 
-/// HTMX handler: performs a hard sync -- clears soft-deletes, re-syncs, then soft-deletes stale entries.
-pub async fn hard_sync_service(
-    auth: AuthUser,
-    State(state): State<AppState>,
-    Path(service): Path<String>,
-) -> Result<Html<String>, AppError> {
+/// Hard sync: clears soft-deletes, re-syncs, then removes entries the sync no longer returns.
+/// Shared by the HTMX handler and the JSON API.
+pub(crate) async fn run_hard_sync(
+    state: &AppState,
+    user_id: i64,
+    service: &str,
+) -> Result<(), AppError> {
     // Map service to its source names used in brag_entries.source
-    let sources: Vec<&str> = match service.as_str() {
-        "atlassian" => vec!["jira", "confluence"],
-        "google_drive" => vec!["google_drive"],
-        "google_calendar" => vec!["google_calendar"],
-        other => vec![other],
-    };
+    let sources = super::integrations_routes::service_to_sources(service);
 
     for source in &sources {
-        let _ = BragEntry::clear_soft_deletes_for_service(&state.db, auth.user_id, source).await;
+        let _ = BragEntry::clear_soft_deletes_for_service(&state.db, user_id, source).await;
     }
 
     // Calendar uses hard-delete for unmatched entries because its sync window
@@ -207,8 +203,8 @@ pub async fn hard_sync_service(
         &state.db,
         &state.crypto,
         &http_client,
-        auth.user_id,
-        &service,
+        user_id,
+        service,
         Some(&state.config),
     )
     .await
@@ -226,7 +222,7 @@ pub async fn hard_sync_service(
                 let deleted = if use_hard_delete {
                     BragEntry::hard_delete_unmatched_for_service(
                         &state.db,
-                        auth.user_id,
+                        user_id,
                         source,
                         &matched_ids,
                     )
@@ -234,7 +230,7 @@ pub async fn hard_sync_service(
                 } else {
                     BragEntry::soft_delete_unmatched_for_service(
                         &state.db,
-                        auth.user_id,
+                        user_id,
                         source,
                         &matched_ids,
                     )
@@ -256,7 +252,16 @@ pub async fn hard_sync_service(
             tracing::warn!(service = %service, error = %e, "Hard sync failed for service");
         }
     }
+    Ok(())
+}
 
+/// HTMX handler: performs a hard sync and returns the updated log.
+pub async fn hard_sync_service(
+    auth: AuthUser,
+    State(state): State<AppState>,
+    Path(service): Path<String>,
+) -> Result<Html<String>, AppError> {
+    run_hard_sync(&state, auth.user_id, &service).await?;
     render_sync_log(&state, auth.user_id).await
 }
 
