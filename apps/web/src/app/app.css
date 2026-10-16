@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+@import './components.css';
+
+/* Fonts: same files and names as the old app (static/css/tokens.css). */
+@font-face { font-family: 'Mozilla Headline'; src: url('/fonts/MozillaHeadline-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Mozilla Headline'; src: url('/fonts/MozillaHeadlineItalic-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Mozilla Text'; src: url('/fonts/MozillaText-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Mozilla Text'; src: url('/fonts/MozillaTextItalic-Variable.woff2') format('woff2'); font-weight: 100 900; font-style: italic; font-display: swap; }
+
+/* Design tokens: values copied 1:1 from apps/api/static/css/tokens.css (Mozilla New Products Orange-1 light).
+   `static` emits every variable so the /custom/tokens.css overlay can still override them. */
+@theme static {
+  --color-*: initial;
+  --color-ink-10: #fafafa; --color-ink-20: #e5e5e5; --color-ink-80: #171717; --color-ink-90: #0a0a0a;
+  --color-blue-10: #003eaa; --color-blue-20: #004ec2; --color-blue-30: #3b82f6; --color-blue-40: #60a5fa; --color-blue-50: #93c5fd; --color-blue-60: #80ebff;
+  --color-green-30: #16a34a; --color-green-40: #22c55e; --color-green-50: #4ade80;
+  --color-yellow-30: #ca8a04; --color-yellow-40: #eab308; --color-yellow-50: #fde047;
+  --color-red-30: #dc2626; --color-red-40: #ef4444; --color-red-50: #f87171;
+  --color-orange-30: #c45a27; --color-orange-40: #e27f2e; --color-orange-50: #ffa436;
+  --color-purple-30: #7542e5; --color-purple-40: #9059ff;
+  --color-spot-30: #e03e38; --color-spot-40: #ff453f; --color-spot-50: #ff6e69;
+  --color-gray-10: #f5f5f5; --color-gray-20: #e5e5e5; --color-gray-30: #d4d4d4; --color-gray-40: #a3a3a3; --color-gray-50: #737373;
+  --color-gray-60: #525252; --color-gray-70: #404040; --color-gray-80: #262626; --color-gray-90: #171717;
+
+  --color-primary: #ff453f; --color-primary-hover: #e03e38; --color-primary-active: #c03530;
+  --color-accent: #e27f2e; --color-accent-hover: #c45a27;
+  --color-success: #16a34a; --color-warning: #eab308; --color-error: #ef4444; --color-info: #3b82f6;
+  --color-bg: #f0ebe3; --color-bg-secondary: #faf0e6; --color-surface: #ffffff;
+  --color-text: #000000; --color-text-secondary: #5c5c5c; --color-border: #d4cec6;
+  /* One tone between border and bg-secondary for hairlines inside cards (allowed by the style guide). */
+  --color-hairline: #e3ddd4;
+
+  --color-tint-green: rgba(22, 163, 74, 0.08); --color-tint-yellow: rgba(234, 179, 8, 0.08);
+  --color-tint-red: rgba(239, 68, 68, 0.08); --color-tint-blue: rgba(59, 130, 246, 0.08);
+  --color-tint-purple: rgba(117, 66, 229, 0.08); --color-tint-coral: rgba(255, 69, 63, 0.08);
+  --color-active-bg: rgba(255, 69, 63, 0.14);
+
+  --font-stack: 'Mozilla Text', Inter, system-ui, -apple-system, sans-serif;
+  --font-stack-heading: 'Mozilla Headline', 'Mozilla Text', system-ui, sans-serif;
+  --font-stack-mono: 'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace;
+  --font-sans: var(--font-stack);
+  --font-display: var(--font-stack-heading);
+  --font-mono: var(--font-stack-mono);
+
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-base: 1rem; --text-lg: 1.125rem; --text-xl: 1.25rem; --text-2xl: 1.5rem; --text-3xl: 1.875rem;
+  --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px; --radius-full: 9999px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 8px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 20px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
+  --halftone-dot-color: rgba(0, 0, 0, 0.03); --halftone-dot-size: 1.2px; --halftone-dot-spacing: 14px;
+  --scrim-bg: rgba(0, 0, 0, 0.3);
+  --panel-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  --sidebar-width: 240px;
+  --nav-height: 48px;
+}
