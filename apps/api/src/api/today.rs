@@ -268,7 +268,7 @@ pub struct DraftPrepRequest {
 
 #[derive(Serialize, TS)]
 #[ts(export)]
-pub struct DraftResponse {
+pub struct PrepDraftResponse {
     pub content: String,
 }
 
@@ -364,7 +364,7 @@ pub async fn draft_prep(
     State(state): State<AppState>,
     Path(entry_id): Path<i64>,
     Json(input): Json<DraftPrepRequest>,
-) -> ApiResult<DraftResponse> {
+) -> ApiResult<PrepDraftResponse> {
     let ai = get_ai_client(&state, auth.user_id)
         .await
         .map_err(|e| ApiError::invalid(e.to_string().replace("Bad request: ", "")))?;
@@ -423,5 +423,5 @@ pub async fn draft_prep(
         &prior_preps,
     );
     let content = ai.generate(&prompt).await?;
-    Ok(Json(DraftResponse { content }))
+    Ok(Json(PrepDraftResponse { content }))
 }

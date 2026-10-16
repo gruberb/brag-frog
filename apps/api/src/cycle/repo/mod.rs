@@ -177,6 +177,12 @@ impl BragPhase {
             .execute(&mut *tx)
             .await?;
 
+        // Delete saved reports
+        sqlx::query("DELETE FROM reports WHERE phase_id = ?")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+
         // Delete the phase itself (scoped to user)
         sqlx::query("DELETE FROM brag_phases WHERE id = ? AND user_id = ?")
             .bind(id)

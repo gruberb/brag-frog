@@ -43,6 +43,26 @@ impl Priority {
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
+    /// Live entry count per priority for a phase, in one query. Priorities without entries are
+    /// absent from the map.
+    pub async fn entry_counts_for_phase(
+        pool: &SqlitePool,
+        phase_id: i64,
+    ) -> Result<std::collections::HashMap<i64, i64>, AppError> {
+        let rows: Vec<(i64, i64)> = sqlx::query_as(
+            r#"
+            SELECT e.priority_id, COUNT(*) FROM brag_entries e
+            JOIN weeks w ON e.week_id = w.id
+            WHERE w.phase_id = ? AND e.priority_id IS NOT NULL AND e.deleted_at IS NULL
+            GROUP BY e.priority_id
+            "#,
+        )
+        .bind(phase_id)
+        .fetch_all(pool)
+        .await?;
+        Ok(rows.into_iter().collect())
+    }
+
     /// Priorities linked to a specific department goal.
     pub async fn list_for_department_goal(
         pool: &SqlitePool,
@@ -299,6 +319,31 @@ impl PriorityUpdate {
         .fetch_all(pool)
         .await?;
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
+    }
+
+    /// The newest update of every priority in a phase, keyed by priority id.
+    pub async fn latest_for_phase(
+        pool: &SqlitePool,
+        phase_id: i64,
+        crypto: &UserCrypto,
+    ) -> Result<std::collections::HashMap<i64, Self>, AppError> {
+        let rows = sqlx::query_as::<_, PriorityUpdateRow>(
+            r#"
+            SELECT pu.* FROM priority_updates pu
+            WHERE pu.id IN (
+                SELECT MAX(pu2.id) FROM priority_updates pu2
+                JOIN priorities p ON p.id = pu2.priority_id
+                WHERE p.phase_id = ?
+                GROUP BY pu2.priority_id
+            )
+            "#,
+        )
+        .bind(phase_id)
+        .fetch_all(pool)
+        .await?;
+        rows.into_iter()
+            .map(|r| r.decrypt(crypto).map(|u| (u.priority_id, u)))
+            .collect()
     }
 
     /// Count unresolved blockers across all active priorities for a user.

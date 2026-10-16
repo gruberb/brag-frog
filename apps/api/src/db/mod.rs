@@ -158,6 +158,10 @@ const INCREMENTAL_MIGRATIONS: &[(&str, &str)] = &[
         "024_perf_and_content_format",
         include_str!("../../migrations/024_perf_and_content_format.sql"),
     ),
+    (
+        "025_reports",
+        include_str!("../../migrations/025_reports.sql"),
+    ),
 ];
 
 /// Applies migrations beyond 001 that haven't been run yet.
