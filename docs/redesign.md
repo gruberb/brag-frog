@@ -1,6 +1,8 @@
 # Brag Frog redesign: implementation plan
 
-Source: RFD "Redesign Brag Frog" (2026-10-16). Mocks: [`mocks/index.html`](mocks/index.html).
+> **Status: implemented** (see the `[Unreleased]` section of CHANGELOG.md). This is the plan the redesign was built from, kept for the rationale. The HTML mocks it refers to were removed once the real app existed; the web app in `apps/web` is the reference. Where the plan and the code differ, the code wins: for example `templates/` and `static/` were deleted from `apps/api` in the cutover, legacy tables are read through an archive endpoint instead of being migrated, and Reports became a button in the Logbook.
+
+Source: RFD "Redesign Brag Frog" (2026-10-16).
 Audience: a lower-tier model or contributor executing milestone by milestone. Follow the order. Each milestone is one PR and ends with acceptance checks that must pass before the next one starts.
 
 ## 0. Summary of decisions
@@ -56,7 +58,7 @@ brag-frog/
         config/              # env.ts, paths.ts
         features/            # auth cycles today logbook priorities review trends settings entries
         hooks/  lib/  stores/  testing/  types/  utils/
-  docs/  mocks/  website/    # website/ (marketing, Vercel) is untouched
+  docs/  website/    # website/ (marketing, Vercel) is untouched
 ```
 
 Rules (enforced by ESLint `import/no-restricted-paths`, M3):

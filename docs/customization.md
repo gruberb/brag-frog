@@ -4,7 +4,7 @@ Brag Frog is designed to be customized for any organization without modifying so
 
 ## The `custom/` overlay
 
-Create a `custom/` directory in the project root. On startup, the app checks `custom/` first, then falls back to `config/`. The `custom/` directory is gitignored, so your overrides survive `git pull`.
+The API reads two directories, set by `BRAGFROG_CUSTOM_DIR` (default `custom`) and `BRAGFROG_CONFIG_DIR` (default `config`). Both are relative to the API's working directory: `apps/api/` under `moon run api:dev`, `/app` in the Docker image (where they are preset to `/app/custom` and `/app/config`). On startup the API checks the custom directory first, then falls back to the config directory (`apps/api/config/` in the repo). The custom directory is gitignored, so your overrides survive `git pull`.
 
 ```
 custom/
@@ -15,11 +15,13 @@ custom/
   fonts/                   # Custom web fonts (.woff2)
 ```
 
-Only include files you want to override — missing files fall through to `config/` defaults.
+Only include files you want to override. Missing files fall through to the defaults in `config/`. Config changes need an API restart.
+
+The overlay supports exactly three TOML files plus `tokens.css`. Other files in `custom/` are ignored, and only `tokens.css` is served to the browser (as `/custom/tokens.css`); the TOML files may contain AI prompts and are never exposed over HTTP. `custom/fonts/` is not served either, see "Custom fonts" below.
 
 ## Career levels (`clg_levels.toml`)
 
-Define your organization's IC career ladder. This populates the Level Guide page.
+Define your organization's IC career ladder. The levels feed the career level drawer in the Review view, the role choices in Settings (profile), and the level context in AI self-review prompts.
 
 ```toml
 [[levels]]
@@ -37,11 +39,11 @@ code = "IC2"
 # ...
 ```
 
-See `config/clg_levels.toml` for the full format.
+See `apps/api/config/clg_levels.toml` for the full format.
 
 ## Review sections (`review_sections.toml`)
 
-Configure what sections appear in the AI-generated self-review and the prompts used to generate them. This maps to your review platform (Lattice, 15Five, etc.).
+Configure which sections appear in the Review view (one document editor per section) and the prompts used for AI drafts. This maps to your review platform (Lattice, 15Five, etc.).
 
 ```toml
 [[sections]]
@@ -57,7 +59,7 @@ question = "How have you grown professionally?"
 ai_prompt = "Identify areas of professional growth..."
 ```
 
-See `config/review_sections.toml` for the full format.
+See `apps/api/config/review_sections.toml` for the full format.
 
 ## Service defaults (`services.toml`)
 
@@ -95,7 +97,7 @@ token_url = "https://console.anthropic.com/settings/keys"
 
 ### Sync filters
 
-The `allowed_*` fields restrict what gets synced org-wide. Empty arrays (the default) mean no restriction — users can sync everything they have access to.
+The `allowed_*` fields restrict what gets synced org-wide. Empty arrays (the default) mean no restriction: users can sync everything they have access to.
 
 | Field | Service | Effect |
 |-------|---------|--------|
@@ -107,7 +109,7 @@ The `allowed_*` fields restrict what gets synced org-wide. Empty arrays (the def
 
 ## Custom branding (`tokens.css`)
 
-Override CSS design tokens to match your brand. Create `custom/tokens.css`:
+Override the design tokens to match your brand. Create `custom/tokens.css`:
 
 ```css
 :root {
@@ -118,17 +120,23 @@ Override CSS design tokens to match your brand. Create `custom/tokens.css`:
 }
 ```
 
-The custom CSS is loaded after the default `tokens.css`, so any variables you define will override the defaults.
+The web app links `/custom/tokens.css` after its own stylesheet, so any variable you define overrides the default. The defaults are in `apps/web/src/app/app.css` (Tailwind `@theme static`, so every token is emitted as a CSS variable); check that file for the variable names. A missing `tokens.css` is fine, the API returns an empty stylesheet.
+
+This is a per-deployment override. In the repository itself, brand colours and the Mozilla fonts are fixed.
 
 ## Custom fonts
 
-1. Place `.woff2` files in `custom/fonts/`
-2. Reference them in `custom/tokens.css`:
+The custom directory serves only `tokens.css`, so font files cannot be loaded from `custom/fonts/`. Either:
+
+- reference fonts hosted elsewhere in `custom/tokens.css`, or
+- rebuild the web app with your `.woff2` files in `apps/web/public/fonts/` (served at `/fonts/`).
+
+Content-Security-Policy is `font-src 'self'`, so external font hosts are blocked unless you change `security_headers` in `apps/api/src/kernel/middleware.rs`.
 
 ```css
 @font-face {
     font-family: 'Your Font';
-    src: url('/custom/fonts/YourFont-Variable.woff2') format('woff2');
+    src: url('/fonts/YourFont-Variable.woff2') format('woff2');
     font-weight: 100 900;
     font-display: swap;
 }
@@ -141,17 +149,17 @@ The custom CSS is loaded after the default `tokens.css`, so any variables you de
 
 ## Instance branding
 
-Set `BRAGFOX_INSTANCE_NAME` to show your company name on the login page:
+Set `BRAGFROG_INSTANCE_NAME` to show your company name on the sign-in page:
 
 ```env
-BRAGFOX_INSTANCE_NAME=Acme Corp
+BRAGFROG_INSTANCE_NAME=Acme Corp
 ```
 
-This displays "Brag Frog | Acme Corp" in the navigation bar.
+This replaces "Brag Frog" in the footer line of the sign-in page with "Acme Corp".
 
 ## Public-only mode
 
-Set `BRAGFOX_PUBLIC_ONLY=true` to restrict all sync services to public/non-confidential data:
+Set `BRAGFROG_PUBLIC_ONLY=true` to restrict all sync services to public/non-confidential data:
 
 - **GitHub:** Only syncs from public repos
 - **Bugzilla:** Strips API token, only public bugs returned
@@ -163,8 +171,8 @@ Set `BRAGFOX_PUBLIC_ONLY=true` to restrict all sync services to public/non-confi
 
 ```bash
 git pull origin main          # custom/ is gitignored, untouched
-docker compose build          # rebuild
+docker compose build          # rebuild (web app + API)
 docker compose up -d          # migrations auto-apply on startup
 ```
 
-New config keys added to `config/*.toml` are handled gracefully — your `custom/` overlay takes precedence for keys it defines; new keys fall through to defaults.
+New config keys added to `apps/api/config/*.toml` are handled gracefully. Your `custom/` overlay takes precedence for files it defines (a custom file replaces the default file as a whole), so check the defaults after an update when you override one.

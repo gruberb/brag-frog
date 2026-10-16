@@ -2,6 +2,31 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **New web app.** The server-rendered pages are replaced by a React single-page app (`apps/web`) that talks to a JSON API under `/api/v1`. Pages load once and navigate without full reloads, and lists are paged instead of rendering a whole cycle at once.
+- **Monorepo.** The Rust backend moved to `apps/api`; the repo is managed with moon (`moon run :lint :test :build`). The Docker image builds the web app and the API together.
+- **New navigation.** Today, Logbook, Priorities, Review and Trends, with Settings behind the gear icon. Performance cycles (create, activate, download) and integrations now live in Settings.
+- **Review is a document.** Each review section is edited in a rich text editor with an evidence drawer that inserts references to logbook entries.
+- **Trends** shows weekly activity by type, priority share and the people, repositories and teams you worked with.
+- **Logbook reports.** The Report button turns the current filters into a saved report (summary, entries per week, who you worked with, key entries) that downloads as PDF, DOCX or Markdown.
+- **Downloads.** A whole cycle (written review, priorities with updates, entries by week) can be downloaded as Markdown, PDF or DOCX from Settings.
+- **Sync runs in the background.** Starting a sync returns immediately and progress is polled.
+- **Security.** Only `custom/tokens.css` is served from the custom directory (previously every file in it, including AI prompts, was public). The Content Security Policy no longer allows inline scripts, `eval` or external fonts.
+- **Ownership checks.** Cycle activation no longer deactivates the active cycle when given an id that is not yours.
+
+### Added
+- `GET /healthz` for container health probes.
+- Environment variables `BRAGFROG_CONFIG_DIR`, `BRAGFROG_CUSTOM_DIR` and `BRAGFROG_WEB_DIST`.
+- Migrations 024 (entry index, review content format) and 025 (saved reports).
+- Versioned container images are published to ghcr on release tags.
+
+### Removed
+- Quarterly check-ins, contribution examples, the status update and last-week report tabs, and the level and review guide pages. Existing data stays in the database and is shown read-only in Review ("archived from the old app") and in the cycle download.
+- Config files `assessment_templates.toml`, `checkin_sections.toml` and `rating_scale.toml` (custom overrides of them are ignored).
+- Tera templates, HTMX and the vendored static assets.
+
 ## [5.2.12] - 2026-05-27
 
 ### Fixed

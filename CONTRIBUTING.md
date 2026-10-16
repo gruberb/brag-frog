@@ -11,55 +11,54 @@ cd brag-frog
 
 # Set up environment
 cp .env.example .env
-# Fill in GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, ENCRYPTION_KEY
+# Fill in BRAGFROG_GOOGLE_CLIENT_ID, BRAGFROG_GOOGLE_CLIENT_SECRET, BRAGFROG_ENCRYPTION_KEY
 
-# Run the app
-cargo run  # http://localhost:8080
+npm ci                  # web dependencies
+moon run api:dev        # API on http://localhost:8080
+moon run web:dev        # web app on http://localhost:5173
 
-# Run tests (uses in-memory SQLite, no external deps)
-cargo test
+# Lint, test and build everything (what CI runs)
+moon run :lint :test :build
 ```
 
-**Requirements:** Rust 1.75+ and a working C linker (for SQLite).
+**Requirements:** [moon](https://moonrepo.dev), Node 24 (pinned in `.prototools`), a Rust toolchain with clippy, and a working C linker (for SQLite). API tests use in-memory SQLite and web tests use MSW, so no external services are needed.
 
 ## Project Structure
 
 ```
-src/
-├── main.rs              # Entry point
-├── lib.rs               # Module declarations, AppState
-├── routes/              # Axum route handlers
-├── models/              # Data types, entry types, KR scoring
-├── db/                  # SQLite queries, migrations
-├── services/            # Sync services (GitHub, Jira, etc.)
-├── templates.rs         # Tera template loading
-├── crypto.rs            # AES-256-GCM encryption
-└── serde_helpers.rs     # Form deserialization helpers
-templates/               # Tera HTML templates (SSR)
-├── pages/               # Full page templates
-├── components/          # HTMX partial fragments
-├── panels/              # Slide-over panel content
-└── base.html            # Layout shell
-static/                  # CSS, JS, images (no build step)
-config/                  # TOML config files (levels, review sections, services)
-migrations/              # SQL migration files
+apps/
+├── api/                 # Rust crate `brag-frog` (Axum JSON API + OAuth redirects)
+│   ├── src/
+│   │   ├── api/         # /api/v1 handlers and DTOs, one file per area
+│   │   ├── identity/    # Google OAuth, users, career levels
+│   │   ├── worklog/     # Entries and entry types
+│   │   ├── objectives/  # Priorities, department goals
+│   │   ├── cycle/       # Cycles, weeks, meeting prep, trends
+│   │   ├── review/      # Summaries, reports, AI documents
+│   │   ├── integrations/# Sync services (GitHub, Jira, etc.)
+│   │   ├── ai/          # Anthropic client and prompts
+│   │   ├── kernel/      # Config, crypto, errors, middleware
+│   │   └── db/          # SQLite pool, migrations
+│   ├── config/          # Default TOML config (levels, review sections, services)
+│   ├── migrations/      # SQL migration files
+│   └── tests/           # Integration tests
+└── web/                 # React 19 + Vite SPA
+    └── src/             # app/, features/, components/, hooks/, lib/, types/api (generated)
+.moon/                   # moon workspace and toolchains
 website/                 # Landing page (separate from the app)
 ```
 
 ## Key Conventions
 
-**Route handlers** return `Result<Html<String>, AppError>`:
-- Full pages render `pages/*.html`
-- HTMX partials render `components/*.html`
-- Panel content renders `panels/*.html`
+**API handlers** return `ApiResult<T>` (JSON). Use the `ApiAuth` extractor, keep handlers thin, and register routes in `apps/api/src/api/mod.rs`. State-changing requests need `X-Requested-With: brag-frog`.
 
-**HTMX everywhere.** The `<body>` has `hx-boost="true"`, so all links and forms are intercepted. Entry CRUD returns HTML fragments for `hx-swap`.
+**Generated types.** Wire types marked `#[ts(export)]` are exported to `apps/web/src/types/api/`. After changing one, run `moon run api:types` and commit the result. Never edit those files by hand.
 
-**No build step.** Templates are loaded at startup. CSS and JS are served from `static/` as-is.
+**Web app structure.** Code flows one way: shared (`components`, `hooks`, `lib`, `stores`, `types`, `utils`, `config`) then `features` then `app`. A feature never imports another feature; compose features in `src/app/routes`. ESLint enforces this. No barrel files.
 
 **Runtime SQL.** We use `sqlx::query` / `query_as` (not `query!`), so SQL errors surface at runtime. Run the app and test your queries.
 
-**Encrypted fields.** Titles, descriptions, and other sensitive fields are AES-256-GCM encrypted BLOBs. You can't use SQL `LIKE` on them — filter in application code after decryption.
+**Encrypted fields.** Titles, descriptions, and other sensitive fields are AES-256-GCM encrypted BLOBs. You can't use SQL `LIKE` on them: filter in application code after decryption.
 
 ## Making Changes
 
@@ -86,25 +85,24 @@ docs: documentation change
 
 1. Fork the repo and create a branch from `main`
 2. Make your changes
-3. Run `cargo test` and `cargo clippy`
-4. Open a PR against `main` — the template will guide you
+3. Run `moon run :lint :test :build`
+4. Open a PR against `main`: the template will guide you
 5. Keep PRs focused: one feature or fix per PR
 
 ### Adding a migration
 
-1. Create a new `.sql` file in `migrations/` (e.g., `005_add_foo.sql`)
-2. Register it in the `INCREMENTAL_MIGRATIONS` array in `src/db/mod.rs`
+1. Create a new `.sql` file in `apps/api/migrations/` (next number after `025_reports.sql`)
+2. Register it in the `INCREMENTAL_MIGRATIONS` array in `apps/api/src/db/mod.rs`
 3. Never modify `001_initial.sql` or any released migration
 4. Migrations run automatically at startup
 
 ### CSS changes
 
-Three CSS surfaces exist and must stay in sync:
-- `website/css/` — Landing page
-- `static/css/main.css` (`.login-page`) — Sign-in page
-- `static/css/` — App pages
+Two CSS surfaces exist and must stay in sync:
+- `website/css/`: landing page
+- `apps/web/src/app/app.css` and `components.css`: the web app, including the sign-in page
 
-Design tokens live in `static/css/tokens.css`. Keep the existing color palette and fonts.
+Design tokens live in `apps/web/src/app/app.css`. Brand colours and the Mozilla Headline and Mozilla Text fonts are fixed: use shades of the existing colours, not new hues or fonts. `apps/web/src/app/shell.test.tsx` fails on other `font-family` values.
 
 ## What to Work On
 
@@ -115,7 +113,7 @@ Issues labeled [`good first issue`](https://github.com/gruberb/brag-frog/labels/
 | `area: integrations` | GitHub, Jira, Phabricator, Bugzilla, Confluence, Google Drive/Calendar sync |
 | `area: okrs` | Goals, key results, initiatives, phases |
 | `area: ai` | Meeting prep drafts, self-review generation |
-| `area: ui` | Templates, CSS, HTMX interactions |
+| `area: ui` | React components, CSS |
 | `area: database` | Schema, migrations, queries |
 | `area: auth` | Google OAuth, sessions, encryption |
 

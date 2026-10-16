@@ -1,10 +1,5 @@
 
 /custom/tokens.css doesn't exist at build time, it will remain unchanged to be resolved at runtime
-../../node_modules/zod/v4/core/util.js (400:0): A comment
-
-"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
-
-in "../../node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
 ../../node_modules/zod/v4/core/regexes.js (74:0): A comment
 
 "/** Anchors a pattern source. The interpolation lives here rather than at the call site because
@@ -12,6 +7,11 @@ in "../../node_modules/zod/v4/core/util.js" contains an annotation that Rollup c
  * will drop `anchor(dateSource)`. Keeping it inline pinned `date` into every bundle. */"
 
 in "../../node_modules/zod/v4/core/regexes.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+../../node_modules/zod/v4/core/util.js (400:0): A comment
+
+"// Wrapped in a `@__PURE__` IIFE: esbuild never tree-shakes a top-level initializer that contains a member access on `Number`, so the bare object literal survived into every bundle."
+
+in "../../node_modules/zod/v4/core/util.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
 [plugin vite:reporter] 
-(!) /Users/bastian/CodingIsFun/_workspaces/brag-frog/.claude/worktrees/redesign-web-ac2bd7/apps/web/src/lib/export/markdown.ts is dynamically imported by /Users/bastian/CodingIsFun/_workspaces/brag-frog/.claude/worktrees/redesign-web-ac2bd7/apps/web/src/lib/export/index.ts but also statically imported by /Users/bastian/CodingIsFun/_workspaces/brag-frog/.claude/worktrees/redesign-web-ac2bd7/apps/web/src/lib/export/index.ts, dynamic import will not move module into another chunk.
+(!) /Users/bastian/CodingIsFun/_workspaces/brag-frog/apps/web/src/lib/export/markdown.ts is dynamically imported by /Users/bastian/CodingIsFun/_workspaces/brag-frog/apps/web/src/lib/export/index.ts but also statically imported by /Users/bastian/CodingIsFun/_workspaces/brag-frog/apps/web/src/lib/export/index.ts, dynamic import will not move module into another chunk.
 

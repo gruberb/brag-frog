@@ -1,48 +1,56 @@
-# Conventions — Brag Frog
+# Conventions: Brag Frog
 
-Reference material for the entry system, data model, and subsystem conventions. See [CLAUDE.md](../CLAUDE.md) for the core development guide.
+Reference material for the entry system, data model, and API and web conventions. See [CLAUDE.md](../CLAUDE.md) for the core development guide.
 
 ## Entry System
 
 - **Sources:** `github`, `phabricator`, `bugzilla`, `jira`, `confluence`, `google_drive`, `google_calendar`, `manual`
-- **35 entry types** — see `EntryType::ALL` in `src/models/entry.rs`
-- Entries belong to a Week (which belongs to a Phase)
+- **35 entry types:** see `EntryType::ALL` in `apps/api/src/worklog/model.rs`. The web app reads them from `GET /api/v1/meta/entry-types`.
+- Entries belong to a Week (which belongs to a cycle)
 - **Impact fields:** `outcome_statement`, `evidence_urls`, `role`, `impact_tags`, `reach`, `complexity`
 - **Decision fields:** `decision_alternatives`, `decision_reasoning`, `decision_outcome`
 - **Meeting fields:** `meeting_role`, `recurring_group`
+- Encrypted columns: `title`, `description`, `teams`, `collaborators`, `outcome_statement`, `decision_*`. Filter them in application code after decryption.
 
 ## Data Model
 
-Hierarchy: **Goal → KeyResult → Entry** (via `key_result_id` → `goal_id` FKs). **Initiative → Entry** (via `initiative_id`). **Initiative ↔ KeyResult** (many-to-many via `initiative_key_results`).
+Hierarchy: **DepartmentGoal → Priority → Entry** (via `department_goal_id` on priorities and `priority_id` on entries). A cycle is a `brag_phases` row.
 
-Additional tables: `department_goals`, `priorities`, `contribution_examples`, `contribution_example_entries`, `quarterly_checkins`, `summaries`, `ai_documents`, `meeting_rules`, `meeting_prep_notes`, `status_updates`, `last_week_reports`.
+Tables in use: `users`, `brag_phases`, `weeks`, `brag_entries`, `department_goals`, `priorities`, `priority_updates`, `summaries`, `reports`, `ai_documents`, `meeting_rules`, `meeting_prep_notes`, `people_aliases`, `integration_configs`, `sync_logs`.
 
-## KR Measurement System
+Read-only legacy tables (no write path, shown by `GET /api/v1/cycles/{id}/archive`): `quarterly_checkins`, `contribution_examples`, `contribution_example_entries`, `status_updates`, `last_week_reports`.
 
-- `kr_type`: `manual` (default), `numeric`, `boolean`, `milestone`
-- `direction`: `increase`, `decrease`, `maintain` (for numeric)
-- Score: auto-calculated 0.0–1.0 via `KeyResult::recalculate_score()`
-- `progress` field kept in sync: `progress = (score * 100).round()`
+## Priorities
 
-## Panel System
+- `status`: plain string. The UI treats `active | not_started | on_hold` as active and `completed | cancelled` as done.
+- `tracking_status`: `on_track`, `off_track`, and similar plain strings, set through priority updates.
+- Measurement: `measure_type`, `measure_start`, `measure_target`, `measure_current`.
+- Lattice CSV import: `POST /api/v1/priorities/import` (multipart `csv_file`, `cycle_id` in the query string).
 
-- Slide-over panels for entry detail, initiative detail, KR updates
-- JS: `openPanel(title, html)`, `openPanelFromUrl(title, url)`, `closePanel()`
-- Escape key closes panel. Scrim click closes panel.
-- Panel content loaded into `#panel-body` div via `htmx.ajax('GET', url, {target: '#panel-body'})`
+## Reports and Review
 
-## Navigation
+- **Review sections** come from `review_sections.toml`. Each saved section has `content` and `content_format` (`markdown` for old text, `blocknote` after the first save in the editor).
+- **Reports** are created from the current Logbook filters (`POST /api/v1/reports`). A report stores the filters, a stats snapshot and optional AI text. There is no edit endpoint: create a new report to refresh it.
+- **Exports** (Markdown, PDF, DOCX) are generated in the browser from `GET /api/v1/cycles/{id}/bundle`.
 
-- **Primary nav:** Dashboard, Logbook, Priorities, Reports, Review
-- **Secondary (avatar dropdown):** Settings, Integrations, Level Guide, Trends, Export, Sync All, Sign Out
-- `GET /` → redirects to `/dashboard`
-- `/priorities` — department goals, priorities, and priority updates
-- `/reports` — last-week summaries and latest updates
-- `/integrations` — service connections (split from settings)
-- `/settings` — profile and preferences
-- `/review/:id` — self-review page
-- `/quarterly-checkin/:quarter/:year` — Review-owned check-in page
+## API Conventions
+
+- All routes live in `apps/api/src/api/` and are registered in `api/mod.rs`. Authenticated routes sit behind `csrf_protection` then `require_auth_api`.
+- Handlers return `ApiResult<T>`. Errors are `{"error":{"code","message"}}` with codes such as `not_found`, `invalid_input` (422), `bad_request`, `unauthorized`, `csrf`, `internal`.
+- Use the `ApiAuth` extractor before `State(state)`. Resolve and ownership-check cycles with `api/scope.rs`.
+- State-changing requests need `X-Requested-With: brag-frog`.
+- Optional request fields: `deserialize_optional_i64` and `deserialize_optional_string` in `kernel/serde_helpers.rs` convert `""` to `None`.
+- Wire types derive `TS` with `#[ts(export)]`. Run `moon run api:types` after changing them.
+
+## Web Conventions
+
+- Layers: shared (`components hooks lib stores types utils config`) then `features` then `app`. No feature imports another feature; compose in `src/app/routes`. Enforced by ESLint.
+- Each feature has `api/` (query hooks and keys), `components/`, and optionally `utils/`.
+- No barrel files. Route paths come from `src/config/paths.ts`.
+- Navigation: Today, Logbook, Priorities, Review, Trends in the main nav. Settings (profile, cycles, people, integrations, AI) opens from the gear icon. Cmd+K opens the command palette.
+- Fonts and colours are fixed (see CLAUDE.md gotchas 11 to 13).
+- Details of how each view maps to the API: [apps/web/README.md](../apps/web/README.md).
 
 ## Config System
 
-Three TOML files loaded at startup into `OnceLock` statics: `clg_levels.toml`, `review_sections.toml`, `services.toml`. App checks `custom/` first, falls back to `config/`. The `custom/` directory is gitignored.
+Three TOML files loaded at startup into `OnceLock` statics: `clg_levels.toml`, `review_sections.toml`, `services.toml`. The API checks `BRAGFROG_CUSTOM_DIR` (default `custom`) first, then falls back to `BRAGFROG_CONFIG_DIR` (default `config`). The custom directory is gitignored. Only `custom/tokens.css` is served over HTTP.

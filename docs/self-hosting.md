@@ -1,6 +1,6 @@
 # Self-Hosting Guide
 
-Brag Frog is a single Rust binary with an embedded SQLite database. No external services required beyond Google OAuth for authentication.
+Brag Frog is one Rust binary (API) that also serves the built web app, with an embedded SQLite database. No external services required beyond Google OAuth for authentication.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Brag Frog is a single Rust binary with an embedded SQLite database. No external 
 
 - Go to [console.cloud.google.com](https://console.cloud.google.com)
 - Create a new project (or use an existing one)
-- No billing is required — OAuth is free
+- No billing is required: OAuth is free
 
 ### 2. Configure the OAuth consent screen
 
@@ -58,7 +58,7 @@ mkdir -p custom/        # optional: add config overrides
 docker compose up -d
 ```
 
-The `docker-compose.yml` mounts a persistent volume for the database and maps `./custom/` into the container.
+The `docker-compose.yml` builds the image from the `Dockerfile`, mounts a persistent volume for the database at `/data` and maps `./custom/` to `/app/custom`.
 
 ## Docker
 
@@ -74,21 +74,33 @@ docker run -p 8080:8080 \
   brag-frog
 ```
 
-The SQLite database is stored at `/data/bragfrog.db` inside the container.
+The Dockerfile has three stages: `node:24-alpine` builds the web app, `rust:1.93-slim` builds the API, and `debian:trixie-slim` runs it. The image sets `BRAGFROG_WEB_DIST=/app/web`, `BRAGFROG_CONFIG_DIR=/app/config`, `BRAGFROG_CUSTOM_DIR=/app/custom` and `BRAGFROG_DATABASE_PATH=/data/bragfrog.db`, and listens on port 8080.
+
+### Prebuilt image
+
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which publishes the image to GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/gruberb/brag-frog:latest   # or a version tag
+```
+
+Use it in place of `brag-frog` in the `docker run` command above.
 
 ## Bare metal
 
+Requirements on the build machine: Rust toolchain, Node 24, npm.
+
 ```bash
 git clone https://github.com/gruberb/brag-frog.git && cd brag-frog
-cargo build --release
+npm ci
+npm run build -w apps/web           # writes apps/web/dist
+cargo build --release -p brag-frog  # writes target/release/brag-frog
 ```
 
-Copy to your server:
+Migrations are compiled into the binary. Copy to your server:
 - `target/release/brag-frog` (binary)
-- `templates/` (HTML templates)
-- `static/` (CSS, JS, images)
-- `config/` (default config files)
-- `migrations/` (database migrations)
+- `apps/web/dist/` (built web app)
+- `apps/api/config/` (default config files)
 
 Set environment variables and run:
 
@@ -97,8 +109,17 @@ export BRAGFROG_GOOGLE_CLIENT_ID=...
 export BRAGFROG_GOOGLE_CLIENT_SECRET=...
 export BRAGFROG_ENCRYPTION_KEY=...
 export BRAGFROG_BASE_URL=https://your-domain.com
+export BRAGFROG_WEB_DIST=/opt/brag-frog/web          # the copied dist/
+export BRAGFROG_CONFIG_DIR=/opt/brag-frog/config
+export BRAGFROG_CUSTOM_DIR=/opt/brag-frog/custom     # optional overrides
 ./brag-frog
 ```
+
+The three directory variables default to `config`, `custom` and `../web/dist` relative to the working directory, so set them explicitly unless you run from `apps/api`.
+
+## Health check
+
+`GET /healthz` returns `200 ok` without touching the database. Use it for load balancer, Kubernetes or Cloud Run liveness probes. The image has no `curl`, so run container-level checks from outside or add a probe in your orchestrator.
 
 ## Fly.io
 
@@ -128,6 +149,12 @@ primary_region = "iad"
 [mounts]
   source = "bragfrog_data"
   destination = "/data"
+
+[[http_service.checks]]
+  method = "GET"
+  path = "/healthz"
+  interval = "30s"
+  timeout = "5s"
 ```
 
 ```bash
@@ -171,7 +198,7 @@ server {
 }
 ```
 
-Set `BRAGFROG_BASE_URL=https://bragfrog.example.com` so OAuth redirects use the correct URL.
+Set `BRAGFROG_BASE_URL=https://bragfrog.example.com` so OAuth redirects use the correct URL. With an https base URL the session cookie is marked `Secure`. The web app and the API share one origin, so a single `location /` is enough; no separate static file serving or CORS is needed.
 
 ## Backups
 
@@ -185,29 +212,35 @@ sqlite3 /path/to/bragfrog.db ".backup /path/to/backup.db"
 cp /path/to/bragfrog.db /path/to/backup.db
 ```
 
-The encryption key (`BRAGFROG_ENCRYPTION_KEY`) must be backed up separately — without it, encrypted data in the database is unrecoverable.
+The encryption key (`BRAGFROG_ENCRYPTION_KEY`) must be backed up separately: without it, encrypted data in the database is unrecoverable.
 
 ## Updates
 
 ```bash
 git pull origin main          # custom/ is gitignored, untouched
-docker compose build          # rebuild
+docker compose build          # rebuild (web app + API)
 docker compose up -d          # migrations auto-apply on startup
 ```
+
+Or pull a newer `ghcr.io/gruberb/brag-frog` tag. Back up `bragfrog.db` before upgrading. The browser picks up a new release on the next load because `index.html` is served with `no-cache` and the hashed assets are immutable.
 
 ## Environment variables reference
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `BRAGFROG_GOOGLE_CLIENT_ID` | Yes | — | Google OAuth client ID |
-| `BRAGFROG_GOOGLE_CLIENT_SECRET` | Yes | — | Google OAuth client secret |
-| `BRAGFROG_ENCRYPTION_KEY` | Yes | — | Base64-encoded 32-byte AES key |
-| `BRAGFROG_INSTANCE_NAME` | No | — | Shows "Brag Frog \| {name}" on login page |
-| `BRAGFROG_ALLOWED_DOMAIN` | No | — | Restrict sign-ups to an email domain |
+| `BRAGFROG_GOOGLE_CLIENT_ID` | Yes | none | Google OAuth client ID |
+| `BRAGFROG_GOOGLE_CLIENT_SECRET` | Yes | none | Google OAuth client secret |
+| `BRAGFROG_ENCRYPTION_KEY` | Yes | none | Base64-encoded 32-byte AES key |
+| `BRAGFROG_INSTANCE_NAME` | No | none | Instance name shown on the sign-in page |
+| `BRAGFROG_ALLOWED_DOMAIN` | No | none | Restrict sign-ups to an email domain |
 | `BRAGFROG_PUBLIC_ONLY` | No | `false` | Only sync public/non-confidential data |
 | `BRAGFROG_AI_MODEL` | No | `claude-opus-4-7` | Anthropic model for AI summaries |
 | `BRAGFROG_BASE_URL` | No | `http://localhost:{port}` | Public URL for OAuth redirects |
 | `BRAGFROG_HOST` | No | `0.0.0.0` | Bind address |
 | `BRAGFROG_PORT` | No | `8080` | Listen port (also reads `PORT`) |
 | `BRAGFROG_DATABASE_PATH` | No | `bragfrog.db` | Path to SQLite database |
+| `BRAGFROG_CONFIG_DIR` | No | `config` | Directory with the default TOML configs |
+| `BRAGFROG_CUSTOM_DIR` | No | `custom` | Directory with operator overrides (TOML files; only `tokens.css` is served) |
+| `BRAGFROG_WEB_DIST` | No | `../web/dist` | Directory with the built web app (`index.html`, `assets/`) |
+| `BRAGFROG_GOOGLE_REDIRECT_URI` | No | `{base_url}/auth/callback` | OAuth redirect URI |
 | `SQLITE_JOURNAL_MODE` | No | `wal` | SQLite journal mode; use `delete` for FUSE/NFS-backed volumes |
