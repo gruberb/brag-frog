@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
-use crate::kernel::serde_helpers::deserialize_optional_string;
 
 /// Raw DB row with encrypted quarterly reflection fields.
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -56,25 +55,4 @@ pub struct QuarterlyCheckin {
     pub looking_ahead: Option<String>,
     pub created_at: String,
     pub updated_at: String,
-}
-
-/// Form payload for saving a quarterly check-in.
-/// `quarter` and `year` are populated from the URL path by the handler,
-/// so they default to empty/zero to avoid 422 when absent from the form body.
-#[derive(Debug, Deserialize)]
-pub struct SaveQuarterlyCheckin {
-    #[serde(default)]
-    pub quarter: String,
-    #[serde(default)]
-    pub year: i64,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub highlights_impact: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub learnings_adjustments: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub growth_development: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub support_feedback: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub looking_ahead: Option<String>,
 }

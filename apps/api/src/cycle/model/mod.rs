@@ -5,7 +5,6 @@ pub mod last_week_report;
 mod meeting;
 pub mod status_update;
 
-use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
@@ -59,23 +58,6 @@ pub struct Week {
 }
 
 impl Week {
-    /// Builds a `week_id -> JSON` lookup map for template consumption.
-    pub fn to_json_map(weeks: &[Week]) -> HashMap<i64, serde_json::Value> {
-        let mut map = HashMap::new();
-        for w in weeks {
-            map.insert(
-                w.id,
-                serde_json::json!({
-                    "id": w.id,
-                    "iso_week": w.iso_week,
-                    "year": w.year,
-                    "start_date": w.start_date,
-                    "end_date": w.end_date,
-                }),
-            );
-        }
-        map
-    }
 }
 
 // Converts ISO year + week number to the Monday of that week.

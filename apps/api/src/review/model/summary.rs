@@ -114,35 +114,6 @@ pub fn review_config() -> &'static ReviewConfig {
         .expect("Review config not loaded. Call load_review_config() at startup.")
 }
 
-/// Returns section slugs from the config.
-pub fn section_slugs() -> Vec<&'static str> {
-    review_config()
-        .sections
-        .iter()
-        .map(|s| s.slug.as_str())
-        .collect()
-}
-
-/// Human-readable heading for a section slug.
-pub fn section_title(section: &str) -> &'static str {
-    review_config()
-        .sections
-        .iter()
-        .find(|s| s.slug == section)
-        .map(|s| s.title.as_str())
-        .unwrap_or("Unknown")
-}
-
-/// Review prompt/question for a section slug.
-pub fn section_question(section: &str) -> &'static str {
-    review_config()
-        .sections
-        .iter()
-        .find(|s| s.slug == section)
-        .map(|s| s.question.as_str())
-        .unwrap_or("")
-}
-
 /// Returns the ReviewSection for a given slug.
 pub fn get_section(slug: &str) -> Option<&'static ReviewSection> {
     review_config().sections.iter().find(|s| s.slug == slug)

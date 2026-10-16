@@ -24,15 +24,6 @@ pub struct FocusDay {
     pub is_best: bool,
 }
 
-/// A day header for grouping meetings.
-#[derive(Debug, Serialize)]
-pub struct MeetingDay {
-    pub date: String,
-    pub label: String,
-    pub is_today: bool,
-    pub is_past: bool,
-}
-
 /// Parse "HH:MM" to minutes since midnight.
 fn hhmm_to_minutes(s: &str) -> Option<i32> {
     let parts: Vec<&str> = s.split(':').collect();
@@ -162,29 +153,6 @@ pub fn compute_focus_days(
     }
 
     days
-}
-
-/// Build meeting day headers from a list of meetings grouped by date.
-pub fn build_meeting_days(meetings: &[&BragEntry], today: &str) -> Vec<MeetingDay> {
-    let mut seen_dates = std::collections::BTreeSet::new();
-    for m in meetings {
-        seen_dates.insert(m.occurred_at.clone());
-    }
-    seen_dates
-        .into_iter()
-        .filter(|d| d.as_str() >= today)
-        .map(|d| {
-            let label = NaiveDate::parse_from_str(&d, "%Y-%m-%d")
-                .map(|nd| nd.format("%A, %b %e").to_string())
-                .unwrap_or_else(|_| d.clone());
-            MeetingDay {
-                is_today: d == today,
-                is_past: *d < *today,
-                label,
-                date: d,
-            }
-        })
-        .collect()
 }
 
 /// Filter entries to "active work": open PRs, revisions, bugs, Jira tickets

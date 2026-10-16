@@ -57,13 +57,3 @@ pub struct DepartmentGoalInput {
 
 pub type CreateDepartmentGoal = DepartmentGoalInput;
 pub type UpdateDepartmentGoal = DepartmentGoalInput;
-
-/// Form payload for creating a department goal via HTMX panel (includes phase_id).
-#[derive(Debug, Deserialize)]
-pub struct CreateDepartmentGoalForm {
-    pub phase_id: i64,
-    pub title: String,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub description: Option<String>,
-    pub status: Option<String>,
-}

@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::cycle::model::MeetingPrepNote;
 use crate::identity::clg::ClgLevel;
-use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
+use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::review::model::{AiDocument, ContributionExample, get_section};
 use crate::worklog::model::BragEntry;
 
@@ -1094,123 +1094,6 @@ pub fn build_report_prompt(
          Totals: {stats_line}\n\n{}",
         build_last_week_summary_prompt(&groups, from, to)
     )
-}
-
-/// Builds an AI prompt for generating a stakeholder status update.
-pub fn build_status_update_prompt(
-    entries: &[BragEntry],
-    priorities: &[Priority],
-    blocker_updates: &[PriorityUpdate],
-    week_start: &str,
-    week_end: &str,
-) -> String {
-    let mut ctx = String::new();
-    ctx.push_str(&format!("Week: {} to {}\n\n", week_start, week_end));
-
-    // Priorities
-    if !priorities.is_empty() {
-        ctx.push_str("## Active Priorities\n");
-        for p in priorities {
-            if p.status == "active" {
-                let tracking = p.tracking_status.as_deref().unwrap_or("no update");
-                ctx.push_str(&format!("- {} (tracking: {})\n", p.title, tracking));
-            }
-        }
-        ctx.push('\n');
-    }
-
-    // Blockers
-    if !blocker_updates.is_empty() {
-        ctx.push_str("## Active Blockers\n");
-        for b in blocker_updates {
-            if let Some(ref comment) = b.comment {
-                ctx.push_str(&format!("- {}\n", comment));
-            }
-            if let Some(ref tradeoff) = b.tradeoff_text {
-                ctx.push_str(&format!("  Tradeoff: {}\n", tradeoff));
-            }
-        }
-        ctx.push('\n');
-    }
-
-    // Entries summary
-    if !entries.is_empty() {
-        ctx.push_str("## Work Done This Week\n");
-        for e in entries.iter().take(40) {
-            ctx.push_str(&format!("- [{}] {}", e.entry_type, e.title));
-            if let Some(ref status) = e.status {
-                ctx.push_str(&format!(" ({})", status));
-            }
-            ctx.push('\n');
-        }
-        if entries.len() > 40 {
-            ctx.push_str(&format!("... and {} more entries\n", entries.len() - 40));
-        }
-        ctx.push('\n');
-    }
-
-    ctx.push_str("---\n\n");
-    ctx.push_str(
-        "Generate a concise stakeholder status update from the context above. Format:\n\n\
-         ## Progress\n\
-         Bullet points of what shipped, what progressed, key outcomes. Be specific.\n\n\
-         ## Blockers & Tradeoffs\n\
-         For each blocker, frame it as a decision for stakeholders:\n\
-         \"We can [option A] if we [sacrifice], or [option B] but [consequence]\"\n\
-         If no blockers, say \"No blockers this week.\"\n\n\
-         ## Next Week\n\
-         Top 3 focus areas for next week.\n\n\
-         Rules: First person, concise, professional. Stakeholders should be able to scan this in 30 seconds. \
-         Never say \"we're behind\" — frame delays as tradeoffs with options.",
-    );
-
-    ctx
-}
-
-/// Builds the AI prompt for a single quarterly check-in section.
-///
-/// The model gets the section's question and instruction from
-/// `checkin_sections.toml` plus brag entries logged during the quarter. Returns
-/// plain text that the caller can drop into the textarea; no persistence happens here.
-pub fn build_quarterly_checkin_prompt(
-    section_question: &str,
-    section_instruction: &str,
-    entries: &[BragEntry],
-    quarter: &str,
-    year: i64,
-) -> String {
-    let mut ctx = String::new();
-    ctx.push_str(&format!(
-        "You are helping a software engineer prepare for their {} {} quarterly conversation with their manager.\n\n",
-        quarter, year
-    ));
-    ctx.push_str(&format!("## Question\n{}\n\n", section_question));
-
-    // Brag entries from the quarter give the model concrete artefacts to anchor the
-    // narrative. Cap the list so we do not blow past the model's context window on
-    // active quarters.
-    if !entries.is_empty() {
-        ctx.push_str(&format!(
-            "## Work Logged This Quarter ({} entries)\n",
-            entries.len()
-        ));
-        for e in entries.iter().take(60) {
-            ctx.push_str(&format!("- [{}] {}", e.entry_type, e.title));
-            if let Some(ref status) = e.status {
-                ctx.push_str(&format!(" ({})", status));
-            }
-            ctx.push('\n');
-        }
-        if entries.len() > 60 {
-            ctx.push_str(&format!("... and {} more entries\n", entries.len() - 60));
-        }
-        ctx.push('\n');
-    }
-
-    ctx.push_str("---\n\n");
-    ctx.push_str(section_instruction);
-
-    ctx
 }
 
 #[cfg(test)]

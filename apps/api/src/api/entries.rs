@@ -20,7 +20,7 @@ use super::facets;
 use super::scope::resolve_cycle;
 use crate::AppState;
 use crate::cycle::model::{BragPhase, Week};
-use crate::cycle::routes::logbook_insights::{
+use crate::cycle::service::logbook_insights::{
     AnalyzePageQuery, apply_in_memory_filters, category_to_entry_types,
 };
 use crate::identity::model::PeopleAlias;

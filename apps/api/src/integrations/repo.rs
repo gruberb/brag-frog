@@ -229,12 +229,4 @@ impl SyncLog {
         Ok(())
     }
 
-    /// Purges all sync log history for a user.
-    pub async fn delete_all_for_user(pool: &SqlitePool, user_id: i64) -> Result<(), AppError> {
-        sqlx::query("DELETE FROM sync_logs WHERE user_id = ?")
-            .bind(user_id)
-            .execute(pool)
-            .await?;
-        Ok(())
-    }
 }

@@ -79,32 +79,6 @@ pub enum EntryType {
     Investigation,
 }
 
-/// Human-readable display name for a sync source.
-pub fn source_display_name(source: &str) -> &'static str {
-    match source {
-        "github" => "GitHub",
-        "phabricator" => "Phabricator",
-        "bugzilla" => "Bugzilla",
-        "jira" => "Jira",
-        "confluence" => "Confluence",
-        "google_drive" => "Google Drive",
-        "google_calendar" => "Google Calendar",
-        "atlassian" => "Atlassian",
-        "manual" => "Manual",
-        _ => "Other",
-    }
-}
-
-/// Map an entry type slug to its originating service/source.
-/// Delegates to `EntryType::source()` — the enum is the single source of truth.
-pub fn entry_type_to_source(entry_type: &str) -> &'static str {
-    EntryType::ALL
-        .iter()
-        .find(|v| v.slug() == entry_type)
-        .map(|v| v.source())
-        .unwrap_or("manual")
-}
-
 impl EntryType {
     /// All entry type variants in display order.
     pub const ALL: &[EntryType] = &[
@@ -245,68 +219,6 @@ impl EntryType {
         self.source() == "manual"
     }
 
-    /// Look up display name by slug string.
-    pub fn display_name(type_str: &str) -> &'static str {
-        Self::ALL
-            .iter()
-            .find(|v| v.slug() == type_str)
-            .map(|v| v.label())
-            .unwrap_or("Unknown")
-    }
-
-    /// All entry types as `{value, label}` JSON objects for form dropdowns.
-    pub fn as_json_options() -> Vec<serde_json::Value> {
-        Self::ALL
-            .iter()
-            .map(|v| serde_json::json!({"value": v.slug(), "label": v.label()}))
-            .collect()
-    }
-
-    /// Manual-only entry types as `{value, label}` JSON objects.
-    pub fn as_manual_json_options() -> Vec<serde_json::Value> {
-        Self::ALL
-            .iter()
-            .filter(|v| v.is_manual())
-            .map(|v| serde_json::json!({"value": v.slug(), "label": v.label()}))
-            .collect()
-    }
-
-    /// Group label for this entry type (used in `<optgroup>` headers).
-    fn group_label(&self) -> &'static str {
-        match self.source() {
-            "github" => "GitHub",
-            "phabricator" => "Phabricator",
-            "bugzilla" => "Bugzilla",
-            "jira" => "Jira",
-            "confluence" => "Confluence",
-            "google_drive" => "Google Drive",
-            _ => "Custom",
-        }
-    }
-
-    /// All entry types grouped by source, as `[{group, options: [{value, label}]}]`.
-    pub fn as_grouped_json_options() -> Vec<serde_json::Value> {
-        let mut groups: Vec<(&str, Vec<serde_json::Value>)> = Vec::new();
-        for v in Self::ALL {
-            let group = v.group_label();
-            if let Some(last) = groups.last_mut()
-                && last.0 == group
-            {
-                last.1
-                    .push(serde_json::json!({"value": v.slug(), "label": v.label()}));
-            } else {
-                groups.push((
-                    group,
-                    vec![serde_json::json!({"value": v.slug(), "label": v.label()})],
-                ));
-            }
-        }
-        groups
-            .into_iter()
-            .map(|(g, opts)| serde_json::json!({"group": g, "options": opts}))
-            .collect()
-    }
-
     /// Map a category name to the set of entry type slugs it contains.
     pub fn types_for_category(category: &str) -> Vec<&'static str> {
         match category {
@@ -364,15 +276,6 @@ impl EntryType {
         }
     }
 
-    /// Manual-only entry types as a single "Custom" group.
-    pub fn as_manual_grouped_json_options() -> Vec<serde_json::Value> {
-        let options: Vec<serde_json::Value> = Self::ALL
-            .iter()
-            .filter(|v| v.is_manual())
-            .map(|v| serde_json::json!({"value": v.slug(), "label": v.label()}))
-            .collect();
-        vec![serde_json::json!({"group": "Custom", "options": options})]
-    }
 }
 
 /// Raw database row with AES-256-GCM encrypted BLOB fields (`title`, `description`, `teams`, `collaborators`).
@@ -494,30 +397,11 @@ pub struct BragEntry {
 }
 
 impl BragEntry {
-    /// Whether this entry has been soft-deleted.
-    pub fn is_soft_deleted(&self) -> bool {
-        self.deleted_at.is_some()
-    }
-
-    /// Whether this entry is a meeting type.
-    pub fn is_meeting(&self) -> bool {
-        self.entry_type == "meeting"
-    }
-
     /// Whether this entry was created by an external sync (not manual).
     pub fn is_synced(&self) -> bool {
         self.source != "manual"
     }
 
-    /// Human-readable display name for this entry's source.
-    pub fn source_display_name(&self) -> &'static str {
-        source_display_name(&self.source)
-    }
-
-    /// The category this entry's type belongs to (e.g., "code", "reviews", "docs").
-    pub fn category(&self) -> Option<&'static str> {
-        EntryType::category_for_slug(&self.entry_type)
-    }
 }
 
 /// Form payload for creating a manual entry.
@@ -594,7 +478,7 @@ pub struct BulkUpdateEntries {
 
 #[cfg(test)]
 mod tests {
-    use super::{EntryType, entry_type_to_source};
+    use super::EntryType;
 
     #[test]
     fn all_count() {
@@ -610,60 +494,11 @@ mod tests {
     }
 
     #[test]
-    fn slug_label_roundtrip() {
-        for v in EntryType::ALL {
-            assert_eq!(
-                EntryType::display_name(v.slug()),
-                v.label(),
-                "display_name({}) doesn't match label()",
-                v.slug()
-            );
+    fn categories_agree_with_their_type_lists() {
+        for cat in ["reviews", "code", "docs", "meetings", "collaboration", "learning"] {
+            for slug in EntryType::types_for_category(cat) {
+                assert_eq!(EntryType::category_for_slug(slug), Some(cat), "{slug}");
+            }
         }
-    }
-
-    #[test]
-    fn source_consistency() {
-        for v in EntryType::ALL {
-            assert_eq!(
-                entry_type_to_source(v.slug()),
-                v.source(),
-                "entry_type_to_source({}) doesn't match source()",
-                v.slug()
-            );
-        }
-    }
-
-    #[test]
-    fn manual_only_matches_source() {
-        let manual: Vec<&str> = EntryType::ALL
-            .iter()
-            .filter(|v| v.is_manual())
-            .map(|v| v.slug())
-            .collect();
-        let manual_json = EntryType::as_manual_json_options();
-        assert_eq!(manual.len(), manual_json.len());
-        for (slug, opt) in manual.iter().zip(manual_json.iter()) {
-            assert_eq!(*slug, opt["value"].as_str().unwrap());
-        }
-    }
-
-    #[test]
-    fn display_name_known() {
-        assert_eq!(EntryType::display_name("pr_authored"), "PR Authored");
-        assert_eq!(EntryType::display_name("meeting"), "Meeting");
-        assert_eq!(EntryType::display_name("other"), "Other");
-    }
-
-    #[test]
-    fn display_name_unknown() {
-        assert_eq!(EntryType::display_name("nonexistent"), "Unknown");
-    }
-
-    #[test]
-    fn as_json_options() {
-        let opts = EntryType::as_json_options();
-        assert_eq!(opts.len(), 35);
-        assert_eq!(opts[0]["value"], "pr_authored");
-        assert_eq!(opts[0]["label"], "PR Authored");
     }
 }

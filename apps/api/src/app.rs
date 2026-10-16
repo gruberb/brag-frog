@@ -1,36 +1,27 @@
 //! Composition root: builds the application state and router.
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::{
-    Router,
-    extract::State,
-    http::{StatusCode, header},
-    middleware,
-    response::{Html, IntoResponse, Redirect, Response},
-    routing::{delete, get, post, put},
+    Json, Router,
+    extract::Request,
+    http::{HeaderValue, StatusCode, header},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
+    routing::{any, get},
 };
-use tera::Tera;
-use tower_http::services::ServeDir;
-use tower_sessions::{Expiry, Session, SessionManagerLayer, cookie::SameSite};
+use serde_json::json;
+use tower_http::compression::CompressionLayer;
+use tower_http::services::{ServeDir, ServeFile};
+use tower_sessions::{Expiry, SessionManagerLayer, cookie::SameSite};
 use tower_sessions_sqlx_store::SqliteStore;
 
 use crate::AppState;
+use crate::identity::routes as identity_routes;
 use crate::kernel::config::Config;
 use crate::kernel::crypto::Crypto;
-use crate::kernel::error::AppError;
-use crate::kernel::middleware::{csrf_protection, security_headers};
-use crate::kernel::render::markdown_filter;
-
-use crate::cycle::routes as cycle_routes;
-use crate::identity::auth::middleware::require_auth;
-use crate::identity::routes as identity_routes;
-use crate::integrations::integrations_routes;
-use crate::integrations::sync_routes;
-use crate::objectives::routes as objectives_routes;
-use crate::reflections::routes as reflections_routes;
-use crate::review::routes as review_routes;
-use crate::worklog::routes as worklog_routes;
+use crate::kernel::middleware::security_headers;
 
 /// Resolves a config file path: checks the custom dir first, falls back to the config dir.
 /// This allows organizations to override default config files by placing their
@@ -45,7 +36,7 @@ pub fn config_path(config: &Config, filename: &str) -> String {
     }
 }
 
-/// Creates the application state: database pool, session store, templates, crypto.
+/// Creates the application state: database pool, session store, crypto.
 /// Returns `(AppState, SqliteStore)` so the caller can build the session layer.
 pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
     // Database
@@ -59,18 +50,10 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
         .await
         .expect("Failed to migrate session store");
 
-    // Config files — check custom/ overlay first, then fall back to config/
+    // Config files: check the custom overlay first, then fall back to the defaults
     crate::identity::clg::load_levels(&config_path(&config, "clg_levels.toml"));
     crate::review::model::load_review_config(&config_path(&config, "review_sections.toml"));
-    crate::reflections::model::load_checkin_config(&config_path(&config, "checkin_sections.toml"));
-    crate::review::model::load_assessment_config(&config_path(&config, "assessment_templates.toml"));
-    crate::review::model::load_rating_scale(&config_path(&config, "rating_scale.toml"));
     crate::integrations::services_config::load(&config_path(&config, "services.toml"));
-
-    // Templates
-    let mut templates = Tera::new("templates/**/*.html").expect("Failed to load templates");
-    templates.register_filter("markdown", markdown_filter);
-    crate::register_tera_filters(&mut templates);
 
     // Crypto
     if config.encryption_key.is_empty() {
@@ -84,7 +67,6 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
     let state = AppState {
         db: pool,
         config: Arc::new(config),
-        templates: Arc::new(templates),
         crypto: Arc::new(crypto),
         sync_status: crate::integrations::sync_status::new_sync_status_map(),
         entry_facets: crate::api::facets::new_facet_map(),
@@ -94,306 +76,34 @@ pub async fn build_state(config: Config) -> (AppState, SqliteStore) {
 }
 
 // ---------------------------------------------------------------------------
-// Static page handlers
-// ---------------------------------------------------------------------------
-
-/// Renders the privacy policy page.
-pub async fn static_page_privacy(State(state): State<AppState>) -> Result<Html<String>, AppError> {
-    let ctx = tera::Context::new();
-    let html = state.templates.render("pages/privacy.html", &ctx)?;
-    Ok(Html(html))
-}
-
-/// Renders the terms of service page.
-pub async fn static_page_terms(State(state): State<AppState>) -> Result<Html<String>, AppError> {
-    let ctx = tera::Context::new();
-    let html = state.templates.render("pages/terms.html", &ctx)?;
-    Ok(Html(html))
-}
-
-/// Landing page: redirects authenticated users to `/dashboard`, shows login page otherwise.
-async fn landing_page(
-    State(state): State<AppState>,
-    session: Session,
-) -> Result<Response, AppError> {
-    let user_id: Option<i64> = session.get("user_id").await.unwrap_or(None);
-
-    if user_id.is_some() {
-        return Ok(Redirect::to("/dashboard").into_response());
-    }
-
-    let mut ctx = tera::Context::new();
-
-    let state_token = crate::identity::oauth_state::mint(
-        &state.crypto,
-        crate::identity::oauth_state::OAuthFlow::Login,
-    )?;
-    let google_auth_url = crate::identity::auth::google_auth_url(&state.config, &state_token);
-    ctx.insert("google_auth_url", &google_auth_url);
-    ctx.insert("instance_name", &state.config.instance_name);
-
-    let html = state.templates.render("pages/landing.html", &ctx)?;
-    Ok(Html(html).into_response())
-}
-
-// ---------------------------------------------------------------------------
 // Router assembly
 // ---------------------------------------------------------------------------
 
-/// Assembles the full application router: public, auth, and protected route groups.
+/// Server-side routes: the OAuth redirects (they must stay server-side) and the JSON API.
+/// Everything else is the web app, served by `build_app`.
 pub fn create_router() -> Router<AppState> {
-    let auth_routes = Router::new()
-        .route("/auth/login", get(identity_routes::login_page))
+    Router::new()
+        .route("/auth/login", get(identity_routes::login))
         .route("/auth/callback", get(identity_routes::callback))
-        .route("/auth/logout", post(identity_routes::logout));
-
-    let public_routes = Router::new()
-        .route("/", get(landing_page))
-        .route("/privacy", get(static_page_privacy))
-        .route("/terms", get(static_page_terms));
-
-    let protected_routes = Router::new()
-        // Dashboard
-        .route("/dashboard", get(cycle_routes::dashboard::dashboard))
-        // Reports — AI-generated Last Week summary and Latest Updates
-        .route("/reports", get(cycle_routes::reports::reports_page))
         .route(
-            "/reports/last-week/generate",
-            post(cycle_routes::reports::last_week_generate),
-        )
-        // Logbook
-        .route("/logbook", get(cycle_routes::logbook::logbook))
-        // Entries
-        .route("/entries/quick", post(worklog_routes::quick_create_entry))
-        .route(
-            "/entries/bulk-update",
-            post(worklog_routes::bulk_update_entries),
-        )
-        .route("/entries/{id}", put(worklog_routes::update_entry))
-        .route("/entries/{id}", delete(worklog_routes::delete_entry))
-        .route("/entries/{id}/view", get(worklog_routes::view_entry))
-        .route("/entries/{id}/panel", get(worklog_routes::entry_panel))
-        .route(
-            "/entries/{id}/classify",
-            post(worklog_routes::classify_entry),
-        )
-        .route(
-            "/entries/{id}/exclude-file",
-            post(worklog_routes::exclude_drive_file),
-        )
-        .route(
-            "/entries/{id}/exclude-event",
-            post(worklog_routes::exclude_calendar_event),
-        )
-        // Trends
-        .route("/trends", get(cycle_routes::trends::trends_page))
-        // Meeting Prep (panel only)
-        .route(
-            "/meeting-prep/panel/{entry_id}",
-            get(cycle_routes::meeting_prep::meeting_prep_panel)
-                .post(cycle_routes::meeting_prep::save_meeting_prep_panel),
-        )
-        .route(
-            "/meeting-prep/panel/{entry_id}/ai-draft",
-            post(cycle_routes::meeting_prep::ai_draft_meeting_prep),
-        )
-        // Status Update (inline on dashboard — generate + save only)
-        .route(
-            "/status-update/{week_id}/generate",
-            post(cycle_routes::status_update::generate_status_update),
-        )
-        .route(
-            "/status-update/{week_id}/save",
-            post(cycle_routes::status_update::save_status_update),
-        )
-        // Contribution Examples
-        .route(
-            "/contribution-examples",
-            get(review_routes::contribution_examples::contribution_examples_page)
-                .post(review_routes::contribution_examples::create_contribution_example),
-        )
-        .route(
-            "/contribution-examples/{id}",
-            put(review_routes::contribution_examples::update_contribution_example)
-                .delete(review_routes::contribution_examples::delete_contribution_example),
-        )
-        .route(
-            "/contribution-examples/{example_id}/entries/{entry_id}",
-            post(review_routes::contribution_examples::link_entry_to_example)
-                .delete(review_routes::contribution_examples::unlink_entry_from_example),
-        )
-        // Review check-ins
-        .route(
-            "/quarterly-checkin/{quarter}/{year}",
-            get(reflections_routes::checkins::quarterly_checkin_page)
-                .post(reflections_routes::checkins::save_quarterly_checkin),
-        )
-        .route(
-            "/quarterly-checkin/{quarter}/{year}/panel",
-            get(reflections_routes::checkins::quarterly_checkin_panel),
-        )
-        .route(
-            "/quarterly-checkin/{quarter}/{year}/ai-draft/{section}",
-            post(reflections_routes::checkins::ai_draft_quarterly_section),
-        )
-        .route(
-            "/quarterly-checkin/{quarter}/{year}/save/{section}",
-            post(reflections_routes::checkins::save_quarterly_checkin_section),
-        )
-        // Logbook filtered entries (HTMX)
-        .route(
-            "/logbook/entries",
-            get(cycle_routes::logbook::logbook_filtered_entries),
-        )
-        // Priorities
-        .route(
-            "/priorities",
-            get(objectives_routes::priorities_page).post(objectives_routes::create_priority),
-        )
-        .route(
-            "/priorities/new-panel",
-            get(objectives_routes::priority_form_panel),
-        )
-        .route(
-            "/priorities/import-panel",
-            get(objectives_routes::import_panel),
-        )
-        .route(
-            "/priorities/{id}/edit-panel",
-            get(objectives_routes::priority_edit_panel),
-        )
-        .route(
-            "/priorities/goals/new-panel",
-            get(objectives_routes::department_goal_form_panel),
-        )
-        .route(
-            "/priorities/goals/{id}/edit-panel",
-            get(objectives_routes::department_goal_edit_panel),
-        )
-        .route(
-            "/priorities/import",
-            post(objectives_routes::import_lattice_csv),
-        )
-        .route(
-            "/priorities/goals",
-            post(objectives_routes::create_department_goal),
-        )
-        .route(
-            "/priorities/goals/{id}",
-            put(objectives_routes::update_department_goal)
-                .delete(objectives_routes::delete_department_goal),
-        )
-        .route(
-            "/priorities/{id}",
-            put(objectives_routes::update_priority).delete(objectives_routes::delete_priority),
-        )
-        .route(
-            "/priorities/{id}/updates",
-            post(objectives_routes::post_priority_update),
-        )
-        // Phases (Performance Cycle)
-        .route("/phases", post(cycle_routes::phases::create_phase))
-        .route("/phases/{id}", delete(cycle_routes::phases::delete_phase))
-        .route(
-            "/phases/{id}/activate",
-            post(cycle_routes::phases::activate_phase),
-        )
-        // Settings
-        .route("/settings", get(identity_routes::settings_page))
-        .route("/settings", post(identity_routes::save_settings))
-        .route(
-            "/settings/people-alias",
-            post(identity_routes::upsert_people_alias),
-        )
-        .route(
-            "/settings/people-alias/{id}",
-            delete(identity_routes::delete_people_alias),
-        )
-        // Level Guide
-        .route("/level-guide", get(identity_routes::clg_guide_page))
-        // Review Guide
-        .route(
-            "/review-guide",
-            get(review_routes::summaries::review_guide_page),
-        )
-        // Export
-        .route("/export", get(review_routes::export::export_page))
-        .route(
-            "/export/download",
-            get(review_routes::export::export_download),
-        )
-        // Integrations page + API routes
-        .route("/integrations", get(integrations_routes::integrations_page))
-        .route(
-            "/integrations/{service}/test",
-            post(integrations_routes::test_connection),
-        )
-        .route(
-            "/integrations/{service}",
-            post(integrations_routes::save_integration),
-        )
-        .route(
-            "/integrations/{service}/reset",
-            delete(integrations_routes::reset_integration),
-        )
-        .route(
-            "/integrations/google_drive/excluded/{file_id}",
-            delete(integrations_routes::restore_excluded_file),
-        )
-        .route(
-            "/integrations/google_calendar/excluded/{event_id}",
-            delete(integrations_routes::restore_excluded_event),
-        )
-        // Google Drive OAuth connect
-        .route(
-            "/integrations/google_drive/connect",
+            "/auth/connect/google_drive",
             get(identity_routes::connect_google_drive),
         )
-        // Google Calendar OAuth connect
         .route(
-            "/integrations/google_calendar/connect",
+            "/auth/connect/google_calendar",
             get(identity_routes::connect_google_calendar),
         )
-        // Sync
-        .route("/sync/status", get(sync_routes::sync_status))
-        .route(
-            "/sync/status/activity",
-            get(sync_routes::sync_status_activity),
-        )
-        .route("/sync/{service}", post(sync_routes::sync_service))
-        .route("/sync/{service}/hard", post(sync_routes::hard_sync_service))
-        .route("/sync/all", post(sync_routes::sync_all))
-        .route("/sync/logs", delete(sync_routes::clear_sync_logs))
-        // Self Review
-        .route(
-            "/review/{phase_id}",
-            get(review_routes::summaries::summary_page),
-        )
-        .route(
-            "/review/{phase_id}/generate",
-            post(review_routes::summaries::generate_all),
-        )
-        .route(
-            "/review/{phase_id}/ai-draft/{section}",
-            post(review_routes::summaries::ai_draft_section),
-        )
-        .route(
-            "/review/{phase_id}/preview/{section}",
-            post(review_routes::summaries::preview_section),
-        )
-        .route(
-            "/review/{phase_id}/save/{section}",
-            post(review_routes::summaries::save_section),
-        )
-        .layer(middleware::from_fn(require_auth))
-        .layer(middleware::from_fn(csrf_protection));
-
-    Router::new()
-        .merge(auth_routes)
-        .merge(public_routes)
-        .merge(protected_routes)
         .merge(crate::api::public_router())
         .merge(crate::api::router())
+        .route("/api/{*rest}", any(api_not_found))
+}
+
+async fn api_not_found() -> Response {
+    (
+        StatusCode::NOT_FOUND,
+        Json(json!({"error": {"code": "not_found", "message": "No such API route"}})),
+    )
+        .into_response()
 }
 
 fn custom_tokens_css_response(path: &std::path::Path) -> Response {
@@ -431,7 +141,38 @@ fn custom_router<S: Clone + Send + Sync + 'static>(custom_dir: &str) -> Router<S
     )
 }
 
-/// Assembles the full Axum application: router, static files, sessions, security headers.
+/// Cache policy for the web app: hashed build assets never change, the HTML shell must
+/// always be revalidated so a new release is picked up.
+async fn static_cache_headers(request: Request, next: Next) -> Response {
+    let path = request.uri().path().to_string();
+    let mut response = next.run(request).await;
+    let immutable = path.starts_with("/assets/") || path.starts_with("/fonts/");
+    let value = if immutable {
+        "public, max-age=31536000, immutable"
+    } else {
+        "no-cache"
+    };
+    if response.status().is_success() {
+        response
+            .headers_mut()
+            .insert(header::CACHE_CONTROL, HeaderValue::from_static(value));
+    }
+    response
+}
+
+/// Serves the built web app. Unknown paths return `index.html` so client-side routes work
+/// after a reload.
+fn web_app(dist: &str) -> Router {
+    let dist = PathBuf::from(dist);
+    let files = ServeDir::new(&dist)
+        .precompressed_gzip()
+        .fallback(ServeFile::new(dist.join("index.html")));
+    Router::new()
+        .fallback_service(files)
+        .layer(middleware::from_fn(static_cache_headers))
+}
+
+/// Assembles the full Axum application: router, web app, sessions, security headers.
 pub fn build_app(state: AppState, session_store: SqliteStore) -> Router {
     let is_production = state.config.base_url.starts_with("https://");
     let session_layer = SessionManagerLayer::new(session_store)
@@ -441,14 +182,16 @@ pub fn build_app(state: AppState, session_store: SqliteStore) -> Router {
         .with_expiry(Expiry::OnInactivity(time::Duration::hours(12)));
 
     let custom_files = custom_router(&state.config.custom_dir);
+    let web = web_app(&state.config.web_dist);
 
     Router::new()
         .merge(create_router())
-        .nest_service("/static", ServeDir::new("static"))
         .nest("/custom", custom_files)
+        .with_state(state)
+        .merge(web)
         .layer(session_layer)
         .layer(axum::middleware::from_fn(security_headers))
-        .with_state(state)
+        .layer(CompressionLayer::new())
 }
 
 #[cfg(test)]

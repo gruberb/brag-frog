@@ -20,24 +20,8 @@ impl Summary {
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
-    /// Replaces the summary for a `(phase_id, section)` pair (delete + insert), stored as
-    /// `markdown` like every row written before the SPA editor existed.
-    pub async fn upsert(
-        pool: &SqlitePool,
-        phase_id: i64,
-        section: &str,
-        content: &str,
-        prompt_used: Option<&str>,
-        model_used: Option<&str>,
-        crypto: &UserCrypto,
-    ) -> Result<Self, AppError> {
-        Self::upsert_with_format(
-            pool, phase_id, section, content, "markdown", prompt_used, model_used, crypto,
-        )
-        .await
-    }
-
-    /// Like [`Summary::upsert`] but records how `content` is encoded (`markdown` or `blocknote`).
+    /// Replaces the saved text of a section and records how `content` is encoded
+    /// (`markdown` or `blocknote`).
     #[allow(clippy::too_many_arguments)]
     pub async fn upsert_with_format(
         pool: &SqlitePool,

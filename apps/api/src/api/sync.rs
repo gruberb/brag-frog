@@ -13,7 +13,7 @@ use super::auth::ApiAuth;
 use super::error::{ApiError, ApiResult};
 use crate::AppState;
 use crate::integrations::background;
-use crate::integrations::integrations_routes::service_display_name;
+use crate::integrations::catalog::service_display_name;
 use crate::integrations::model::{IntegrationConfig, SERVICES, SyncLog};
 use crate::kernel::error::AppError;
 

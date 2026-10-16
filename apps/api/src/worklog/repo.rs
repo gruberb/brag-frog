@@ -442,58 +442,6 @@ impl BragEntry {
         Ok(result.rows_affected())
     }
 
-    /// Get distinct team names from all entries in a phase
-    pub async fn distinct_teams_for_phase(
-        pool: &SqlitePool,
-        phase_id: i64,
-        crypto: &UserCrypto,
-    ) -> Result<Vec<String>, AppError> {
-        let rows: Vec<(Vec<u8>,)> = sqlx::query_as(
-            "SELECT e.teams FROM brag_entries e JOIN weeks w ON e.week_id = w.id WHERE w.phase_id = ? AND e.teams IS NOT NULL AND e.deleted_at IS NULL",
-        )
-        .bind(phase_id)
-        .fetch_all(pool)
-        .await?;
-
-        let mut set = std::collections::BTreeSet::new();
-        for (encrypted,) in rows {
-            let raw = crypto.decrypt(&encrypted)?;
-            for part in raw.split(',') {
-                let t = part.trim();
-                if !t.is_empty() {
-                    set.insert(t.to_string());
-                }
-            }
-        }
-        Ok(set.into_iter().collect())
-    }
-
-    /// Get distinct collaborator names from all entries in a phase
-    pub async fn distinct_collaborators_for_phase(
-        pool: &SqlitePool,
-        phase_id: i64,
-        crypto: &UserCrypto,
-    ) -> Result<Vec<String>, AppError> {
-        let rows: Vec<(Vec<u8>,)> = sqlx::query_as(
-            "SELECT e.collaborators FROM brag_entries e JOIN weeks w ON e.week_id = w.id WHERE w.phase_id = ? AND e.collaborators IS NOT NULL AND e.deleted_at IS NULL",
-        )
-        .bind(phase_id)
-        .fetch_all(pool)
-        .await?;
-
-        let mut set = std::collections::BTreeSet::new();
-        for (encrypted,) in rows {
-            let raw = crypto.decrypt(&encrypted)?;
-            for part in raw.split(',') {
-                let c = part.trim();
-                if !c.is_empty() {
-                    set.insert(c.to_string());
-                }
-            }
-        }
-        Ok(set.into_iter().collect())
-    }
-
     /// Counts non-deleted, non-manual entries per source within a phase.
     pub async fn source_counts_for_phase(
         pool: &SqlitePool,

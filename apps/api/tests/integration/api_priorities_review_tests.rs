@@ -359,13 +359,11 @@ async fn import(f: &Fixture, csv: Option<&str>) -> common::TestResponse {
         .unwrap();
     let resp = f.app.app.clone().oneshot(req).await.unwrap();
     let status = resp.status();
-    let headers = resp.headers().clone();
     let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
         .await
         .unwrap();
     common::TestResponse {
         status,
-        headers,
         body: String::from_utf8_lossy(&bytes).to_string(),
     }
 }
@@ -564,9 +562,6 @@ async fn review_draft_without_ai_is_a_clear_400() {
 
 #[tokio::test]
 async fn archive_returns_retired_data_with_linked_entry_titles() {
-    use brag_frog::reflections::model::SaveQuarterlyCheckin;
-    use brag_frog::review::model::{ContributionExample, CreateContributionExample};
-
     let f = Fixture::new().await;
     let crypto = f.app.crypto.for_user(f.user_id).unwrap();
     let week =
@@ -584,40 +579,28 @@ async fn archive_returns_retired_data_with_linked_entry_titles() {
     )
     .await;
 
-    brag_frog::reflections::model::QuarterlyCheckin::upsert(
-        &f.app.pool,
-        f.cycle_id,
-        f.user_id,
-        &SaveQuarterlyCheckin {
-            quarter: "Q1".into(),
-            year: 2025,
-            highlights_impact: Some("Big win".into()),
-            learnings_adjustments: None,
-            growth_development: None,
-            support_feedback: None,
-            looking_ahead: None,
-        },
-        &crypto,
+    // The write paths of these retired features are gone, so seed the legacy rows directly.
+    sqlx::query(
+        "INSERT INTO quarterly_checkins (phase_id, user_id, quarter, year, highlights_impact) VALUES (?, ?, 'Q1', 2025, ?)",
     )
+    .bind(f.cycle_id)
+    .bind(f.user_id)
+    .bind(crypto.encrypt("Big win").unwrap())
+    .execute(&f.app.pool)
     .await
     .unwrap();
-    let example = ContributionExample::create(
-        &f.app.pool,
-        f.cycle_id,
-        f.user_id,
-        &CreateContributionExample {
-            title: "Search launch".into(),
-            outcome: None,
-            behaviors: None,
-            impact_level: Some("team".into()),
-            learnings: None,
-            assessment_type: None,
-        },
-        &crypto,
+    let example_id: i64 = sqlx::query_scalar(
+        "INSERT INTO contribution_examples (phase_id, title, impact_level) VALUES (?, ?, 'team') RETURNING id",
     )
+    .bind(f.cycle_id)
+    .bind(crypto.encrypt("Search launch").unwrap())
+    .fetch_one(&f.app.pool)
     .await
     .unwrap();
-    ContributionExample::link_entry(&f.app.pool, example.id, entry.id)
+    sqlx::query("INSERT INTO contribution_example_entries (example_id, entry_id) VALUES (?, ?)")
+        .bind(example_id)
+        .bind(entry.id)
+        .execute(&f.app.pool)
         .await
         .unwrap();
 

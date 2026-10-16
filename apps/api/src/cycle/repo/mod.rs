@@ -216,15 +216,6 @@ impl BragPhase {
 // ---------------------------------------------------------------------------
 
 impl Week {
-    /// Fetches a single week by ID.
-    pub async fn find_by_id(pool: &SqlitePool, week_id: i64) -> Result<Option<Self>, AppError> {
-        let week = sqlx::query_as::<_, Week>("SELECT * FROM weeks WHERE id = ?")
-            .bind(week_id)
-            .fetch_optional(pool)
-            .await?;
-        Ok(week)
-    }
-
     /// All weeks in a phase, ordered chronologically.
     pub async fn list_for_phase(pool: &SqlitePool, phase_id: i64) -> Result<Vec<Self>, AppError> {
         let weeks = sqlx::query_as::<_, Week>(

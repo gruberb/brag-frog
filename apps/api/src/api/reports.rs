@@ -21,7 +21,7 @@ use super::scope::{owned_cycle, resolve_cycle};
 use crate::AppState;
 use crate::ai::get_ai_client;
 use crate::ai::prompts::build_report_prompt;
-use crate::cycle::routes::logbook_insights::{AnalyzePageQuery, apply_in_memory_filters};
+use crate::cycle::service::logbook_insights::{AnalyzePageQuery, apply_in_memory_filters};
 use crate::identity::model::PeopleAlias;
 use crate::objectives::model::{DepartmentGoal, Priority};
 use crate::review::model::{NewReport, Report, ReportFilters};

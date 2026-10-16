@@ -6,14 +6,14 @@ pub mod factory;
 pub mod github;
 pub mod google_calendar;
 pub mod google_drive;
-pub mod integrations_routes;
+pub mod catalog;
 pub mod jira;
 pub mod model;
 pub mod orchestrator;
 pub mod phabricator;
 pub mod repo;
 pub mod services_config;
-pub mod sync_routes;
+pub mod hard_sync;
 pub mod sync_status;
 pub mod validation;
 

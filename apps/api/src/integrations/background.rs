@@ -32,7 +32,7 @@ pub fn spawn_sync_service(state: AppState, user_id: i64, service: String, hard: 
 
     tokio::spawn(async move {
         let result = if hard {
-            crate::integrations::sync_routes::run_hard_sync(&state, user_id, &service).await
+            crate::integrations::hard_sync::run_hard_sync(&state, user_id, &service).await
         } else {
             match crate::integrations::http_client() {
                 Ok(client) => crate::integrations::run_sync(

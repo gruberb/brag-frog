@@ -20,9 +20,6 @@ pub enum AppError {
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
 
-    #[error("Template error: {0}")]
-    Template(#[from] tera::Error),
-
     #[error("HTTP client error: {0}")]
     HttpClient(#[from] reqwest::Error),
 
@@ -38,13 +35,6 @@ impl IntoResponse for AppError {
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             AppError::Database(e) => {
                 tracing::error!("Database error: {:?}", e);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Internal server error".into(),
-                )
-            }
-            AppError::Template(e) => {
-                tracing::error!("Template error: {:?}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Internal server error".into(),

@@ -165,11 +165,12 @@ async fn test_phase_cascade_delete() {
     )
     .await;
 
-    Summary::upsert(
+    Summary::upsert_with_format(
         &pool,
         phase_id,
         "goal_outcomes",
         "Test summary",
+        "markdown",
         None,
         None,
         &user_crypto,

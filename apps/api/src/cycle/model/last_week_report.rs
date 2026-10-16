@@ -17,15 +17,6 @@ pub struct LastWeekReportRow {
     pub updated_at: String,
 }
 
-/// Input for `LastWeekReport::upsert`. Content and window travel together —
-/// the narrative and its date range are meaningless in isolation.
-#[derive(Debug, Clone)]
-pub struct SaveLastWeekReport<'a> {
-    pub content: Option<&'a str>,
-    pub window_start: &'a str,
-    pub window_end: &'a str,
-}
-
 /// Decrypted domain view of a saved Last Week report.
 ///
 /// The report is anchored to a `week_id` (one report per current week per user).

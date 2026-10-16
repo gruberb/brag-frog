@@ -4,7 +4,7 @@ use axum::{
     Router,
     body::Body,
     extract::Path,
-    http::{Request, StatusCode, header::HeaderMap},
+    http::{Request, StatusCode},
     routing::get,
 };
 use tower::ServiceExt;
@@ -29,9 +29,6 @@ fn init_test_configs() {
     INIT.call_once(|| {
         brag_frog::identity::clg::load_levels("config/clg_levels.toml");
         brag_frog::review::model::load_review_config("config/review_sections.toml");
-        brag_frog::reflections::model::load_checkin_config("config/checkin_sections.toml");
-        brag_frog::review::model::load_assessment_config("config/assessment_templates.toml");
-        brag_frog::review::model::load_rating_scale("config/rating_scale.toml");
         brag_frog::integrations::services_config::load("config/services.toml");
     });
 }
@@ -53,6 +50,7 @@ fn test_config() -> Config {
         instance_name: None,
         config_dir: "config".to_string(),
         custom_dir: "custom".to_string(),
+        web_dist: "../web/dist".to_string(),
     }
 }
 
@@ -66,7 +64,6 @@ pub struct TestApp {
 /// Parsed HTTP response for test assertions.
 pub struct TestResponse {
     pub status: StatusCode,
-    pub headers: HeaderMap,
     pub body: String,
 }
 
@@ -81,21 +78,9 @@ impl TestApp {
         let config = Arc::new(test_config());
         let crypto = Arc::new(test_crypto());
 
-        let mut templates =
-            tera::Tera::new("templates/**/*.html").expect("Failed to load templates");
-        brag_frog::register_tera_filters(&mut templates);
-        // Register a no-op markdown filter for tests (avoids needing pulldown-cmark in lib)
-        templates.register_filter(
-            "markdown",
-            |value: &tera::Value,
-             _args: &std::collections::HashMap<String, tera::Value>|
-             -> tera::Result<tera::Value> { Ok(value.clone()) },
-        );
-
         let state = AppState {
             db: pool.clone(),
             config: config.clone(),
-            templates: Arc::new(templates),
             crypto: crypto.clone(),
             sync_status: brag_frog::integrations::sync_status::new_sync_status_map(),
             entry_facets: brag_frog::api::facets::new_facet_map(),
@@ -155,53 +140,6 @@ impl TestApp {
         self.send(req).await
     }
 
-    /// Sends a POST with URL-encoded form body + HX-Request header.
-    pub async fn post_form(&self, path: &str, body: &str, cookie: Option<&str>) -> TestResponse {
-        let mut builder = Request::builder()
-            .uri(path)
-            .method("POST")
-            .header("content-type", "application/x-www-form-urlencoded")
-            .header("HX-Request", "true");
-
-        if let Some(c) = cookie {
-            builder = builder.header("cookie", c);
-        }
-
-        let req = builder.body(Body::from(body.to_string())).unwrap();
-        self.send(req).await
-    }
-
-    /// Sends a PUT with URL-encoded form body + HX-Request header.
-    pub async fn put_form(&self, path: &str, body: &str, cookie: Option<&str>) -> TestResponse {
-        let mut builder = Request::builder()
-            .uri(path)
-            .method("PUT")
-            .header("content-type", "application/x-www-form-urlencoded")
-            .header("HX-Request", "true");
-
-        if let Some(c) = cookie {
-            builder = builder.header("cookie", c);
-        }
-
-        let req = builder.body(Body::from(body.to_string())).unwrap();
-        self.send(req).await
-    }
-
-    /// Sends a DELETE with HX-Request header.
-    pub async fn delete(&self, path: &str, cookie: Option<&str>) -> TestResponse {
-        let mut builder = Request::builder()
-            .uri(path)
-            .method("DELETE")
-            .header("HX-Request", "true");
-
-        if let Some(c) = cookie {
-            builder = builder.header("cookie", c);
-        }
-
-        let req = builder.body(Body::empty()).unwrap();
-        self.send(req).await
-    }
-
     /// Sends a JSON API request. State-changing methods carry the CSRF header the SPA sends.
     pub async fn json(
         &self,
@@ -236,7 +174,6 @@ impl TestApp {
         let resp = self.app.clone().oneshot(req).await.unwrap();
 
         let status = resp.status();
-        let headers = resp.headers().clone();
         let body_bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
             .await
             .unwrap();
@@ -244,7 +181,6 @@ impl TestApp {
 
         TestResponse {
             status,
-            headers,
             body,
         }
     }

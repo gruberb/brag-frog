@@ -11,7 +11,7 @@ use super::integrations::{ConfigField, config_fields};
 use crate::AppState;
 use crate::identity::clg;
 use crate::identity::model::User;
-use crate::integrations::integrations_routes::{
+use crate::integrations::catalog::{
     service_display_name, service_note, service_token_url,
 };
 use crate::integrations::model::SERVICES;

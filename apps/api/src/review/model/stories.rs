@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
-use crate::kernel::serde_helpers::deserialize_optional_string;
 
 /// Raw DB row with encrypted contribution example fields.
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -58,37 +57,4 @@ pub struct ContributionExample {
     pub sort_order: i64,
     pub created_at: String,
     pub updated_at: String,
-}
-
-/// Form payload for creating a contribution example.
-#[derive(Debug, Deserialize)]
-pub struct CreateContributionExample {
-    pub title: String,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub outcome: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub behaviors: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub impact_level: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub learnings: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub assessment_type: Option<String>,
-}
-
-/// Form payload for updating a contribution example.
-#[derive(Debug, Deserialize)]
-pub struct UpdateContributionExample {
-    pub title: String,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub outcome: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub behaviors: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub impact_level: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub learnings: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub assessment_type: Option<String>,
-    pub status: Option<String>,
 }

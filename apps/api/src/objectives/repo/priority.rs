@@ -63,23 +63,6 @@ impl Priority {
         Ok(rows.into_iter().collect())
     }
 
-    /// Priorities linked to a specific department goal.
-    pub async fn list_for_department_goal(
-        pool: &SqlitePool,
-        department_goal_id: i64,
-        crypto: &UserCrypto,
-    ) -> Result<Vec<Self>, AppError> {
-        let q = format!(
-            "SELECT {} FROM priorities WHERE department_goal_id = ? ORDER BY sort_order, id",
-            SELECT_COLS
-        );
-        let rows = sqlx::query_as::<_, PriorityRow>(&q)
-            .bind(department_goal_id)
-            .fetch_all(pool)
-            .await?;
-        rows.into_iter().map(|r| r.decrypt(crypto)).collect()
-    }
-
     /// All active (non-completed, non-cancelled) priorities for a user's active phase.
     pub async fn list_active_for_user(
         pool: &SqlitePool,
@@ -344,58 +327,6 @@ impl PriorityUpdate {
         rows.into_iter()
             .map(|r| r.decrypt(crypto).map(|u| (u.priority_id, u)))
             .collect()
-    }
-
-    /// Count unresolved blockers across all active priorities for a user.
-    pub async fn count_unresolved_blockers(
-        pool: &SqlitePool,
-        user_id: i64,
-    ) -> Result<i64, AppError> {
-        let count: i64 = sqlx::query_scalar(
-            r#"
-            SELECT COUNT(DISTINCT pu.priority_id) FROM priority_updates pu
-            JOIN priorities p ON p.id = pu.priority_id
-            JOIN brag_phases bp ON bp.id = p.phase_id
-            WHERE bp.user_id = ? AND bp.is_active = 1 AND pu.is_blocker = 1
-              AND NOT EXISTS (
-                  SELECT 1 FROM priority_updates pu2
-                  WHERE pu2.priority_id = pu.priority_id
-                    AND pu2.created_at > pu.created_at
-                    AND pu2.is_blocker = 0
-              )
-            "#,
-        )
-        .bind(user_id)
-        .fetch_one(pool)
-        .await?;
-        Ok(count)
-    }
-
-    /// Lists blocker updates for active priorities (for status update composer).
-    pub async fn list_active_blockers(
-        pool: &SqlitePool,
-        user_id: i64,
-        crypto: &UserCrypto,
-    ) -> Result<Vec<Self>, AppError> {
-        let rows = sqlx::query_as::<_, PriorityUpdateRow>(
-            r#"
-            SELECT pu.* FROM priority_updates pu
-            JOIN priorities p ON p.id = pu.priority_id
-            JOIN brag_phases bp ON bp.id = p.phase_id
-            WHERE bp.user_id = ? AND bp.is_active = 1 AND pu.is_blocker = 1
-              AND NOT EXISTS (
-                  SELECT 1 FROM priority_updates pu2
-                  WHERE pu2.priority_id = pu.priority_id
-                    AND pu2.created_at > pu.created_at
-                    AND pu2.is_blocker = 0
-              )
-            ORDER BY pu.created_at DESC
-            "#,
-        )
-        .bind(user_id)
-        .fetch_all(pool)
-        .await?;
-        rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
     /// Posts a new update, also syncing tracking_status and measure_current

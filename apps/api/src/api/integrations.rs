@@ -16,7 +16,7 @@ use super::error::{ApiError, ApiResult};
 use crate::AppState;
 use crate::identity::model::User;
 use crate::integrations::get_sync_service;
-use crate::integrations::integrations_routes::{
+use crate::integrations::catalog::{
     IntegrationForm, build_config_json, merge_form_into_config, service_config_fields,
     service_display_name, service_note, service_to_sources, service_token_url,
 };

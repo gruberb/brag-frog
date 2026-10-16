@@ -67,15 +67,6 @@ impl MeetingPrepNote {
         row.decrypt(crypto)
     }
 
-    /// Delete a meeting prep note.
-    pub async fn delete(pool: &SqlitePool, id: i64, user_id: i64) -> Result<(), AppError> {
-        sqlx::query("DELETE FROM meeting_prep_notes WHERE id = ? AND user_id = ?")
-            .bind(id)
-            .bind(user_id)
-            .execute(pool)
-            .await?;
-        Ok(())
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -116,15 +107,6 @@ impl MeetingRule {
         .fetch_one(pool)
         .await?;
         Ok(rule)
-    }
-
-    pub async fn delete(pool: &SqlitePool, id: i64, user_id: i64) -> Result<(), AppError> {
-        sqlx::query("DELETE FROM meeting_rules WHERE id = ? AND user_id = ?")
-            .bind(id)
-            .bind(user_id)
-            .execute(pool)
-            .await?;
-        Ok(())
     }
 
     /// Apply all meeting rules to unclassified meeting entries for a user.

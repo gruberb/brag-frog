@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
-use crate::kernel::serde_helpers::deserialize_optional_string;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct StatusUpdateRow {
@@ -38,10 +37,4 @@ impl StatusUpdateRow {
             updated_at: self.updated_at,
         })
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SaveStatusUpdate {
-    #[serde(default, deserialize_with = "deserialize_optional_string")]
-    pub content: Option<String>,
 }

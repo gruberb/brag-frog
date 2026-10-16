@@ -33,6 +33,8 @@ pub struct Config {
     pub config_dir: String,
     /// Directory with optional operator overrides (TOML files, `tokens.css`). Default: `custom`.
     pub custom_dir: String,
+    /// Directory with the built web app (`index.html`, `assets/`). Default: `../web/dist`.
+    pub web_dist: String,
 }
 
 impl Config {
@@ -74,6 +76,7 @@ impl Config {
             instance_name: env::var("BRAGFROG_INSTANCE_NAME").ok(),
             config_dir: env::var("BRAGFROG_CONFIG_DIR").unwrap_or_else(|_| "config".to_string()),
             custom_dir: env::var("BRAGFROG_CUSTOM_DIR").unwrap_or_else(|_| "custom".to_string()),
+            web_dist: env::var("BRAGFROG_WEB_DIST").unwrap_or_else(|_| "../web/dist".to_string()),
         }
     }
 }
