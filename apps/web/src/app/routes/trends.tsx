@@ -1,3 +1,3 @@
-export function Component() {
-  return <div>trends</div>;
-}
+import { TrendsPage } from '@/features/trends/components/TrendsPage';
+
+export const Component = TrendsPage;
