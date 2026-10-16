@@ -2,6 +2,12 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [6.0.2] - 2026-10-16
+
+### Changed
+- Review: the outline a section starts from has headings and placeholder guidance for each part (outcome, behaviors, learnings and next steps), and can be set per section in `review_sections.toml`.
+- The web test suite is smaller and faster: tests that type into forms and the rich text editor were removed.
+
 ## [6.0.1] - 2026-10-16
 
 ### Fixed
