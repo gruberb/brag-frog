@@ -132,13 +132,16 @@ fn custom_tokens_css_response(path: &std::path::Path) -> Response {
 /// config (including AI prompts), so it must never be exposed as a static file tree.
 fn custom_router<S: Clone + Send + Sync + 'static>(custom_dir: &str) -> Router<S> {
     let tokens = std::path::PathBuf::from(custom_dir).join("tokens.css");
-    Router::new().route(
-        "/tokens.css",
-        get(move || {
-            let tokens = tokens.clone();
-            async move { custom_tokens_css_response(&tokens) }
-        }),
-    )
+    Router::new()
+        .route(
+            "/tokens.css",
+            get(move || {
+                let tokens = tokens.clone();
+                async move { custom_tokens_css_response(&tokens) }
+            }),
+        )
+        // Without this, other /custom paths would fall through to the web app's index.html.
+        .fallback(|| async { StatusCode::NOT_FOUND })
 }
 
 /// Cache policy for the web app: hashed build assets never change, the HTML shell must

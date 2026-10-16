@@ -57,7 +57,7 @@ export function IntegrationsPanel() {
               <span className={`src ${icon.cls}`}>{icon.abbr}</span>
               <div><b>{i.display_name}</b><div className="small muted">{subtitle(i)}</div></div>
               <Badge tone={state === 'connected' ? 'green' : state === 'error' ? 'red' : 'gray'}>{state === 'connected' ? 'Connected' : state === 'error' ? 'Error' : 'Not connected'}</Badge>
-              <Button size="sm" variant={state === 'connected' ? 'default' : 'primary'} onClick={() => setOpenService(i.service)} aria-label={`${state === 'connected' ? 'Configure' : state === 'error' ? 'Fix token for' : 'Connect'} ${i.display_name}`}>
+              <Button size="sm" variant={state === 'connected' ? 'default' : 'primary'} onClick={() => (state === 'not_connected' && i.oauth_connect ? window.location.assign(`/auth/connect/${i.service}`) : setOpenService(i.service))} aria-label={`${state === 'connected' ? 'Configure' : state === 'error' ? 'Fix token for' : 'Connect'} ${i.display_name}`}>
                 {state === 'connected' ? 'Configure' : state === 'error' ? 'Fix token' : 'Connect'}
               </Button>
             </div>
