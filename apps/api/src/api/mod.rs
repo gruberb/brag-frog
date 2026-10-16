@@ -6,6 +6,7 @@ pub mod dto;
 pub mod error;
 pub mod me;
 pub mod priorities;
+pub mod review;
 pub mod scope;
 
 use axum::{
@@ -46,6 +47,10 @@ pub fn router() -> Router<AppState> {
             "/api/v1/goals/{id}",
             put(priorities::update_goal).delete(priorities::delete_goal),
         )
+        .route("/api/v1/cycles/{id}/review", get(review::get_review))
+        .route("/api/v1/cycles/{id}/review/{slug}", put(review::save_section))
+        .route("/api/v1/cycles/{id}/review/{slug}/draft", post(review::draft_section))
+        .route("/api/v1/cycles/{id}/archive", get(review::get_archive))
         .layer(middleware::from_fn(auth::require_auth_api))
         .layer(middleware::from_fn(csrf_protection))
 }

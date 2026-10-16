@@ -295,3 +295,149 @@ async fn lattice_import_without_file_is_422() {
     assert_eq!(resp.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(resp.json()["error"]["code"], "invalid_input");
 }
+
+// ── Review ──────────────────────────────────────────────────────────────────
+
+const SECTION: &str = "impact_examples";
+
+#[tokio::test]
+async fn review_lists_every_configured_section_with_entry_count() {
+    let f = Fixture::new().await;
+    let crypto = f.app.crypto.for_user(f.user_id).unwrap();
+    let week = common::create_test_week(&f.app.pool, f.cycle_id, 3, 2025, "2025-01-13", "2025-01-19").await;
+    common::create_test_entry(&f.app.pool, f.user_id, week.id, "One", "development", "2025-01-14", None, &crypto).await;
+
+    let resp = f.get(&format!("/api/v1/cycles/{}/review", f.cycle_id)).await;
+    assert_eq!(resp.status, StatusCode::OK);
+    let body = resp.json();
+    assert_eq!(body["entry_count"], 1);
+    let sections = body["sections"].as_array().unwrap();
+    assert_eq!(sections.len(), brag_frog::review::model::review_config().sections.len());
+    let s = sections.iter().find(|s| s["slug"] == SECTION).unwrap();
+    assert!(s["content"].is_null());
+    assert_eq!(s["content_format"], "blocknote");
+    assert!(s["title"].as_str().is_some_and(|t| !t.is_empty()));
+}
+
+#[tokio::test]
+async fn review_section_save_round_trips_content_and_format() {
+    let f = Fixture::new().await;
+    let path = format!("/api/v1/cycles/{}/review/{SECTION}", f.cycle_id);
+
+    let saved = f
+        .send("PUT", &path, json!({"content": "[{\"type\":\"paragraph\"}]", "content_format": "blocknote"}))
+        .await;
+    assert_eq!(saved.status, StatusCode::OK);
+    assert_eq!(saved.json()["content_format"], "blocknote");
+
+    // A second save replaces the first (one row per section).
+    f.send("PUT", &path, json!({"content": "# Plain", "content_format": "markdown"})).await;
+    let body = f.get(&format!("/api/v1/cycles/{}/review", f.cycle_id)).await.json();
+    let s = body["sections"].as_array().unwrap().iter().find(|s| s["slug"] == SECTION).unwrap().clone();
+    assert_eq!(s["content"], "# Plain");
+    assert_eq!(s["content_format"], "markdown");
+    assert!(s["generated_at"].is_string());
+
+    // The content is encrypted at rest.
+    let raw: Vec<u8> = sqlx::query_scalar("SELECT content FROM summaries WHERE phase_id = ?")
+        .bind(f.cycle_id)
+        .fetch_one(&f.app.pool)
+        .await
+        .unwrap();
+    assert!(!String::from_utf8_lossy(&raw).contains("Plain"));
+}
+
+#[tokio::test]
+async fn review_section_rejects_bad_input() {
+    let f = Fixture::new().await;
+    let bad_format = f
+        .send("PUT", &format!("/api/v1/cycles/{}/review/{SECTION}", f.cycle_id), json!({"content": "x", "content_format": "html"}))
+        .await;
+    assert_eq!(bad_format.status, StatusCode::UNPROCESSABLE_ENTITY);
+
+    let unknown = f
+        .send("PUT", &format!("/api/v1/cycles/{}/review/nope", f.cycle_id), json!({"content": "x", "content_format": "markdown"}))
+        .await;
+    assert_eq!(unknown.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn review_endpoints_404_for_another_users_cycle() {
+    let f = Fixture::new().await;
+    let (other_cycle, _, _) = f.other_user_rows().await;
+    assert_eq!(f.get(&format!("/api/v1/cycles/{other_cycle}/review")).await.status, StatusCode::NOT_FOUND);
+    assert_eq!(f.get(&format!("/api/v1/cycles/{other_cycle}/archive")).await.status, StatusCode::NOT_FOUND);
+    let put = f
+        .send("PUT", &format!("/api/v1/cycles/{other_cycle}/review/{SECTION}"), json!({"content": "x", "content_format": "markdown"}))
+        .await;
+    assert_eq!(put.status, StatusCode::NOT_FOUND);
+    let draft = f
+        .send("POST", &format!("/api/v1/cycles/{other_cycle}/review/{SECTION}/draft"), json!({}))
+        .await;
+    assert_eq!(draft.status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn review_draft_without_ai_is_a_clear_400() {
+    let f = Fixture::new().await;
+    let resp = f
+        .send("POST", &format!("/api/v1/cycles/{}/review/{SECTION}/draft", f.cycle_id), json!({}))
+        .await;
+    assert_eq!(resp.status, StatusCode::BAD_REQUEST);
+    let body = resp.json();
+    assert_eq!(body["error"]["code"], "bad_request");
+    assert!(body["error"]["message"].as_str().unwrap().contains("AI not configured"));
+}
+
+#[tokio::test]
+async fn archive_returns_retired_data_with_linked_entry_titles() {
+    use brag_frog::reflections::model::SaveQuarterlyCheckin;
+    use brag_frog::review::model::{ContributionExample, CreateContributionExample};
+
+    let f = Fixture::new().await;
+    let crypto = f.app.crypto.for_user(f.user_id).unwrap();
+    let week = common::create_test_week(&f.app.pool, f.cycle_id, 3, 2025, "2025-01-13", "2025-01-19").await;
+    let entry = common::create_test_entry(&f.app.pool, f.user_id, week.id, "Linked work", "development", "2025-01-14", None, &crypto).await;
+
+    brag_frog::reflections::model::QuarterlyCheckin::upsert(
+        &f.app.pool,
+        f.cycle_id,
+        f.user_id,
+        &SaveQuarterlyCheckin {
+            quarter: "Q1".into(),
+            year: 2025,
+            highlights_impact: Some("Big win".into()),
+            learnings_adjustments: None,
+            growth_development: None,
+            support_feedback: None,
+            looking_ahead: None,
+        },
+        &crypto,
+    )
+    .await
+    .unwrap();
+    let example = ContributionExample::create(
+        &f.app.pool,
+        f.cycle_id,
+        f.user_id,
+        &CreateContributionExample {
+            title: "Search launch".into(),
+            outcome: None,
+            behaviors: None,
+            impact_level: Some("team".into()),
+            learnings: None,
+            assessment_type: None,
+        },
+        &crypto,
+    )
+    .await
+    .unwrap();
+    ContributionExample::link_entry(&f.app.pool, example.id, entry.id).await.unwrap();
+
+    let body = f.get(&format!("/api/v1/cycles/{}/archive", f.cycle_id)).await.json();
+    assert_eq!(body["checkins"][0]["highlights_impact"], "Big win");
+    assert_eq!(body["contribution_examples"][0]["title"], "Search launch");
+    assert_eq!(body["contribution_examples"][0]["entries"][0]["title"], "Linked work");
+    assert!(body["status_updates"].as_array().unwrap().is_empty());
+    assert!(body["last_week_reports"].as_array().unwrap().is_empty());
+}

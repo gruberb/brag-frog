@@ -20,12 +20,31 @@ impl Summary {
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
-    /// Replaces the summary for a `(phase_id, section)` pair (delete + insert).
+    /// Replaces the summary for a `(phase_id, section)` pair (delete + insert), stored as
+    /// `markdown` like every row written before the SPA editor existed.
     pub async fn upsert(
         pool: &SqlitePool,
         phase_id: i64,
         section: &str,
         content: &str,
+        prompt_used: Option<&str>,
+        model_used: Option<&str>,
+        crypto: &UserCrypto,
+    ) -> Result<Self, AppError> {
+        Self::upsert_with_format(
+            pool, phase_id, section, content, "markdown", prompt_used, model_used, crypto,
+        )
+        .await
+    }
+
+    /// Like [`Summary::upsert`] but records how `content` is encoded (`markdown` or `blocknote`).
+    #[allow(clippy::too_many_arguments)]
+    pub async fn upsert_with_format(
+        pool: &SqlitePool,
+        phase_id: i64,
+        section: &str,
+        content: &str,
+        content_format: &str,
         prompt_used: Option<&str>,
         model_used: Option<&str>,
         crypto: &UserCrypto,
@@ -42,8 +61,8 @@ impl Summary {
 
         let row = sqlx::query_as::<_, SummaryRow>(
             r#"
-            INSERT INTO summaries (phase_id, section, content, prompt_used, model_used)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO summaries (phase_id, section, content, prompt_used, model_used, content_format)
+            VALUES (?, ?, ?, ?, ?, ?)
             RETURNING *
             "#,
         )
@@ -52,9 +71,22 @@ impl Summary {
         .bind(&enc_content)
         .bind(&enc_prompt)
         .bind(model_used)
+        .bind(content_format)
         .fetch_one(pool)
         .await?;
 
         row.decrypt(crypto)
+    }
+
+    /// Number of live entries in a phase, for the review header. Counts in SQL so no entry
+    /// is decrypted.
+    pub async fn phase_entry_count(pool: &SqlitePool, phase_id: i64) -> Result<i64, AppError> {
+        let n: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM brag_entries e JOIN weeks w ON e.week_id = w.id WHERE w.phase_id = ? AND e.deleted_at IS NULL",
+        )
+        .bind(phase_id)
+        .fetch_one(pool)
+        .await?;
+        Ok(n)
     }
 }
