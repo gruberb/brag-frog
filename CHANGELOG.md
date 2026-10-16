@@ -2,6 +2,17 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [6.0.1] - 2026-10-16
+
+### Fixed
+- Trends: the "linked to a priority" tile showed code instead of a number.
+- Trends: the activity chart has a fixed height, a hover bar with the week's numbers per type, and keyboard focus; ranked lists (people, repositories, teams) show full names instead of truncating them.
+- Evidence added to a review is written as a readable bullet (title linked to its source, with source and date) instead of a bare reference chip.
+
+### Changed
+- Entries show the provider's logo (GitHub, Phabricator, Bugzilla, Jira, Confluence, Google Calendar, Google Drive) instead of letter badges.
+- Review: the guidance opens by itself while a section is empty, and a section can define a markdown outline (`template` in `review_sections.toml`) that the "Start from outline" button inserts.
+
 ## [6.0.0] - 2026-10-16
 
 ### Changed

@@ -9,7 +9,8 @@ import { SkeletonRows } from '@/components/ui/Spinner';
 import { paths } from '@/config/paths';
 import { useCycleContext, useSession } from '@/stores/session';
 import type { Entry, MeetingDto, TodayPriority } from '@/types/api/models';
-import { humanize, sourceMeta, workKind, type WorkKind } from '@/utils/entries';
+import { SourceIcon } from '@/components/SourceIcon';
+import { humanize, workKind, type WorkKind } from '@/utils/entries';
 import { progressPct, trackingMeta } from '@/utils/priorities';
 import { useToday } from '../api/today';
 import { MeetingPrepDrawer } from './MeetingPrepDrawer';
@@ -47,11 +48,10 @@ function PriorityRow({ p }: { p: TodayPriority }) {
 }
 
 function WorkRow({ e }: { e: Entry }) {
-  const m = sourceMeta(e.source);
   const k = kindBadge[workKind(e)];
   return (
     <div className="row">
-      <span className={`src ${m.cls}`} title={m.label}>{m.abbr}</span>
+      <SourceIcon source={e.source} />
       <div className="grow">
         {e.source_url ? <a href={e.source_url} target="_blank" rel="noreferrer" className="clamp" style={{ display: 'block' }}>{e.title}</a> : <span className="clamp" style={{ display: 'block' }}>{e.title}</span>}
         <div className="small muted">{[e.repository, humanize(e.status ?? e.entry_type)].filter(Boolean).join(' · ')}</div>

@@ -49,9 +49,19 @@ describe('Trends', () => {
     const user = userEvent.setup();
     renderWithProviders(ui, { route: '/trends' });
     await screen.findByText('PRs merged');
-    const bars = within(screen.getByRole('group', { name: 'Activity by week' })).getAllByRole('link');
+    const bars = within(screen.getByRole('group', { name: 'Activity by week' })).getAllByRole('button');
     await user.click(bars.at(-1)!);
     expect(await screen.findByTestId('where')).toHaveTextContent(/\/logbook\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
+  });
+
+  it('shows the numbers of a bar in the info bar on hover', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(ui, { route: '/trends' });
+    await screen.findByText('PRs merged');
+    const bars = within(screen.getByRole('group', { name: 'Activity by week' })).getAllByRole('button');
+    await user.hover(bars[0]!);
+    expect(await screen.findByText(/\d+ entries$/, { selector: '.chart-info span' })).toBeInTheDocument();
+    expect(document.querySelector('.chart-info')?.textContent).toMatch(/Code \d+/);
   });
 
   it('offers the data behind each chart in a table', async () => {

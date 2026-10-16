@@ -50,6 +50,8 @@ export function TrendsPage() {
   const range = (RANGES.find((r) => r.value === sp.get('range'))?.value ?? 'cycle') as TrendRange;
   const q = useTrends(cycle?.id ?? null, range);
   const t = q.data;
+  const prioritised = t ? t.priority_share.reduce((n, p) => n + p.count, 0) : 0;
+  const linkedPct = t && prioritised > 0 ? Math.round((t.priority_share.filter((p) => p.priority_id != null).reduce((n, p) => n + p.count, 0) / prioritised) * 100) : 0;
   const cycleSearch = cycle && !cycle.is_active ? `&cycle=${cycle.id}` : '';
   const logbook = (params: string) => `${paths.logbook}?${params}${cycleSearch}`;
 
@@ -71,13 +73,10 @@ export function TrendsPage() {
             <Kpi n={t.kpis.total} l="entries" />
             <Kpi n={t.kpis.prs_merged} l="PRs merged" />
             <Kpi n={t.kpis.prs_reviewed + t.kpis.jira_closed} l="reviews and tickets closed" />
-            <Kpi n={`{(() => {
-              const total = Math.max(1, t.priority_share.reduce((n, p) => n + p.count, 0));
-              return Math.round((t.priority_share.filter((p) => p.priority_id != null).reduce((n, p) => n + p.count, 0) / total) * 100);
-            })()}%`} l="linked to a priority" />
+            <Kpi n={`${linkedPct}%`} l="linked to a priority" />
           </div>
 
-          <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', marginBottom: 16 }}>
+          <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', marginBottom: 16, alignItems: 'start' }}>
             <Card>
               <CardHeader title="Activity by week"><span className="small muted">stacked by type</span></CardHeader>
               <CardBody>

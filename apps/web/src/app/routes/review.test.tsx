@@ -23,6 +23,13 @@ describe('Review', () => {
     expect(screen.getByText(/Converted from your earlier text/)).toBeInTheDocument();
   }, 15000);
 
+  it('opens the guidance for an empty section and starts it from the outline', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(ui, { route: '/review/2/growth' });
+    await user.click(await screen.findByRole('button', { name: 'Start from outline' }));
+    expect(await screen.findByText(/Example headline/, {}, { timeout: 8000 })).toBeInTheDocument();
+  }, 20000);
+
   it('switches sections through the URL', async () => {
     const user = userEvent.setup();
     renderWithProviders(ui, { route: '/review/2' });
@@ -53,7 +60,7 @@ describe('Review', () => {
   it('drafts with AI and shows the draft in the editor', async () => {
     const user = userEvent.setup();
     renderWithProviders(ui, { route: '/review/2/growth' });
-    await screen.findByText(/How did you grow\?/);
+    await screen.findByRole('button', { name: 'Draft with AI' });
     await user.click(await screen.findByRole('button', { name: 'Draft with AI' }));
     await user.click(await screen.findByRole('button', { name: 'Generate draft' }));
     expect(await screen.findByText(/Drafted example/, {}, { timeout: 8000 })).toBeInTheDocument();

@@ -1,20 +1,20 @@
 import type { Entry } from '@/types/api/models';
 
-type SourceInfo = { label: string; abbr: string; cls: string };
+type SourceInfo = { label: string };
 
 const SOURCES: Record<string, SourceInfo> = {
-  github: { label: 'GitHub', abbr: 'GH', cls: 's-gh' },
-  phabricator: { label: 'Phabricator', abbr: 'Ph', cls: 's-ph' },
-  bugzilla: { label: 'Bugzilla', abbr: 'Bz', cls: 's-bz' },
-  jira: { label: 'Jira', abbr: 'J', cls: 's-jira' },
-  confluence: { label: 'Confluence', abbr: 'Cf', cls: 's-conf' },
-  google_calendar: { label: 'Google Calendar', abbr: 'C', cls: 's-cal' },
-  google_drive: { label: 'Google Drive', abbr: 'D', cls: 's-drive' },
-  manual: { label: 'Manual', abbr: 'M', cls: 's-man' },
+  github: { label: 'GitHub' },
+  phabricator: { label: 'Phabricator' },
+  bugzilla: { label: 'Bugzilla' },
+  jira: { label: 'Jira' },
+  confluence: { label: 'Confluence' },
+  google_calendar: { label: 'Google Calendar' },
+  google_drive: { label: 'Google Drive' },
+  manual: { label: 'Manual' },
 };
 
 /** Unknown sources (new integrations) render as a neutral badge instead of crashing. */
-export const sourceMeta = (source: string): SourceInfo => SOURCES[source] ?? { label: source, abbr: source.slice(0, 2).toUpperCase(), cls: 's-man' };
+export const sourceMeta = (source: string): SourceInfo => SOURCES[source] ?? { label: source };
 
 export const humanize = (s: string | null | undefined) => (s ? s.replace(/_/g, ' ') : '');
 const label = (s: string) => humanize(s).replace(/^./, (c) => c.toUpperCase());

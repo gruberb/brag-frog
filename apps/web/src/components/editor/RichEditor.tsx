@@ -50,6 +50,19 @@ const RichEditor = forwardRef<RichEditorHandle, Props>(function RichEditor(
     ref,
     () => ({
       insertEntryRef,
+      insertEvidence: (item) => {
+        // A bullet with the title (a link when the item has a source URL) and a muted source/date suffix.
+        const content = [
+          item.url ? { type: 'link', href: item.url, content: item.title } : { type: 'text', text: item.title, styles: {} },
+          ...(item.meta ? [{ type: 'text', text: ` (${item.meta})`, styles: {} }] : []),
+        ];
+        const at = editor.getTextCursorPosition().block;
+        const empty = Array.isArray(at.content) && at.content.length === 0 && at.type === 'paragraph';
+        const block = { type: 'bulletListItem', content } as never;
+        if (empty) editor.replaceBlocks([at], [block]);
+        else editor.insertBlocks([block], at, 'after');
+        editor.focus();
+      },
       replaceAll: (blocks) => {
         applyingExternal.current = true;
         try {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SourceIcon } from '@/components/SourceIcon';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -12,10 +13,6 @@ import { useIntegrations, useSync, useSyncStatus } from '../api/integrations';
 import { integrationState } from '../utils/integration-status';
 import { ConfigureDrawer } from './ConfigureDrawer';
 
-const ICON: Record<string, { abbr: string; cls: string }> = {
-  github: { abbr: 'GH', cls: 's-gh' }, phabricator: { abbr: 'Ph', cls: 's-ph' }, bugzilla: { abbr: 'Bz', cls: 's-bz' }, atlassian: { abbr: 'J', cls: 's-jira' },
-  google_calendar: { abbr: 'C', cls: 's-cal' }, google_drive: { abbr: 'D', cls: 's-drive' },
-};
 
 function subtitle(i: Integration): string {
   const state = integrationState(i);
@@ -50,11 +47,10 @@ export function IntegrationsPanel() {
         {list.isPending && <CardBody><SkeletonRows rows={4} h={48} /></CardBody>}
         {list.error && <ErrorState error={list.error} onRetry={() => list.refetch()} />}
         {items.map((i) => {
-          const icon = ICON[i.service] ?? { abbr: i.service.slice(0, 2), cls: 's-man' };
           const state = integrationState(i);
           return (
             <div key={i.service} className="svc">
-              <span className={`src ${icon.cls}`}>{icon.abbr}</span>
+              <SourceIcon source={i.service === 'atlassian' ? 'jira' : i.service} />
               <div><b>{i.display_name}</b><div className="small muted">{subtitle(i)}</div></div>
               <Badge tone={state === 'connected' ? 'green' : state === 'error' ? 'red' : 'gray'}>{state === 'connected' ? 'Connected' : state === 'error' ? 'Error' : 'Not connected'}</Badge>
               <Button size="sm" variant={state === 'connected' ? 'default' : 'primary'} onClick={() => (state === 'not_connected' && i.oauth_connect ? window.location.assign(`/auth/connect/${i.service}`) : setOpenService(i.service))} aria-label={`${state === 'connected' ? 'Configure' : state === 'error' ? 'Fix token for' : 'Connect'} ${i.display_name}`}>

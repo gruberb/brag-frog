@@ -1,4 +1,5 @@
-import { format, parseISO } from 'date-fns';
+import { useState } from 'react';
+import { addDays, format, parseISO } from 'date-fns';
 import type { Trends } from '@/types/api/models';
 import { weekTotal } from '../utils/weeks';
 
@@ -11,50 +12,64 @@ const SERIES = [
   { key: 'other', label: 'Other', color: 'var(--color-orange-40)' },
 ] as const;
 
-const W = 40;
-const H = 160;
-const PAD_BOTTOM = 22;
+/** Fixed plot height, so the card does not grow or shrink with its neighbours or the data. */
+const PLOT_HEIGHT = 200;
 
 type Props = { weeks: Week[]; onSelectWeek: (weekStart: string) => void };
 
-/** Hand-written SVG stacked bars (no chart library). Each bar is a button that opens that week in the logbook. */
+const range = (weekStart: string) => {
+  const start = parseISO(weekStart);
+  return `${format(start, 'MMM d')} to ${format(addDays(start, 6), 'MMM d')}`;
+};
+
+/** Stacked bars drawn with flexbox (no chart library). Hovering or focusing a bar shows its numbers; clicking opens that week in the logbook. */
 export function StackedBars({ weeks, onSelectWeek }: Props) {
+  const [active, setActive] = useState<number | null>(null);
   const max = Math.max(1, ...weeks.map(weekTotal));
   const step = Math.ceil(weeks.length / 8);
+  const shown = active != null ? weeks[active] : null;
+
   return (
     <div>
-      <svg viewBox={`0 0 ${weeks.length * W} ${H + PAD_BOTTOM}`} width="100%" height={H + PAD_BOTTOM} role="group" aria-label="Activity by week">
+      <div className="chart-info" aria-live="polite">
+        {shown ? (
+          <>
+            <b>{range(shown.week_start)}</b>
+            <span>{weekTotal(shown)} entries</span>
+            {SERIES.map((s) => (
+              <span key={s.key} className="chart-info-item"><i style={{ background: s.color }} />{s.label} {shown.by_type[s.key]}</span>
+            ))}
+          </>
+        ) : (
+          <span className="muted">Hover a bar for details, click it to open that week in the logbook.</span>
+        )}
+      </div>
+      <div className="chart-plot" style={{ height: PLOT_HEIGHT }} role="group" aria-label="Activity by week" onMouseLeave={() => setActive(null)}>
         {weeks.map((w, i) => {
-          let y = H;
           const total = weekTotal(w);
           return (
-            <g
+            <button
               key={w.week_start}
-              role="link"
-              tabIndex={0}
+              type="button"
+              className={`chart-col${active === i ? ' on' : ''}`}
               aria-label={`Week of ${format(parseISO(w.week_start), 'MMM d')}: ${total} entries. Open in logbook`}
-              style={{ cursor: 'pointer' }}
               onClick={() => onSelectWeek(w.week_start)}
-              onKeyDown={(e) => e.key === 'Enter' && onSelectWeek(w.week_start)}
+              onMouseEnter={() => setActive(i)}
+              onFocus={() => setActive(i)}
+              onBlur={() => setActive(null)}
             >
-              <rect x={i * W} y={0} width={W} height={H} fill="transparent" />
-              {SERIES.map((s) => {
-                const h = (w.by_type[s.key] / max) * (H - 8);
-                y -= h;
-                return h > 0 ? <rect key={s.key} x={i * W + 6} y={y} width={W - 12} height={h} fill={s.color} opacity={0.8}><title>{`${s.label}: ${w.by_type[s.key]}`}</title></rect> : null;
-              })}
-              {i % step === 0 && (
-                <text x={i * W + W / 2} y={H + 15} textAnchor="middle" fontSize="10" fill="var(--color-text-secondary)">
-                  {format(parseISO(w.week_start), 'MMM d')}
-                </text>
-              )}
-            </g>
+              <span className="chart-stack" style={{ height: `${(total / max) * 100}%` }}>
+                {SERIES.map((s) =>
+                  w.by_type[s.key] > 0 ? <span key={s.key} style={{ flexGrow: w.by_type[s.key], background: s.color }} /> : null,
+                )}
+              </span>
+              <span className="chart-label">{i % step === 0 ? format(parseISO(w.week_start), 'MMM d') : ''}</span>
+            </button>
           );
         })}
-      </svg>
+      </div>
       <div className="legend">
         {SERIES.map((s) => <span key={s.key}><b style={{ background: s.color }} />{s.label}</span>)}
-        <span className="muted">Click a bar to open that week in the logbook</span>
       </div>
     </div>
   );

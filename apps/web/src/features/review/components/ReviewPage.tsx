@@ -8,6 +8,7 @@ import { EmptyState, ErrorState } from '@/components/ui/EmptyState';
 import { Menu } from '@/components/ui/Menu';
 import { Popover } from '@/components/ui/Popover';
 import { SkeletonRows } from '@/components/ui/Spinner';
+import { markdownToBlocks } from '@/components/editor/convert';
 import { LazyRichEditor } from '@/components/editor/LazyRichEditor';
 import type { EntryRefCandidate, RichEditorHandle } from '@/components/editor/types';
 import { paths } from '@/config/paths';
@@ -16,11 +17,13 @@ import { usePriorityOptions } from '@/hooks/use-priority-options';
 import type { ExportFormat } from '@/lib/export';
 import { useCycleContext, useSession } from '@/stores/session';
 import { toast, toastError } from '@/stores/toast';
-import type { ContentFormat, ReviewSection } from '@/types/api/models';
+import type { ContentFormat, EntrySummary, ReviewSection } from '@/types/api/models';
+import { shortDate } from '@/utils/dates';
+import { sourceMeta } from '@/utils/entries';
 import { useDraftSection, useReview, useSaveSection } from '../api/review';
 import { CareerLevelDrawer } from './CareerLevelDrawer';
 
-export type EvidenceSlot = ComponentType<{ open: boolean; onOpenChange: (o: boolean) => void; onInsert: (e: EntryRefCandidate) => void }>;
+export type EvidenceSlot = ComponentType<{ open: boolean; onOpenChange: (o: boolean) => void; onInsert: (e: EntrySummary) => void }>;
 export type EntryDrawerSlot = ComponentType<{ entryId: number | null; onClose: () => void }>;
 
 type Props = {
@@ -48,9 +51,9 @@ function SectionEditor({ cycleId, section, readOnly, jiraBase, Evidence, EntryDr
   const [evidence, setEvidence] = useState(false);
   const [openEntry, setOpenEntry] = useState<number | null>(null);
   const [original, setOriginal] = useState(false);
-  const onInsert = useCallback((e: EntryRefCandidate) => {
-    handleRef.current?.insertEntryRef(e);
-    toast('Reference inserted');
+  const onInsert = useCallback((e: EntrySummary) => {
+    handleRef.current?.insertEvidence({ title: e.title, url: e.source_url, meta: `${sourceMeta(e.source).label}, ${shortDate(e.occurred_at)}` });
+    toast('Evidence added');
   }, [handleRef]);
   const save = useSaveSection(cycleId);
   // Remember whether this section started as old markdown; the notice goes away after the first save as blocknote.
@@ -111,13 +114,21 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
   const { goals } = usePriorityOptions(cycleId);
   const draft = useDraftSection(cycleId);
   const handle = useRef<RichEditorHandle>(null);
-  const [guidance, setGuidance] = useState(false);
+  // Guidance opens by itself while a section is empty, and stays under the user's control once toggled.
+  const [guidanceToggle, setGuidanceToggle] = useState<Record<string, boolean>>({});
   const [level, setLevel] = useState(false);
   const [picked, setPicked] = useState<number[]>([]);
   const [busyExport, setBusyExport] = useState(false);
 
   const sections = useMemo(() => review.data?.sections ?? [], [review.data]);
   const active = sections.find((s) => s.slug === sectionSlug) ?? sections[0];
+  const guidance = active ? (guidanceToggle[active.slug] ?? !active.content?.trim()) : false;
+  const startFromOutline = async () => {
+    if (!active?.template || !handle.current) return;
+    const blocks = await markdownToBlocks(active.template);
+    if (handle.current.isEmpty()) handle.current.replaceAll(blocks);
+    else handle.current.insertBlocks(blocks);
+  };
 
   const exportDoc = async (format: ExportFormat, scope: 'section' | 'all') => {
       if (!review.data) return;
@@ -203,7 +214,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
           </div>
           <div className="hint" style={{ marginBottom: 12 }}>
             {active.question}{' '}
-            <button type="button" className="linkish" aria-expanded={guidance} onClick={() => setGuidance((g) => !g)}>Guidance</button>
+            <button type="button" className="linkish" aria-expanded={guidance} onClick={() => setGuidanceToggle((t) => ({ ...t, [active.slug]: !guidance }))}>Guidance</button>
             {' · '}
             <button type="button" className="linkish" onClick={() => setLevel(true)}>Career level</button>
           </div>
@@ -212,7 +223,12 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
               <b>{active.form_question ?? active.question}</b>
               {active.form_guidance && <p style={{ margin: '8px 0 4px' }}>{active.form_guidance}</p>}
               {active.form_bullets.length > 0 && <ul style={{ margin: 0, paddingLeft: 20 }}>{active.form_bullets.map((b) => <li key={b}>{b}</li>)}</ul>}
-              {active.form_tip && <p className="small muted" style={{ marginBottom: 0 }}>{active.form_tip}</p>}
+              {active.form_tip && <p className="small muted" style={{ margin: '8px 0 0' }}>{active.form_tip}</p>}
+              {active.template && !readOnly && (
+                <div style={{ marginTop: 12 }}>
+                  <Button size="sm" onClick={() => void startFromOutline()}>Start from outline</Button>
+                </div>
+              )}
             </Card>
           )}
           <SectionEditor

@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { EntrySummary } from '@/types/api/models';
 import { humanize } from '@/utils/entries';
-import { SourceIcon } from './SourceIcon';
+import { SourceIcon } from '@/components/SourceIcon';
 
 const ExternalIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden>

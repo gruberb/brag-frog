@@ -10,7 +10,7 @@ import { useCycleContext } from '@/stores/session';
 import type { EntrySummary } from '@/types/api/models';
 import { shortDate } from '@/utils/dates';
 import { useEntries } from '../api/entries';
-import { SourceIcon } from './SourceIcon';
+import { SourceIcon } from '@/components/SourceIcon';
 
 type Props = { open: boolean; onOpenChange: (o: boolean) => void; onInsert: (entry: EntrySummary) => void };
 

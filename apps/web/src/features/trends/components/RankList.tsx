@@ -14,16 +14,18 @@ export function RankList({ title, items, color, to, mono }: Props) {
         {items.map((i) => {
           const row = (
             <>
-              <span className={mono ? 'mono clamp' : 'clamp'}>{i.name}</span>
-              <div className="bar"><i style={{ width: `${(i.count / max) * 100}%`, background: color }} /></div>
-              <b>{i.count}</b>
+              <span className="rank-head">
+                <span className={mono ? 'mono rank-name' : 'rank-name'}>{i.name}</span>
+                <b>{i.count}</b>
+              </span>
+              <span className="bar"><i style={{ width: `${(i.count / max) * 100}%`, background: color }} /></span>
             </>
           );
           return to ? (
-            <Link key={i.name} to={to(i.name)} className="rank-row" style={{ display: 'grid', gridTemplateColumns: '110px 1fr 36px', gap: 8, alignItems: 'center', marginBottom: 8, fontSize: 13 }} aria-label={`${i.name}: ${i.count}. Open in logbook`}>
+            <Link key={i.name} to={to(i.name)} className="rank-row" aria-label={`${i.name}: ${i.count}. Open in logbook`}>
               {row}
             </Link>
-          ) : <div key={i.name}>{row}</div>;
+          ) : <div key={i.name} className="rank-row">{row}</div>;
         })}
       </CardBody>
     </Card>

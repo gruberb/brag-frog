@@ -145,4 +145,4 @@ function createDb() {
 export let db = createDb();
 export const resetDb = () => { db = createDb(); };
 
-export const sectionFor = (cycleId: number, s: ReviewSectionConfig): ReviewSectionDto => ({ ...s, ...(db.reviews[`${cycleId}:${s.slug}`] ?? { content: null, content_format: 'blocknote', generated_at: null }) });
+export const sectionFor = (cycleId: number, s: ReviewSectionConfig): ReviewSectionDto => ({ template: '1. Example headline\n\n**Status:** done', ...s, ...(db.reviews[`${cycleId}:${s.slug}`] ?? { content: null, content_format: 'blocknote', generated_at: null }) });

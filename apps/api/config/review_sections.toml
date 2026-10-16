@@ -19,6 +19,30 @@ form_bullets = [
 ]
 form_tip = "Use concise, evidence-based examples to describe what changed, who was impacted, and how you approached the work."
 form_placeholder = "Required: Write your response..."
+template = """1. <Action-oriented example headline>
+
+**Status:** <Completed or in progress, and one concrete sentence about what shipped or changed.>
+
+**Impact**
+- <Who or what improved: team, users, organization, reliability, launch.>
+- <Evidence: numbers if you have them, otherwise concrete outcomes.>
+
+**Details**
+- <Your ownership, scope and sequencing. Who you worked with.>
+- <The hardest technical or coordination problem and how you handled it.>
+
+**CLG behaviors demonstrated**
+- Complexity: <...>
+- Risk management: <...>
+- Influence and communication: <...>
+
+**Learnings going forward**
+- <What you learned and what you will do next.>
+
+2. <Second example, same structure>
+
+**Development focus for next half**
+- <What you want to grow next, tied to the work above.>"""
 focus_priorities = true
 focus_priority_help = "Select department goals you want this Lattice answer to emphasize. Brag Frog will still use linked contribution examples, priorities, and logbook evidence."
 prompt = """Write one paste-ready answer for this Lattice self-review question:

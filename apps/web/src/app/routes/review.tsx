@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useCycleContext } from '@/stores/session';
 
 const Evidence: EvidenceSlot = ({ open, onOpenChange, onInsert }) => (
-  <EvidencePicker open={open} onOpenChange={onOpenChange} onInsert={(e) => onInsert({ id: e.id, title: e.title })} />
+  <EvidencePicker open={open} onOpenChange={onOpenChange} onInsert={onInsert} />
 );
 const EntryDrawerView: EntryDrawerSlot = ({ entryId, onClose }) => <EntryDrawer entryId={entryId} onClose={onClose} />;
 

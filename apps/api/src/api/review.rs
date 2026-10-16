@@ -42,6 +42,7 @@ pub struct ReviewSectionDto {
     pub form_bullets: Vec<String>,
     pub form_tip: Option<String>,
     pub form_placeholder: Option<String>,
+    pub template: Option<String>,
     pub focus_priorities: bool,
     pub focus_priority_help: Option<String>,
     /// `null` until the section has been saved once.
@@ -64,6 +65,7 @@ impl ReviewSectionDto {
             form_bullets: config.form_bullets.clone(),
             form_tip: config.form_tip.clone(),
             form_placeholder: config.form_placeholder.clone(),
+            template: config.template.clone(),
             focus_priorities: config.focus_priorities,
             focus_priority_help: config.focus_priority_help.clone(),
             content: saved.map(|s| s.content.clone()),
