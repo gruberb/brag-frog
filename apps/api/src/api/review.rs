@@ -119,17 +119,26 @@ pub async fn get_review(
     Path(cycle_id): Path<i64>,
 ) -> ApiResult<ReviewResponse> {
     let cycle = owned_cycle(&state, auth.user_id, cycle_id).await?;
-    let saved = Summary::list_for_phase(&state.db, cycle.id, &auth.crypto).await?;
+    Ok(Json(load_review(&state, &auth.crypto, cycle.id).await?))
+}
+
+/// All configured review sections of a cycle. Shared with the cycle bundle export.
+pub async fn load_review(
+    state: &AppState,
+    crypto: &crate::kernel::crypto::UserCrypto,
+    cycle_id: i64,
+) -> Result<ReviewResponse, ApiError> {
+    let saved = Summary::list_for_phase(&state.db, cycle_id, crypto).await?;
     let sections = review_config()
         .sections
         .iter()
         .map(|cfg| ReviewSectionDto::new(cfg, saved.iter().find(|s| s.section == cfg.slug)))
         .collect();
-    Ok(Json(ReviewResponse {
-        cycle_id: cycle.id,
+    Ok(ReviewResponse {
+        cycle_id,
         sections,
-        entry_count: Summary::phase_entry_count(&state.db, cycle.id).await?,
-    }))
+        entry_count: Summary::phase_entry_count(&state.db, cycle_id).await?,
+    })
 }
 
 /// `PUT /api/v1/cycles/{id}/review/{slug}`

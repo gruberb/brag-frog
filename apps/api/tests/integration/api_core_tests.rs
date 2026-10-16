@@ -395,3 +395,36 @@ async fn prep_draft_without_ai_key_is_a_clear_error() {
     assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(r.json()["error"]["message"].as_str().unwrap().contains("AI not configured"));
 }
+
+// ── cycle bundle ──
+
+#[tokio::test]
+async fn bundle_contains_review_priorities_and_entries_by_week() {
+    let (app, _uid, cookie) = setup().await;
+    create_entry(&app, &cookie, "Shipped it", &today()).await;
+    let cycle_id = app.get_json("/api/v1/me", Some(&cookie)).await.json()["active_cycle"]["id"]
+        .as_i64()
+        .unwrap();
+
+    let r = app.get_json(&format!("/api/v1/cycles/{cycle_id}/bundle"), Some(&cookie)).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.body);
+    let b = r.json();
+    assert_eq!(b["cycle"]["name"], "Cycle");
+    assert_eq!(b["weeks"].as_array().unwrap().len(), 1);
+    assert_eq!(b["weeks"][0]["entries"][0]["title"], "Shipped it");
+    assert!(!b["review"]["sections"].as_array().unwrap().is_empty());
+    assert!(b["priorities"]["goals"].is_array());
+}
+
+#[tokio::test]
+async fn bundle_of_another_users_cycle_is_404() {
+    let (app, _uid, _cookie) = setup().await;
+    let other = common::create_other_user(&app.pool).await;
+    let other_cookie = app.login(other).await;
+    let id: i64 = sqlx::query_scalar("SELECT id FROM brag_phases LIMIT 1")
+        .fetch_one(&app.pool)
+        .await
+        .unwrap();
+    let r = app.get_json(&format!("/api/v1/cycles/{id}/bundle"), Some(&other_cookie)).await;
+    assert_eq!(r.status, StatusCode::NOT_FOUND);
+}

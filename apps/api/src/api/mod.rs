@@ -2,6 +2,7 @@
 //! bounded contexts and only translate to and from wire types.
 
 pub mod auth;
+pub mod bundle;
 pub mod config;
 pub mod cycles;
 pub mod dto;
@@ -93,6 +94,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/v1/cycles/{id}/review/{slug}", put(review::save_section))
         .route("/api/v1/cycles/{id}/review/{slug}/draft", post(review::draft_section))
         .route("/api/v1/cycles/{id}/archive", get(review::get_archive))
+        .route("/api/v1/cycles/{id}/bundle", get(bundle::get_bundle))
         .route(
             "/api/v1/reports",
             get(reports::list_reports).post(reports::create_report),

@@ -451,16 +451,24 @@ pub async fn list(
     Query(q): Query<CycleQuery>,
 ) -> ApiResult<PrioritiesResponse> {
     let cycle = resolve_cycle(&state, auth.user_id, q.cycle_id).await?;
+    Ok(Json(load_priorities(&state, &auth.crypto, cycle.id).await?))
+}
 
-    let mut goals = DepartmentGoal::list_for_phase(&state.db, cycle.id, &auth.crypto).await?;
+/// Goals with their priorities for one cycle. Shared with the cycle bundle export.
+pub async fn load_priorities(
+    state: &AppState,
+    crypto: &crate::kernel::crypto::UserCrypto,
+    cycle_id: i64,
+) -> Result<PrioritiesResponse, ApiError> {
+    let mut goals = DepartmentGoal::list_for_phase(&state.db, cycle_id, crypto).await?;
     // Completed goals sink to the bottom; `sort_by_key` is stable so manual order survives.
     goals.sort_by_key(|g| g.status == "completed");
-    let mut priorities = Priority::list_for_phase(&state.db, cycle.id, &auth.crypto).await?;
+    let mut priorities = Priority::list_for_phase(&state.db, cycle_id, crypto).await?;
     sort_priorities(&mut priorities);
 
     let counts = priority_counts(&priorities);
-    let entry_counts = Priority::entry_counts_for_phase(&state.db, cycle.id).await?;
-    let mut latest = PriorityUpdate::latest_for_phase(&state.db, cycle.id, &auth.crypto).await?;
+    let entry_counts = Priority::entry_counts_for_phase(&state.db, cycle_id).await?;
+    let mut latest = PriorityUpdate::latest_for_phase(&state.db, cycle_id, crypto).await?;
 
     let (mut by_goal, unassigned) = group_by_department_goal(&priorities);
     let mut to_dto = |p: &Priority| {
@@ -480,12 +488,12 @@ pub async fn list(
         .collect();
     let unassigned = unassigned.into_iter().map(&mut to_dto).collect();
 
-    Ok(Json(PrioritiesResponse {
-        cycle_id: cycle.id,
+    Ok(PrioritiesResponse {
+        cycle_id,
         goals,
         unassigned,
         counts,
-    }))
+    })
 }
 
 fn priority_counts(priorities: &[Priority]) -> PriorityCounts {
