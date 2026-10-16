@@ -89,6 +89,7 @@ function createDb() {
     { service: 'bugzilla', status: 'error', last_sync_at: iso(-1), last_error: 'token expired', entry_count: 12, config: {}, has_token: true, excluded: [] },
     { service: 'atlassian', status: 'connected', last_sync_at: iso(0), last_error: null, entry_count: 40, config: {}, has_token: true, excluded: [] },
     { service: 'google_calendar', status: 'connected', last_sync_at: iso(0), last_error: null, entry_count: 90, config: {}, has_token: true, excluded: [{ id: 1, label: 'Lunch' }, { id: 2, label: 'Focus block' }] },
+    { service: 'claude', status: 'connected', last_sync_at: null, last_error: null, entry_count: 0, config: {}, has_token: true, excluded: [] },
     { service: 'google_drive', status: 'not_connected', last_sync_at: null, last_error: null, entry_count: 0, config: {}, has_token: false, excluded: [] },
   ];
   const people: PeopleAlias[] = [
