@@ -1,3 +1,3 @@
-export function Component() {
-  return <div>priorities</div>;
-}
+import { PrioritiesPage } from '@/features/priorities/components/PrioritiesPage';
+
+export const Component = PrioritiesPage;
