@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev:mock": "VITE_MSW=true vite"
   },
   "dependencies": {
     "@blocknote/core": "^0.55.0",
