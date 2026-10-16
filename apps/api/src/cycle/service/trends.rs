@@ -270,19 +270,27 @@ impl EntryFilter {
             return false;
         }
         if !self.priority_ids.is_empty()
-            && !e.priority_id.is_some_and(|p| self.priority_ids.contains(&p))
+            && !e
+                .priority_id
+                .is_some_and(|p| self.priority_ids.contains(&p))
         {
             return false;
         }
         if let Some(goal) = self.goal_id
-            && e.priority_id.and_then(|p| priority_to_goal.get(&p).copied().flatten()) != Some(goal)
+            && e.priority_id
+                .and_then(|p| priority_to_goal.get(&p).copied().flatten())
+                != Some(goal)
         {
             return false;
         }
         if self.source.as_deref().is_some_and(|s| s != e.source) {
             return false;
         }
-        if self.entry_type.as_deref().is_some_and(|t| t != e.entry_type) {
+        if self
+            .entry_type
+            .as_deref()
+            .is_some_and(|t| t != e.entry_type)
+        {
             return false;
         }
         if let Some(v) = &self.reach
@@ -351,8 +359,7 @@ pub async fn compute(
     let from = filter.from.as_deref().unwrap_or(&phase.start_date);
     let to = filter.to.as_deref().unwrap_or(&phase.end_date);
 
-    let mut entries =
-        BragEntry::list_for_phase_in_range(pool, phase.id, from, to, crypto).await?;
+    let mut entries = BragEntry::list_for_phase_in_range(pool, phase.id, from, to, crypto).await?;
     let today_str = today.format("%Y-%m-%d").to_string();
     entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
 
@@ -446,7 +453,9 @@ pub async fn compute(
 
     // Zero-filled so charts get a continuous x axis.
     let start = NaiveDate::parse_from_str(from, "%Y-%m-%d").ok();
-    let end = NaiveDate::parse_from_str(to, "%Y-%m-%d").ok().map(|d| d.min(today));
+    let end = NaiveDate::parse_from_str(to, "%Y-%m-%d")
+        .ok()
+        .map(|d| d.min(today));
     let mut weekly_out = Vec::new();
     if let (Some(start), Some(end)) = (start, end) {
         let mut week = monday_of(start);
@@ -500,11 +509,7 @@ pub async fn compute(
             }
         })
         .collect();
-    priority_share.sort_by(|a, b| {
-        b.count
-            .cmp(&a.count)
-            .then_with(|| a.title.cmp(&b.title))
-    });
+    priority_share.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.title.cmp(&b.title)));
 
     let mut categories: Vec<CategoryCount> = categories
         .into_iter()

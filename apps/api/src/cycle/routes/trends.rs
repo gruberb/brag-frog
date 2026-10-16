@@ -47,6 +47,14 @@ fn build_bars(items: &[NameCount]) -> Vec<serde_json::Value> {
         .collect()
 }
 
+struct Group<'a> {
+    name: String,
+    status: Option<String>,
+    color: &'static str,
+    count: u32,
+    items: Vec<&'a PriorityShare>,
+}
+
 /// Groups per-priority activity under department goals for the legacy template.
 fn priority_activity_groups(shares: &[PriorityShare]) -> Vec<serde_json::Value> {
     // Entries without a priority get their own group, separate from priorities without a goal.
@@ -58,7 +66,7 @@ fn priority_activity_groups(shares: &[PriorityShare]) -> Vec<serde_json::Value> 
             .push(share);
     }
 
-    let mut groups: Vec<(String, Option<String>, &'static str, u32, Vec<&PriorityShare>)> = grouped
+    let mut groups: Vec<Group> = grouped
         .into_iter()
         .map(|((goal_id, unlinked), items)| {
             let count = items.iter().map(|i| i.count).sum();
@@ -71,15 +79,15 @@ fn priority_activity_groups(shares: &[PriorityShare]) -> Vec<serde_json::Value> 
                 _ if unlinked => ("Unlinked Entries".to_string(), None, "#95A5A6"),
                 _ => ("No Department Goal".to_string(), None, "#FF453F"),
             };
-            (name, status, color, count, items)
+            Group { name, status, color, count, items }
         })
         .collect();
-    groups.sort_by(|a, b| b.3.cmp(&a.3).then_with(|| a.0.cmp(&b.0)));
+    groups.sort_by(|a, b| b.count.cmp(&a.count).then_with(|| a.name.cmp(&b.name)));
 
-    let max_group = groups.first().map(|g| g.3).unwrap_or(1).max(1) as f64;
+    let max_group = groups.first().map(|g| g.count).unwrap_or(1).max(1) as f64;
     groups
         .into_iter()
-        .map(|(name, status, color, count, items)| {
+        .map(|Group { name, status, color, count, items }| {
             // `items` arrive sorted by count desc from the service.
             let child_max = items.first().map(|i| i.count).unwrap_or(1).max(1) as f64;
             let priorities: Vec<serde_json::Value> = items
@@ -167,7 +175,7 @@ pub async fn trends_page(
         .filter(|d| d.count > 0)
         .cloned()
         .collect();
-    weekday_ranked.sort_by(|a, b| b.count.cmp(&a.count));
+    weekday_ranked.sort_by_key(|d| std::cmp::Reverse(d.count));
 
     let mut ctx = tera::Context::new();
     ctx.insert("user", &user);
