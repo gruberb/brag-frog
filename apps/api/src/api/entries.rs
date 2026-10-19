@@ -1,7 +1,7 @@
 //! Logbook entries: filtered listing with cursor paging, CRUD, bulk edit, meeting
 //! classification, exclusion of synced items, facets and entry type metadata.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -24,7 +24,9 @@ use crate::cycle::service::logbook_insights::LogbookFilter;
 use crate::identity::model::PeopleAlias;
 use crate::kernel::error::AppError;
 use crate::objectives::model::Priority;
-use crate::worklog::model::{BragEntry, BulkUpdateEntries, CreateEntry, EntryType, UpdateEntry};
+use crate::worklog::model::{
+    BragEntry, BulkUpdateEntries, CATEGORIES, CreateEntry, EntryType, UpdateEntry,
+};
 
 const FACET_TTL: Duration = Duration::from_secs(60);
 const DEFAULT_LIMIT: usize = 50;
@@ -298,12 +300,25 @@ pub struct SourceCount {
     pub count: i64,
 }
 
+/// A logbook category that has entries in the cycle.
+#[derive(Clone, Serialize, TS)]
+#[ts(export)]
+pub struct CategoryFacet {
+    /// Category slug, the value of the logbook `category` filter.
+    pub value: String,
+    pub label: String,
+    pub count: usize,
+}
+
 #[derive(Clone, Serialize, TS)]
 #[ts(export)]
 pub struct Facets {
     pub teams: Vec<String>,
     pub people: Vec<String>,
     pub sources: Vec<SourceCount>,
+    /// Only categories with entries, in display order, so the filter never offers a choice
+    /// that lists nothing.
+    pub categories: Vec<CategoryFacet>,
     pub total: usize,
 }
 
@@ -332,10 +347,23 @@ pub async fn facets_handler(
     .await?;
     let mut teams = BTreeSet::new();
     let mut people = BTreeSet::new();
+    let mut category_counts: HashMap<&str, usize> = HashMap::new();
     for e in &entries {
         teams.extend(split_csv(&e.teams));
         people.extend(split_csv(&e.collaborators));
+        let category = EntryType::category_for_slug(&e.entry_type).unwrap_or("other");
+        *category_counts.entry(category).or_default() += 1;
     }
+    let categories = CATEGORIES
+        .iter()
+        .filter_map(|(value, label)| {
+            category_counts.get(value).map(|&count| CategoryFacet {
+                value: value.to_string(),
+                label: label.to_string(),
+                count,
+            })
+        })
+        .collect();
     let counts = BragEntry::source_counts_for_phase(&state.db, phase.id).await?;
     let value = Arc::new(Facets {
         teams: teams.into_iter().collect(),
@@ -344,6 +372,7 @@ pub async fn facets_handler(
             .into_iter()
             .map(|(source, count)| SourceCount { source, count })
             .collect(),
+        categories,
         total: entries.len(),
     });
     facets::put(&state.entry_facets, phase.id, value.clone());

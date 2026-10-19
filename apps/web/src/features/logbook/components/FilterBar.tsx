@@ -5,7 +5,7 @@ import { ChipButton } from '@/components/ui/Chip';
 import { Select, type Option } from '@/components/ui/Select';
 import type { EntryFacets } from '@/types/api/models';
 import { activeFilterCount, parseFilters, writeFilters } from '@/utils/entry-filters';
-import { categoryOptions, complexityOptions, reachOptions, roleOptions, sourceOptions } from '@/utils/entries';
+import { complexityOptions, reachOptions, roleOptions, sourceOptions } from '@/utils/entries';
 
 type Props = { facets?: EntryFacets; goals: Option[]; priorities: Option[] };
 
@@ -51,7 +51,7 @@ export function FilterBar({ facets, goals, priorities }: Props) {
           <div className="field"><label>Source</label>{sel('source', sourceOptions, 'All Sources', 'Source')}</div>
           <div className="field"><label>Team</label>{sel('team', opts(facets?.teams), 'All Teams', 'Team')}</div>
           <div className="field"><label>Person</label>{sel('person', opts(facets?.people), 'All People', 'Person')}</div>
-          <div className="field"><label>Category</label>{sel('category', categoryOptions, 'All Categories', 'Category')}</div>
+          <div className="field"><label>Category</label>{sel('category', (facets?.categories ?? []).map((c) => ({ value: c.value, label: c.label })), 'All Categories', 'Category')}</div>
           <div className="field"><label>Reach</label>{sel('reach', reachOptions, 'All Reach', 'Reach')}</div>
           <div className="field"><label>Complexity</label>{sel('complexity', complexityOptions, 'All Complexity', 'Complexity')}</div>
           <div className="field"><label>Role</label>{sel('role', roleOptions, 'All Roles', 'Role')}</div>

@@ -18,7 +18,7 @@ to?: string,
  */
 source?: string, priority_id?: number, goal_id?: number, 
 /**
- * Entry type category (`code`, `reviews`, `docs`, `meetings`, `collaboration`, `learning`).
+ * Entry type category: a slug from `worklog::model::CATEGORIES`.
  */
 category?: string, 
 /**

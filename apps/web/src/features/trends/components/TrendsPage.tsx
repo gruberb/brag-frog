@@ -12,6 +12,7 @@ import { useCycleContext } from '@/stores/session';
 import type { Trends, TrendRange } from '@/types/api/models';
 import { useTrends } from '../api/trends';
 import { RankList } from './RankList';
+import { CATEGORY_SERIES } from '../utils/categories';
 import { weekRange, weekTotal } from '../utils/weeks';
 import { StackedBars } from './StackedBars';
 
@@ -39,7 +40,7 @@ const Kpi = ({ n, l }: { n: string | number; l: string }) => (
 );
 
 function toCsv(t: Trends) {
-  const rows = [['week_start', 'code', 'review', 'meeting', 'other', 'total'], ...t.weekly.map((w) => [w.week_start, w.by_type.code, w.by_type.review, w.by_type.meeting, w.by_type.other, weekTotal(w)])];
+  const rows = [['week_start', ...CATEGORY_SERIES.map((s) => s.key), 'total'], ...t.weekly.map((w) => [w.week_start, ...CATEGORY_SERIES.map((s) => w.by_category[s.key]), weekTotal(w)])];
   return rows.map((r) => r.join(',')).join('\n');
 }
 
@@ -83,12 +84,13 @@ export function TrendsPage() {
                 <StackedBars weeks={t.weekly} onSelectWeek={(w) => void nav(logbook(`from=${weekRange(w).from}&to=${weekRange(w).to}`))} />
                 <ShowData summary={`${t.weekly.length} weeks, ${t.weekly.reduce((n, w) => n + weekTotal(w), 0)} entries in total. Busiest week starts ${t.weekly.slice().sort((a, b) => weekTotal(b) - weekTotal(a))[0] ? format(parseISO(t.weekly.slice().sort((a, b) => weekTotal(b) - weekTotal(a))[0].week_start), 'MMM d') : 'n/a'}.`}>
                   <table className="small" style={{ borderCollapse: 'collapse', width: '100%' }}>
-                    <thead><tr>{['Week', 'Code', 'Review', 'Meetings', 'Other', 'Total'].map((h) => <th key={h} style={{ textAlign: 'left', padding: '2px 8px', fontWeight: 500 }}>{h}</th>)}</tr></thead>
+                    <thead><tr>{['Week', ...CATEGORY_SERIES.map((s) => s.label), 'Total'].map((h) => <th key={h} style={{ textAlign: 'left', padding: '2px 8px', fontWeight: 500 }}>{h}</th>)}</tr></thead>
                     <tbody>
                       {t.weekly.map((w) => (
                         <tr key={w.week_start}>
-                          <td style={{ padding: '2px 8px' }}>{w.week_start}</td><td style={{ padding: '2px 8px' }}>{w.by_type.code}</td><td style={{ padding: '2px 8px' }}>{w.by_type.review}</td>
-                          <td style={{ padding: '2px 8px' }}>{w.by_type.meeting}</td><td style={{ padding: '2px 8px' }}>{w.by_type.other}</td><td style={{ padding: '2px 8px' }}>{weekTotal(w)}</td>
+                          <td style={{ padding: '2px 8px' }}>{w.week_start}</td>
+                          {CATEGORY_SERIES.map((s) => <td key={s.key} style={{ padding: '2px 8px' }}>{w.by_category[s.key]}</td>)}
+                          <td style={{ padding: '2px 8px' }}>{weekTotal(w)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -120,7 +122,7 @@ export function TrendsPage() {
           </div>
 
           <div className="grid g4" style={{ marginBottom: 16 }}>
-            <RankList title="Categories" items={t.categories} color="var(--color-primary)" to={(n) => logbook(`category=${encodeURIComponent(n.toLowerCase())}`)} />
+            <RankList title="Categories" items={t.categories} color="var(--color-primary)" to={(n) => logbook(`category=${encodeURIComponent(t.categories.find((c) => c.name === n)?.key ?? '')}`)} />
             <RankList title="People" items={t.people} color="var(--color-blue-30)" to={(n) => logbook(`person=${encodeURIComponent(n)}`)} />
             <RankList title="Repositories" items={t.repos} color="var(--color-success)" mono to={(n) => logbook(`q=${encodeURIComponent(n)}`)} />
             <RankList title="Teams" items={t.teams} color="var(--color-orange-40)" to={(n) => logbook(`team=${encodeURIComponent(n)}`)} />

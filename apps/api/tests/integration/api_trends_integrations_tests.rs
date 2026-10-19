@@ -115,14 +115,13 @@ async fn trends_returns_typed_aggregates() {
 
     let weekly = body["weekly"].as_array().unwrap();
     let week = |d: &str| weekly.iter().find(|w| w["week_start"] == d).unwrap();
-    assert_eq!(
-        week("2025-01-06")["by_type"],
-        json!({"code":1,"review":1,"meeting":0,"other":0})
-    );
-    assert_eq!(
-        week("2025-01-13")["by_type"],
-        json!({"code":0,"review":0,"meeting":1,"other":1})
-    );
+    let totals = |code, reviews, docs, meetings| {
+        json!({"code": code, "reviews": reviews, "tickets": 0, "docs": docs, "meetings": meetings,
+               "collaboration": 0, "learning": 0, "other": 0})
+    };
+    assert_eq!(week("2025-01-06")["by_category"], totals(1, 1, 0, 0));
+    // Documents get their own bucket instead of falling into "other".
+    assert_eq!(week("2025-01-13")["by_category"], totals(0, 0, 1, 1));
     // Zero-filled from the cycle start (Monday 2024-12-30).
     assert_eq!(weekly[0]["week_start"], "2024-12-30");
 

@@ -338,6 +338,30 @@ async fn facets_list_teams_and_people_and_refresh_after_writes() {
 }
 
 #[tokio::test]
+async fn facets_list_only_categories_with_entries_in_display_order() {
+    let (app, _uid, cookie) = setup().await;
+    for (title, ty) in [("Fix", "jira_progress"), ("Sync", "meeting"), ("Call", "decision"), ("Plan", "development")] {
+        let r = app
+            .json("POST", "/api/v1/entries", Some(json!({"title": title, "entry_type": ty})), Some(&cookie))
+            .await;
+        assert_eq!(r.status, StatusCode::CREATED, "{}", r.body);
+    }
+    let f = app.get_json("/api/v1/entries/facets", Some(&cookie)).await.json();
+    let cats: Vec<(&str, i64)> = f["categories"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| (c["value"].as_str().unwrap(), c["count"].as_i64().unwrap()))
+        .collect();
+    assert_eq!(cats, vec![("code", 1), ("tickets", 1), ("meetings", 1), ("other", 1)]);
+
+    // The filter accepts every offered value, including `other` (manual impact types).
+    let r = app.get_json("/api/v1/entries?category=other", Some(&cookie)).await.json();
+    let titles: Vec<&str> = r["items"].as_array().unwrap().iter().map(|e| e["title"].as_str().unwrap()).collect();
+    assert_eq!(titles, vec!["Call"]);
+}
+
+#[tokio::test]
 async fn entry_types_metadata_marks_manual_types() {
     let (app, _uid, cookie) = setup().await;
     let types = app.get_json("/api/v1/meta/entry-types", Some(&cookie)).await.json();

@@ -2,6 +2,21 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [6.2.0] - 2026-10-19
+
+### Added
+- Jira: a "Jira Progress" entry for each day you changed an issue's status (for example to In Progress, In Review or Done), dated that day and titled with the new status. Several changes on one day show as one entry with the last status. Before, an issue appeared once, on the day it was created, so later work on it never showed up in the week you did it. Turn it off under Settings → Integrations → Atlassian → "Days I changed an issue's status".
+
+### Changed
+- One set of categories everywhere: Code, Reviews, Tickets, Docs, Meetings, Collaboration, Learning and Other. Every entry type belongs to one of them. Jira and Bugzilla entries are now "Tickets" in the Logbook filter too (they were "Code" there but "Tickets" in Trends).
+- Trends: "Activity by week" stacks all eight categories. Before, only Code, Review and Meetings had their own colour, and tickets, documents, collaboration and learning all went into "Other". The week details list only the categories present that week; the CSV export and data table have one column per category.
+- Logbook: the Category filter lists only categories that have entries in the cycle, with the new Tickets and Other options.
+
+### Fixed
+- Logbook: decisions, process improvements, unblocking, incident responses, investigations, "Other" entries and daily PR development had no category, so no Category filter could show them.
+- Trends: clicking "Tickets", "Decisions" or other Trends-only categories opened an empty Logbook.
+- Jira: syncs with more than 100 matching issues silently dropped the rest (the search was never paged). A hard sync then also removed the dropped issues' entries.
+
 ## [6.1.1] - 2026-10-16
 
 ### Changed

@@ -93,6 +93,7 @@ pub struct IntegrationInput {
     pub sync_jira_completed: Option<bool>,
     pub sync_jira_in_progress: Option<bool>,
     pub sync_jira_created: Option<bool>,
+    pub sync_jira_progress: Option<bool>,
 }
 
 impl IntegrationInput {
@@ -112,6 +113,7 @@ impl IntegrationInput {
             sync_jira_completed: on(self.sync_jira_completed),
             sync_jira_in_progress: on(self.sync_jira_in_progress),
             sync_jira_created: on(self.sync_jira_created),
+            sync_jira_progress: on(self.sync_jira_progress),
             sync_pr_development: on(self.sync_pr_development),
         }
     }

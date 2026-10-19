@@ -31,6 +31,8 @@ pub enum EntryType {
     JiraTask,
     #[serde(rename = "jira_epic")]
     JiraEpic,
+    #[serde(rename = "jira_progress")]
+    JiraProgress,
     #[serde(rename = "confluence_page")]
     ConfluencePage,
     #[serde(rename = "meeting")]
@@ -79,6 +81,25 @@ pub enum EntryType {
     Investigation,
 }
 
+/// Entry categories as `(slug, label)`, in display order. Every entry type belongs to exactly
+/// one ([`EntryType::category`]). The logbook filter, the trends weekly chart and the trends
+/// category list all read this list, so the three always agree.
+pub const CATEGORIES: &[(&str, &str)] = &[
+    ("code", "Code"),
+    ("reviews", "Reviews"),
+    ("tickets", "Tickets"),
+    ("docs", "Docs"),
+    ("meetings", "Meetings"),
+    ("collaboration", "Collaboration"),
+    ("learning", "Learning"),
+    ("other", "Other"),
+];
+
+/// Display label of a category slug.
+pub fn category_label(slug: &str) -> Option<&'static str> {
+    CATEGORIES.iter().find(|(s, _)| *s == slug).map(|(_, label)| *label)
+}
+
 impl EntryType {
     /// All entry type variants in display order.
     pub const ALL: &[EntryType] = &[
@@ -94,6 +115,7 @@ impl EntryType {
         Self::JiraStory,
         Self::JiraTask,
         Self::JiraEpic,
+        Self::JiraProgress,
         Self::ConfluencePage,
         Self::Meeting,
         Self::Workshop,
@@ -134,6 +156,7 @@ impl EntryType {
             Self::JiraStory => "jira_story",
             Self::JiraTask => "jira_task",
             Self::JiraEpic => "jira_epic",
+            Self::JiraProgress => "jira_progress",
             Self::ConfluencePage => "confluence_page",
             Self::Meeting => "meeting",
             Self::Workshop => "workshop",
@@ -175,6 +198,7 @@ impl EntryType {
             Self::JiraStory => "Jira Story",
             Self::JiraTask => "Jira Task",
             Self::JiraEpic => "Jira Epic",
+            Self::JiraProgress => "Jira Progress",
             Self::ConfluencePage => "Confluence Page",
             Self::Meeting => "Meeting",
             Self::Workshop => "Workshop",
@@ -207,7 +231,11 @@ impl EntryType {
             Self::PrAuthored | Self::PrReviewed | Self::PrMerged | Self::PrDevelopment => "github",
             Self::RevisionAuthored | Self::RevisionReviewed => "phabricator",
             Self::BugFixed | Self::BugFiled => "bugzilla",
-            Self::JiraCompleted | Self::JiraStory | Self::JiraTask | Self::JiraEpic => "jira",
+            Self::JiraCompleted
+            | Self::JiraStory
+            | Self::JiraTask
+            | Self::JiraEpic
+            | Self::JiraProgress => "jira",
             Self::ConfluencePage => "confluence",
             Self::DriveCreated | Self::DriveEdited | Self::DriveCommented => "google_drive",
             _ => "manual",
@@ -219,61 +247,64 @@ impl EntryType {
         self.source() == "manual"
     }
 
-    /// Map a category name to the set of entry type slugs it contains.
-    pub fn types_for_category(category: &str) -> Vec<&'static str> {
-        match category {
-            "reviews" => vec!["pr_reviewed", "revision_reviewed", "code_review"],
-            "code" => vec![
-                "pr_authored",
-                "pr_merged",
-                "revision_authored",
-                "development",
-                "bug_fixed",
-                "bug_filed",
-                "jira_completed",
-                "jira_story",
-                "jira_task",
-                "jira_epic",
-            ],
-            "docs" => vec![
-                "design_doc",
-                "document",
-                "confluence_page",
-                "drive_created",
-                "drive_edited",
-                "drive_commented",
-            ],
-            "meetings" => vec!["meeting"],
-            "collaboration" => vec![
-                "workshop",
-                "mentoring",
-                "presentation",
-                "pairing",
-                "cross_team",
-                "interview",
-            ],
-            "learning" => vec!["learning", "onboarding"],
-            _ => vec![],
+    /// Category slug (see [`CATEGORIES`]). The match is exhaustive on purpose: a new entry
+    /// type does not compile until it picks a category, so it can never fall out of the
+    /// logbook filter or into the wrong trends bucket.
+    pub fn category(&self) -> &'static str {
+        match self {
+            Self::PrAuthored
+            | Self::PrMerged
+            | Self::PrDevelopment
+            | Self::RevisionAuthored
+            | Self::Development => "code",
+            Self::PrReviewed | Self::RevisionReviewed | Self::CodeReview => "reviews",
+            Self::BugFixed
+            | Self::BugFiled
+            | Self::JiraCompleted
+            | Self::JiraStory
+            | Self::JiraTask
+            | Self::JiraEpic
+            | Self::JiraProgress => "tickets",
+            Self::DesignDoc
+            | Self::Document
+            | Self::ConfluencePage
+            | Self::DriveCreated
+            | Self::DriveEdited
+            | Self::DriveCommented => "docs",
+            Self::Meeting => "meetings",
+            Self::Workshop
+            | Self::Mentoring
+            | Self::Presentation
+            | Self::Pairing
+            | Self::CrossTeam
+            | Self::Interview => "collaboration",
+            Self::Learning | Self::Onboarding => "learning",
+            Self::Decision
+            | Self::ProcessImprovement
+            | Self::Unblocking
+            | Self::IncidentResponse
+            | Self::Investigation
+            | Self::Other => "other",
         }
     }
 
-    /// Determine which category an entry type slug belongs to, if any.
+    /// The entry type for a database/serde slug.
+    pub fn from_slug(slug: &str) -> Option<EntryType> {
+        Self::ALL.iter().copied().find(|t| t.slug() == slug)
+    }
+
+    /// Slugs of every entry type in `category`; empty for an unknown category.
+    pub fn types_for_category(category: &str) -> Vec<&'static str> {
+        Self::ALL
+            .iter()
+            .filter(|t| t.category() == category)
+            .map(|t| t.slug())
+            .collect()
+    }
+
+    /// Category slug of an entry type slug; `None` only for slugs that are not entry types.
     pub fn category_for_slug(entry_type: &str) -> Option<&'static str> {
-        match entry_type {
-            "pr_reviewed" | "revision_reviewed" | "code_review" => Some("reviews"),
-            "pr_authored" | "pr_merged" | "revision_authored" | "development" | "bug_fixed"
-            | "bug_filed" | "jira_completed" | "jira_story" | "jira_task" | "jira_epic" => {
-                Some("code")
-            }
-            "design_doc" | "document" | "confluence_page" | "drive_created" | "drive_edited"
-            | "drive_commented" => Some("docs"),
-            "meeting" => Some("meetings"),
-            "workshop" | "mentoring" | "presentation" | "pairing" | "cross_team" | "interview" => {
-                Some("collaboration")
-            }
-            "learning" | "onboarding" => Some("learning"),
-            _ => None,
-        }
+        Self::from_slug(entry_type).map(|t| t.category())
     }
 
 }
@@ -478,11 +509,11 @@ pub struct BulkUpdateEntries {
 
 #[cfg(test)]
 mod tests {
-    use super::EntryType;
+    use super::{CATEGORIES, EntryType, category_label};
 
     #[test]
     fn all_count() {
-        assert_eq!(EntryType::ALL.len(), 35);
+        assert_eq!(EntryType::ALL.len(), 36);
     }
 
     #[test]
@@ -495,10 +526,21 @@ mod tests {
 
     #[test]
     fn categories_agree_with_their_type_lists() {
-        for cat in ["reviews", "code", "docs", "meetings", "collaboration", "learning"] {
+        for (cat, _) in CATEGORIES {
             for slug in EntryType::types_for_category(cat) {
-                assert_eq!(EntryType::category_for_slug(slug), Some(cat), "{slug}");
+                assert_eq!(EntryType::category_for_slug(slug), Some(*cat), "{slug}");
             }
+        }
+    }
+
+    #[test]
+    fn every_type_has_a_listed_category() {
+        for t in EntryType::ALL {
+            assert!(category_label(t.category()).is_some(), "{:?} -> {}", t, t.category());
+        }
+        // Every listed category is reachable, so the filter never offers an empty choice by design.
+        for (cat, _) in CATEGORIES {
+            assert!(!EntryType::types_for_category(cat).is_empty(), "{cat}");
         }
     }
 }

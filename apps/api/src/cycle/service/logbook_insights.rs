@@ -29,7 +29,7 @@ pub struct LogbookFilter {
     #[serde(default)]
     #[ts(optional)]
     pub goal_id: Option<i64>,
-    /// Entry type category (`code`, `reviews`, `docs`, `meetings`, `collaboration`, `learning`).
+    /// Entry type category: a slug from `worklog::model::CATEGORIES`.
     #[serde(default)]
     #[ts(optional)]
     pub category: Option<String>,

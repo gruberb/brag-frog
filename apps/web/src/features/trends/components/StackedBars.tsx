@@ -1,16 +1,10 @@
 import { useState } from 'react';
 import { addDays, format, parseISO } from 'date-fns';
 import type { Trends } from '@/types/api/models';
+import { CATEGORY_SERIES } from '../utils/categories';
 import { weekTotal } from '../utils/weeks';
 
 type Week = Trends['weekly'][number];
-// Colours come from the design tokens only.
-const SERIES = [
-  { key: 'code', label: 'Code', color: 'var(--color-primary)' },
-  { key: 'review', label: 'Review', color: 'var(--color-blue-30)' },
-  { key: 'meeting', label: 'Meetings', color: 'var(--color-purple-30)' },
-  { key: 'other', label: 'Other', color: 'var(--color-orange-40)' },
-] as const;
 
 /** Fixed plot height, so the card does not grow or shrink with its neighbours or the data. */
 const PLOT_HEIGHT = 200;
@@ -36,8 +30,9 @@ export function StackedBars({ weeks, onSelectWeek }: Props) {
           <>
             <b>{range(shown.week_start)}</b>
             <span>{weekTotal(shown)} entries</span>
-            {SERIES.map((s) => (
-              <span key={s.key} className="chart-info-item"><i style={{ background: s.color }} />{s.label} {shown.by_type[s.key]}</span>
+            {/* Only categories present that week; eight zero counts would bury the ones that matter. */}
+            {CATEGORY_SERIES.filter((s) => shown.by_category[s.key] > 0).map((s) => (
+              <span key={s.key} className="chart-info-item"><i style={{ background: s.color }} />{s.label} {shown.by_category[s.key]}</span>
             ))}
           </>
         ) : (
@@ -60,8 +55,8 @@ export function StackedBars({ weeks, onSelectWeek }: Props) {
             >
               <span className="chart-area">
                 <span className="chart-stack" style={{ height: `${(total / max) * 100}%` }}>
-                  {SERIES.map((s) =>
-                    w.by_type[s.key] > 0 ? <span key={s.key} style={{ flexGrow: w.by_type[s.key], background: s.color }} /> : null,
+                  {CATEGORY_SERIES.map((s) =>
+                    w.by_category[s.key] > 0 ? <span key={s.key} style={{ flexGrow: w.by_category[s.key], background: s.color }} /> : null,
                   )}
                 </span>
               </span>
@@ -71,7 +66,7 @@ export function StackedBars({ weeks, onSelectWeek }: Props) {
         })}
       </div>
       <div className="legend">
-        {SERIES.map((s) => <span key={s.key}><b style={{ background: s.color }} />{s.label}</span>)}
+        {CATEGORY_SERIES.map((s) => <span key={s.key}><b style={{ background: s.color }} />{s.label}</span>)}
       </div>
     </div>
   );

@@ -31,16 +31,20 @@ const noContent = () => new HttpResponse(null, { status: 204 });
 const num = (v: string | null) => (v ? Number(v) : undefined);
 const dto = ({ cycle_id: _c, ...e }: DbEntry): EntryDto => (void _c, e);
 
+// Mirrors `EntryType::category` in the API; anything unlisted is 'other'.
 const CATEGORY: Record<string, string> = {
-  pr_authored: 'code', pr_merged: 'code', revision_authored: 'code', development: 'code', bug_fixed: 'code', bug_filed: 'code', jira_completed: 'code', jira_story: 'code', jira_task: 'code', jira_epic: 'code',
+  pr_authored: 'code', pr_merged: 'code', pr_development: 'code', revision_authored: 'code', development: 'code',
+  bug_fixed: 'tickets', bug_filed: 'tickets', jira_completed: 'tickets', jira_story: 'tickets', jira_task: 'tickets', jira_epic: 'tickets', jira_progress: 'tickets',
   pr_reviewed: 'reviews', revision_reviewed: 'reviews', code_review: 'reviews',
   design_doc: 'docs', document: 'docs', confluence_page: 'docs', drive_created: 'docs', drive_edited: 'docs', drive_commented: 'docs',
   meeting: 'meetings', workshop: 'collaboration', mentoring: 'collaboration', presentation: 'collaboration', pairing: 'collaboration', cross_team: 'collaboration', interview: 'collaboration',
   learning: 'learning', onboarding: 'learning',
 };
+const CATEGORY_LABELS: [string, string][] = [['code', 'Code'], ['reviews', 'Reviews'], ['tickets', 'Tickets'], ['docs', 'Docs'], ['meetings', 'Meetings'], ['collaboration', 'Collaboration'], ['learning', 'Learning'], ['other', 'Other']];
+const categoryOf = (entryType: string) => CATEGORY[entryType] ?? 'other';
 const ENTRY_TYPES: EntryTypeDto[] = [
-  ...['development', 'code_review', 'design_doc', 'document', 'meeting', 'workshop', 'mentoring', 'presentation', 'pairing', 'cross_team', 'interview', 'learning', 'onboarding', 'decision', 'process_improvement', 'unblocking', 'incident_response', 'investigation', 'other'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: CATEGORY[v] ?? null, manual: true })),
-  ...['pr_authored', 'pr_merged', 'pr_reviewed', 'bug_fixed', 'bug_filed', 'revision_authored', 'revision_reviewed', 'jira_completed', 'jira_story', 'jira_task', 'jira_epic', 'confluence_page', 'drive_created', 'drive_edited', 'drive_commented'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: CATEGORY[v] ?? null, manual: false })),
+  ...['development', 'code_review', 'design_doc', 'document', 'meeting', 'workshop', 'mentoring', 'presentation', 'pairing', 'cross_team', 'interview', 'learning', 'onboarding', 'decision', 'process_improvement', 'unblocking', 'incident_response', 'investigation', 'other'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: categoryOf(v), manual: true })),
+  ...['pr_authored', 'pr_merged', 'pr_reviewed', 'bug_fixed', 'bug_filed', 'revision_authored', 'revision_reviewed', 'jira_completed', 'jira_story', 'jira_task', 'jira_epic', 'jira_progress', 'confluence_page', 'drive_created', 'drive_edited', 'drive_commented'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: categoryOf(v), manual: false })),
 ];
 
 /** Mirrors the API's `LogbookFilter` semantics (source is a comma list, category is derived from the type). */
@@ -55,7 +59,7 @@ function filterEntries(sp: URLSearchParams): DbEntry[] {
     .filter((e) => e.cycle_id === cycleId)
     .filter((e) => !q || e.title.toLowerCase().includes(q) || (e.description ?? '').toLowerCase().includes(q))
     .filter((e) => !sources || sources.includes(e.source))
-    .filter((e) => !sp.get('category') || CATEGORY[e.entry_type] === sp.get('category'))
+    .filter((e) => !sp.get('category') || categoryOf(e.entry_type) === sp.get('category'))
     .filter((e) => !sp.get('reach') || e.reach === sp.get('reach'))
     .filter((e) => !sp.get('complexity') || e.complexity === sp.get('complexity'))
     .filter((e) => !sp.get('role') || e.role === sp.get('role'))
@@ -169,22 +173,21 @@ function trends(range: TrendRange, cycleId: number): TrendsResponse {
   const list = db.entries.filter((e) => e.cycle_id === cycleId);
   const weeks = range === '4w' ? 4 : range === 'quarter' ? 13 : 16;
   const monday = startOfISOWeek(new Date());
-  const kind = (e: EntryDto) => (/review/.test(e.entry_type) ? 'review' : e.entry_type === 'meeting' ? 'meeting' : ['github', 'phabricator', 'bugzilla', 'jira'].includes(e.source) ? 'code' : 'other');
   const weekly = Array.from({ length: weeks }, (_, i) => {
     const k = format(subWeeks(monday, weeks - 1 - i), 'yyyy-MM-dd');
     const inWeek = list.filter((e) => weekStart(e.occurred_at) === k);
-    const n = (t: string) => inWeek.filter((e) => kind(e) === t).length;
-    return { week_start: k, by_type: { code: n('code'), review: n('review'), meeting: n('meeting'), other: n('other') } };
+    const n = (c: string) => inWeek.filter((e) => categoryOf(e.entry_type) === c).length;
+    return { week_start: k, by_category: { code: n('code'), reviews: n('reviews'), tickets: n('tickets'), docs: n('docs'), meetings: n('meetings'), collaboration: n('collaboration'), learning: n('learning'), other: n('other') } };
   });
   const s = stats(list);
   const cat = new Map<string, number>();
-  list.forEach((e) => cat.set(CATEGORY[e.entry_type] ?? 'other', (cat.get(CATEGORY[e.entry_type] ?? 'other') ?? 0) + 1));
+  list.forEach((e) => cat.set(categoryOf(e.entry_type), (cat.get(categoryOf(e.entry_type)) ?? 0) + 1));
   const count = (k: keyof EntryDto, v: string) => list.filter((e) => e[k] === v).length;
   return {
     cycle_id: cycleId, range, from: weekly[0].week_start, to: format(new Date(), 'yyyy-MM-dd'),
     kpis: { total: list.length, prs_merged: count('entry_type', 'pr_merged'), prs_reviewed: count('entry_type', 'pr_reviewed'), jira_closed: count('entry_type', 'jira_completed'), docs_worked_on: list.filter((e) => CATEGORY[e.entry_type] === 'docs').length, meetings: count('entry_type', 'meeting') },
     weekly,
-    categories: [...cat].map(([name, c]) => ({ name, count: c, types: [] })),
+    categories: [...cat].map(([key, c]) => ({ key, name: CATEGORY_LABELS.find(([k]) => k === key)![1], count: c, types: [] })),
     priority_share: s.per_project.sort((a, b) => b.count - a.count).map((p) => ({ priority_id: p.priority_id, title: p.name, color: null, status: null, department_goal_id: null, department_goal_title: null, department_goal_status: null, count: p.count })),
     impact: { reach: [], complexity: [], role: [] },
     people: s.people_top, repos: s.repos_top, teams: s.teams_top,
@@ -266,6 +269,7 @@ export const handlers = [
       teams: [...new Set(es.flatMap((e) => e.teams))].sort(),
       people: [...new Set(es.flatMap((e) => e.collaborators))].sort(),
       sources: [...sources].map(([source, count]) => ({ source, count })),
+      categories: CATEGORY_LABELS.map(([value, label]) => ({ value, label, count: es.filter((e) => categoryOf(e.entry_type) === value).length })).filter((c) => c.count > 0),
       total: es.length,
     });
   }),

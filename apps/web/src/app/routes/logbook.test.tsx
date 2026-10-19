@@ -21,6 +21,18 @@ describe('Logbook', () => {
     expect(screen.getAllByText('Today')[0]).toBeInTheDocument();
   });
 
+  it('offers only categories that have entries, including Tickets and Other', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<Logbook />, { route: '/logbook' });
+    await screen.findByText('Merged runner autoscaling');
+    await user.click(screen.getByRole('button', { name: 'More filters' }));
+    const select = await screen.findByLabelText('Category');
+    await waitFor(() => expect(select.querySelectorAll('option').length).toBeGreaterThan(1));
+    const labels = [...select.querySelectorAll('option')].map((o) => o.textContent);
+    // The mock data has no learning entries, so Learning is not offered.
+    expect(labels).toEqual(['All Categories', 'Code', 'Reviews', 'Tickets', 'Docs', 'Meetings', 'Collaboration', 'Other']);
+  });
+
   it('sends URL filters to the API and debounces search', async () => {
     spy();
     const user = userEvent.setup();

@@ -34,4 +34,3 @@ export const complexityOptions = ['routine', 'moderate', 'complex', 'novel'].map
 export const roleOptions = ['contributor', 'owner', 'lead', 'architect'].map((v) => ({ value: v, label: label(v) }));
 export const sourceOptions = Object.keys(SOURCES).map((v) => ({ value: v, label: SOURCES[v].label }));
 /** Entry type categories accepted by the `category` filter. */
-export const categoryOptions = ['code', 'reviews', 'docs', 'meetings', 'collaboration', 'learning'].map((v) => ({ value: v, label: label(v) }));

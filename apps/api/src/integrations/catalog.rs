@@ -18,6 +18,7 @@ pub struct IntegrationForm {
     pub sync_jira_completed: Option<String>,
     pub sync_jira_in_progress: Option<String>,
     pub sync_jira_created: Option<String>,
+    pub sync_jira_progress: Option<String>,
     pub sync_pr_development: Option<String>,
 }
 
@@ -34,6 +35,7 @@ fn checkbox_fields_for_service(service: &str) -> &[&str] {
             "sync_jira_completed",
             "sync_jira_in_progress",
             "sync_jira_created",
+            "sync_jira_progress",
         ],
         _ => &[],
     }
@@ -48,6 +50,7 @@ fn checkbox_value<'a>(input: &'a IntegrationForm, name: &str) -> Option<&'a Opti
         "sync_jira_completed" => Some(&input.sync_jira_completed),
         "sync_jira_in_progress" => Some(&input.sync_jira_in_progress),
         "sync_jira_created" => Some(&input.sync_jira_created),
+        "sync_jira_progress" => Some(&input.sync_jira_progress),
         "sync_pr_development" => Some(&input.sync_pr_development),
         _ => None,
     }
@@ -204,6 +207,7 @@ pub fn service_config_fields(service: &str, user_email: &str) -> Vec<serde_json:
                 serde_json::json!({"name": "sync_jira_completed", "label": "Completed issues", "default_value": true, "field_type": "checkbox"}),
                 serde_json::json!({"name": "sync_jira_in_progress", "label": "In-progress issues", "default_value": false, "field_type": "checkbox"}),
                 serde_json::json!({"name": "sync_jira_created", "label": "All created/assigned issues", "default_value": false, "field_type": "checkbox"}),
+                serde_json::json!({"name": "sync_jira_progress", "label": "Days I changed an issue's status", "default_value": true, "field_type": "checkbox"}),
             ]
         }
         "claude" => vec![],

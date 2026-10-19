@@ -4,4 +4,8 @@ import type { NameCount } from "./NameCount";
 /**
  * A category with its per-type breakdown (labels as shown in the UI).
  */
-export type CategoryCount = { name: string, count: number, types: Array<NameCount>, };
+export type CategoryCount = { 
+/**
+ * Category slug, as accepted by the logbook `category` filter.
+ */
+key: string, name: string, count: number, types: Array<NameCount>, };

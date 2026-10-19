@@ -59,9 +59,24 @@ describe('Trends', () => {
     renderWithProviders(ui, { route: '/trends' });
     await screen.findByText('PRs merged');
     const bars = within(screen.getByRole('group', { name: 'Activity by week' })).getAllByRole('button');
-    await user.hover(bars[0]!);
+    // The info bar lists only categories present that week, so hover a week with entries.
+    await user.hover(bars.find((b) => !/: 0 entries/.test(b.getAttribute('aria-label')!))!);
     expect(await screen.findByText(/\d+ entries$/, { selector: '.chart-info span' })).toBeInTheDocument();
-    expect(document.querySelector('.chart-info')?.textContent).toMatch(/Code \d+/);
+    expect(document.querySelector('.chart-info')?.textContent).toMatch(/(Code|Reviews|Tickets|Docs|Meetings|Other) \d+/);
+  });
+
+  it('stacks every category instead of folding tickets and docs into Other', async () => {
+    renderWithProviders(ui, { route: '/trends' });
+    await screen.findByText('PRs merged');
+    const legend = document.querySelector('.legend')!;
+    expect([...legend.querySelectorAll('span')].map((s) => s.textContent)).toEqual(['Code', 'Reviews', 'Tickets', 'Docs', 'Meetings', 'Collaboration', 'Learning', 'Other']);
+  });
+
+  it('clicking a category opens the logbook filtered by its key', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(ui, { route: '/trends' });
+    await user.click(await screen.findByRole('link', { name: /^Tickets: \d+/ }));
+    expect(await screen.findByTestId('where')).toHaveTextContent('/logbook?category=tickets');
   });
 
   it('offers the data behind each chart in a table', async () => {

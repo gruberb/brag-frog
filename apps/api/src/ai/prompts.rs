@@ -293,6 +293,7 @@ fn compute_stats(entries: &[BragEntry]) -> String {
     let mut jira_stories = 0;
     let mut jira_tasks = 0;
     let mut jira_epics = 0;
+    let mut jira_progress = 0;
     let mut confluence_pages = 0;
     let mut meetings = 0;
     let mut workshops = 0;
@@ -317,6 +318,7 @@ fn compute_stats(entries: &[BragEntry]) -> String {
             "jira_story" => jira_stories += 1,
             "jira_task" => jira_tasks += 1,
             "jira_epic" => jira_epics += 1,
+            "jira_progress" => jira_progress += 1,
             "confluence_page" => confluence_pages += 1,
             "meeting" => meetings += 1,
             "workshop" => workshops += 1,
@@ -332,7 +334,7 @@ fn compute_stats(entries: &[BragEntry]) -> String {
     }
 
     format!(
-        "- PRs authored: {}\n- PRs reviewed: {}\n- PRs merged: {}\n- Bugs fixed: {}\n- Bugs filed: {}\n- Phabricator revisions: {}\n- Jira tasks completed: {}\n- Jira stories: {}\n- Jira tasks: {}\n- Jira epics: {}\n- Confluence pages: {}\n- Meetings: {}\n- Workshops: {}\n- Mentoring sessions: {}\n- Presentations: {}\n- Design docs: {}\n- Code reviews: {}\n- Onboarding: {}\n- Learning: {}\n- Interviews: {}\n- Other: {}",
+        "- PRs authored: {}\n- PRs reviewed: {}\n- PRs merged: {}\n- Bugs fixed: {}\n- Bugs filed: {}\n- Phabricator revisions: {}\n- Jira tasks completed: {}\n- Jira stories: {}\n- Jira tasks: {}\n- Jira epics: {}\n- Days with Jira status changes: {}\n- Confluence pages: {}\n- Meetings: {}\n- Workshops: {}\n- Mentoring sessions: {}\n- Presentations: {}\n- Design docs: {}\n- Code reviews: {}\n- Onboarding: {}\n- Learning: {}\n- Interviews: {}\n- Other: {}",
         prs_authored,
         prs_reviewed,
         prs_merged,
@@ -343,6 +345,7 @@ fn compute_stats(entries: &[BragEntry]) -> String {
         jira_stories,
         jira_tasks,
         jira_epics,
+        jira_progress,
         confluence_pages,
         meetings,
         workshops,

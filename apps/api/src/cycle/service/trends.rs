@@ -14,7 +14,7 @@ use crate::identity::model::PeopleAlias;
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::worklog::model::BragEntry;
+use crate::worklog::model::{BragEntry, EntryType, category_label};
 
 /// How many rows the people, repository and team rankings keep.
 pub const TOP_N: usize = 8;
@@ -58,14 +58,36 @@ pub struct Kpis {
     pub meetings: u32,
 }
 
-/// Entry counts per coarse type; `other` is everything that is not code, review or meeting.
+/// Entry counts per category. One field per entry of
+/// [`CATEGORIES`](crate::worklog::model::CATEGORIES) (a test keeps them in
+/// step), typed fields rather than a map so the web client gets every key without null checks.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, TS)]
 #[ts(export)]
-pub struct TypeCounts {
+pub struct CategoryTotals {
     pub code: u32,
-    pub review: u32,
-    pub meeting: u32,
+    pub reviews: u32,
+    pub tickets: u32,
+    pub docs: u32,
+    pub meetings: u32,
+    pub collaboration: u32,
+    pub learning: u32,
     pub other: u32,
+}
+
+impl CategoryTotals {
+    fn add(&mut self, category: &str) {
+        let slot = match category {
+            "code" => &mut self.code,
+            "reviews" => &mut self.reviews,
+            "tickets" => &mut self.tickets,
+            "docs" => &mut self.docs,
+            "meetings" => &mut self.meetings,
+            "collaboration" => &mut self.collaboration,
+            "learning" => &mut self.learning,
+            _ => &mut self.other,
+        };
+        *slot += 1;
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -73,7 +95,7 @@ pub struct TypeCounts {
 pub struct WeekBucket {
     /// Monday of the ISO week, `YYYY-MM-DD`.
     pub week_start: String,
-    pub by_type: TypeCounts,
+    pub by_category: CategoryTotals,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -87,6 +109,8 @@ pub struct NameCount {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct CategoryCount {
+    /// Category slug, as accepted by the logbook `category` filter.
+    pub key: String,
     pub name: String,
     pub count: u32,
     pub types: Vec<NameCount>,
@@ -141,29 +165,9 @@ const WEEKDAYS: [&str; 7] = [
     "Sunday",
 ];
 
-pub fn entry_category(entry_type: &str) -> &'static str {
-    match entry_type {
-        "pr_reviewed" | "revision_reviewed" | "code_review" => "Reviews",
-        "pr_authored" | "pr_merged" | "pr_development" | "revision_authored" | "development" => {
-            "Code"
-        }
-        "bug_fixed" | "bug_filed" | "jira_completed" | "jira_story" | "jira_task" | "jira_epic" => {
-            "Tickets"
-        }
-        "design_doc" | "document" | "confluence_page" | "drive_created" | "drive_edited"
-        | "drive_commented" => "Docs",
-        "meeting" => "Meetings",
-        "workshop" | "mentoring" | "presentation" | "pairing" | "cross_team" | "interview" => {
-            "Collaboration"
-        }
-        "learning" | "onboarding" => "Learning",
-        "decision" => "Decisions",
-        "process_improvement" => "Process",
-        "unblocking" => "Unblocking",
-        "incident_response" => "Incidents",
-        "investigation" => "Investigation",
-        _ => "Uncategorized",
-    }
+/// Category slug of an entry type; unknown types (old rows) count as `other`.
+fn entry_category(entry_type: &str) -> &'static str {
+    EntryType::category_for_slug(entry_type).unwrap_or("other")
 }
 
 fn entry_type_label(entry_type: &str) -> &'static str {
@@ -182,6 +186,7 @@ fn entry_type_label(entry_type: &str) -> &'static str {
         "jira_story" => "Jira Stories",
         "jira_task" => "Jira Tasks",
         "jira_epic" => "Jira Epics",
+        "jira_progress" => "Jira Progress",
         "meeting" => "Meetings",
         "design_doc" => "Design Docs",
         "document" => "Documents",
@@ -194,7 +199,7 @@ fn entry_type_label(entry_type: &str) -> &'static str {
 }
 
 fn is_docs_work_type(entry_type: &str) -> bool {
-    entry_category(entry_type) == "Docs"
+    entry_category(entry_type) == "docs"
 }
 
 fn is_terminal_jira_status(status: Option<&str>) -> bool {
@@ -389,7 +394,7 @@ pub async fn compute(
     let mut repos: HashMap<String, u32> = HashMap::new();
     let mut teams: HashMap<String, u32> = HashMap::new();
     let mut weekday = [0u32; 7];
-    let mut weekly: HashMap<NaiveDate, TypeCounts> = HashMap::new();
+    let mut weekly: HashMap<NaiveDate, CategoryTotals> = HashMap::new();
     let mut categories: HashMap<&'static str, HashMap<&'static str, u32>> = HashMap::new();
 
     for e in &entries {
@@ -428,13 +433,7 @@ pub async fn compute(
 
         if let Ok(date) = NaiveDate::parse_from_str(&e.occurred_at, "%Y-%m-%d") {
             weekday[date.weekday().num_days_from_monday() as usize] += 1;
-            let bucket = weekly.entry(monday_of(date)).or_default();
-            match category {
-                "Code" => bucket.code += 1,
-                "Reviews" => bucket.review += 1,
-                "Meetings" => bucket.meeting += 1,
-                _ => bucket.other += 1,
-            }
+            weekly.entry(monday_of(date)).or_default().add(category);
         }
 
         match e.entry_type.as_str() {
@@ -462,7 +461,7 @@ pub async fn compute(
         while week <= end {
             weekly_out.push(WeekBucket {
                 week_start: week.format("%Y-%m-%d").to_string(),
-                by_type: weekly.remove(&week).unwrap_or_default(),
+                by_category: weekly.remove(&week).unwrap_or_default(),
             });
             week += Duration::days(7);
         }
@@ -470,9 +469,9 @@ pub async fn compute(
     // Entries dated outside the computed axis (manual future entries) still count.
     let mut leftover: Vec<_> = weekly.into_iter().collect();
     leftover.sort_by_key(|(d, _)| *d);
-    weekly_out.extend(leftover.into_iter().map(|(d, by_type)| WeekBucket {
+    weekly_out.extend(leftover.into_iter().map(|(d, by_category)| WeekBucket {
         week_start: d.format("%Y-%m-%d").to_string(),
-        by_type,
+        by_category,
     }));
 
     let priority_lookup: HashMap<i64, &Priority> = priorities.iter().map(|p| (p.id, p)).collect();
@@ -513,13 +512,14 @@ pub async fn compute(
 
     let mut categories: Vec<CategoryCount> = categories
         .into_iter()
-        .map(|(name, types)| {
+        .map(|(key, types)| {
             let types = ranked(
                 types.into_iter().map(|(k, v)| (k.to_string(), v)).collect(),
                 None,
             );
             CategoryCount {
-                name: name.to_string(),
+                key: key.to_string(),
+                name: category_label(key).unwrap_or("Other").to_string(),
                 count: types.iter().map(|t| t.count).sum(),
                 types,
             }
@@ -549,4 +549,25 @@ pub async fn compute(
             })
             .collect(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CategoryTotals;
+    use crate::worklog::model::CATEGORIES;
+
+    #[test]
+    fn category_totals_have_one_field_per_category() {
+        let mut totals = CategoryTotals::default();
+        for (slug, _) in CATEGORIES {
+            totals.add(slug);
+        }
+        let json = serde_json::to_value(&totals).unwrap();
+        let fields = json.as_object().unwrap();
+        assert_eq!(fields.len(), CATEGORIES.len());
+        for (slug, _) in CATEGORIES {
+            // Each category lands in its own field, not in `other`.
+            assert_eq!(fields[*slug], 1, "{slug}");
+        }
+    }
 }
