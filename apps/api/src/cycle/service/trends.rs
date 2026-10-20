@@ -50,12 +50,13 @@ pub struct EntryFilter {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Kpis {
-    pub total: u32,
-    pub prs_merged: u32,
+    pub docs_created: u32,
+    pub prs_opened: u32,
     pub prs_reviewed: u32,
-    pub jira_closed: u32,
-    pub docs_worked_on: u32,
+    pub prs_merged: u32,
     pub meetings: u32,
+    pub tickets_opened: u32,
+    pub tickets_closed: u32,
 }
 
 /// Entry counts per category. One field per entry of
@@ -198,8 +199,24 @@ fn entry_type_label(entry_type: &str) -> &'static str {
     }
 }
 
-fn is_docs_work_type(entry_type: &str) -> bool {
-    entry_category(entry_type) == "docs"
+/// Edits and comments are excluded. Drive keeps one entry per file and day and lets an edit
+/// win over a create, so a file created and edited the same day is not counted here.
+fn is_doc_created(entry_type: &str) -> bool {
+    matches!(
+        entry_type,
+        "drive_created" | "confluence_page" | "document" | "design_doc"
+    )
+}
+
+/// Every ticket entry is dated by the issue's creation, except `jira_progress`, which marks a
+/// day on which a status changed.
+fn is_ticket_opened(entry_type: &str) -> bool {
+    entry_category(entry_type) == "tickets" && entry_type != "jira_progress"
+}
+
+/// Jira by terminal status, Bugzilla by `bug_fixed` (which Jira bugs also use once done).
+fn is_ticket_closed(entry: &BragEntry) -> bool {
+    entry.entry_type == "bug_fixed" || is_closed_jira_entry(entry)
 }
 
 fn is_terminal_jira_status(status: Option<&str>) -> bool {
@@ -379,12 +396,13 @@ pub async fn compute(
     entries.retain(|e| filter.matches(e, &priority_to_goal, &aliases));
 
     let mut kpis = Kpis {
-        total: entries.len() as u32,
-        prs_merged: 0,
+        docs_created: 0,
+        prs_opened: 0,
         prs_reviewed: 0,
-        jira_closed: 0,
-        docs_worked_on: 0,
+        prs_merged: 0,
         meetings: 0,
+        tickets_opened: 0,
+        tickets_closed: 0,
     };
     let mut by_priority: HashMap<Option<i64>, u32> = HashMap::new();
     let mut reach: HashMap<String, u32> = HashMap::new();
@@ -437,16 +455,20 @@ pub async fn compute(
         }
 
         match e.entry_type.as_str() {
+            "pr_authored" => kpis.prs_opened += 1,
             "pr_merged" => kpis.prs_merged += 1,
             "pr_reviewed" => kpis.prs_reviewed += 1,
             "meeting" => kpis.meetings += 1,
             _ => {}
         }
-        if is_closed_jira_entry(e) {
-            kpis.jira_closed += 1;
+        if is_doc_created(&e.entry_type) {
+            kpis.docs_created += 1;
         }
-        if is_docs_work_type(&e.entry_type) {
-            kpis.docs_worked_on += 1;
+        if is_ticket_opened(&e.entry_type) {
+            kpis.tickets_opened += 1;
+        }
+        if is_ticket_closed(e) {
+            kpis.tickets_closed += 1;
         }
     }
 

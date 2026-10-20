@@ -107,11 +107,10 @@ async fn trends_returns_typed_aggregates() {
 
     assert_eq!(body["cycle_id"], phase_id);
     assert_eq!(body["range"], "cycle");
-    assert_eq!(body["kpis"]["total"], 4);
     assert_eq!(body["kpis"]["prs_merged"], 1);
     assert_eq!(body["kpis"]["prs_reviewed"], 1);
     assert_eq!(body["kpis"]["meetings"], 1);
-    assert_eq!(body["kpis"]["docs_worked_on"], 1);
+    assert_eq!(body["kpis"]["docs_created"], 1);
 
     let weekly = body["weekly"].as_array().unwrap();
     let week = |d: &str| weekly.iter().find(|w| w["week_start"] == d).unwrap();
@@ -145,6 +144,51 @@ async fn trends_returns_typed_aggregates() {
 }
 
 #[tokio::test]
+async fn trends_kpis_count_opened_and_closed_work() {
+    let app = common::TestApp::new().await;
+    let user_id = common::create_test_user(&app.pool).await;
+    let phase_id = common::create_test_phase(&app.pool, user_id).await;
+    let crypto = app.crypto.for_user(user_id).unwrap();
+    let w =
+        common::create_test_week(&app.pool, phase_id, 2, 2025, "2025-01-06", "2025-01-12").await;
+    for ty in [
+        "pr_authored",
+        "pr_merged",
+        "pr_reviewed",
+        "meeting",
+        "drive_created",
+        "confluence_page",
+        // Edits and comments are not creations.
+        "drive_edited",
+        "drive_commented",
+        "jira_story",
+        "bug_filed",
+        // A status-change day, not an opened ticket.
+        "jira_progress",
+        "bug_fixed",
+    ] {
+        common::create_test_entry(
+            &app.pool, user_id, w.id, "t", ty, "2025-01-07", None, &crypto,
+        )
+        .await;
+    }
+    let cookie = app.login(user_id).await;
+
+    let body = app
+        .get_json(
+            &format!("/api/v1/trends?cycle_id={phase_id}&range=cycle"),
+            Some(&cookie),
+        )
+        .await
+        .json();
+    assert_eq!(
+        body["kpis"],
+        json!({"docs_created": 2, "prs_opened": 1, "prs_reviewed": 1, "prs_merged": 1,
+               "meetings": 1, "tickets_opened": 3, "tickets_closed": 1})
+    );
+}
+
+#[tokio::test]
 async fn trends_four_week_range_excludes_old_entries() {
     let app = common::TestApp::new().await;
     let user_id = common::create_test_user(&app.pool).await;
@@ -171,7 +215,7 @@ async fn trends_four_week_range_excludes_old_entries() {
         .await
         .json();
     assert_eq!(body["range"], "4w");
-    assert_eq!(body["kpis"]["total"], 0);
+    assert_eq!(body["kpis"]["prs_opened"], 0);
 }
 
 #[tokio::test]

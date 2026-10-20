@@ -51,8 +51,6 @@ export function TrendsPage() {
   const range = (RANGES.find((r) => r.value === sp.get('range'))?.value ?? 'cycle') as TrendRange;
   const q = useTrends(cycle?.id ?? null, range);
   const t = q.data;
-  const prioritised = t ? t.priority_share.reduce((n, p) => n + p.count, 0) : 0;
-  const linkedPct = t && prioritised > 0 ? Math.round((t.priority_share.filter((p) => p.priority_id != null).reduce((n, p) => n + p.count, 0) / prioritised) * 100) : 0;
   const cycleSearch = cycle && !cycle.is_active ? `&cycle=${cycle.id}` : '';
   const logbook = (params: string) => `${paths.logbook}?${params}${cycleSearch}`;
 
@@ -66,15 +64,18 @@ export function TrendsPage() {
         </div>
       </div>
 
-      {q.isPending && <div className="grid g4"><Skeleton h={76} /><Skeleton h={76} /><Skeleton h={76} /><Skeleton h={76} /></div>}
+      {q.isPending && <div className="grid g7">{Array.from({ length: 7 }, (_, i) => <Skeleton key={i} h={76} />)}</div>}
       {q.error && <ErrorState error={q.error} onRetry={() => q.refetch()} />}
       {t && (
         <div style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
-          <div className="grid g4" style={{ marginBottom: 16 }}>
-            <Kpi n={t.kpis.total} l="entries" />
+          <div className="grid g7" style={{ marginBottom: 16 }}>
+            <Kpi n={t.kpis.docs_created} l="docs created" />
+            <Kpi n={t.kpis.prs_opened} l="PRs opened" />
+            <Kpi n={t.kpis.prs_reviewed} l="PRs reviewed" />
             <Kpi n={t.kpis.prs_merged} l="PRs merged" />
-            <Kpi n={t.kpis.prs_reviewed + t.kpis.jira_closed} l="reviews and tickets closed" />
-            <Kpi n={`${linkedPct}%`} l="linked to a priority" />
+            <Kpi n={t.kpis.meetings} l="meetings" />
+            <Kpi n={t.kpis.tickets_opened} l="tickets opened" />
+            <Kpi n={t.kpis.tickets_closed} l="tickets closed" />
           </div>
 
           <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', marginBottom: 16, alignItems: 'start' }}>

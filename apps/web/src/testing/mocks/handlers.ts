@@ -185,7 +185,13 @@ function trends(range: TrendRange, cycleId: number): TrendsResponse {
   const count = (k: keyof EntryDto, v: string) => list.filter((e) => e[k] === v).length;
   return {
     cycle_id: cycleId, range, from: weekly[0].week_start, to: format(new Date(), 'yyyy-MM-dd'),
-    kpis: { total: list.length, prs_merged: count('entry_type', 'pr_merged'), prs_reviewed: count('entry_type', 'pr_reviewed'), jira_closed: count('entry_type', 'jira_completed'), docs_worked_on: list.filter((e) => CATEGORY[e.entry_type] === 'docs').length, meetings: count('entry_type', 'meeting') },
+    kpis: {
+      docs_created: list.filter((e) => ['drive_created', 'confluence_page', 'document', 'design_doc'].includes(e.entry_type)).length,
+      prs_opened: count('entry_type', 'pr_authored'), prs_reviewed: count('entry_type', 'pr_reviewed'), prs_merged: count('entry_type', 'pr_merged'),
+      meetings: count('entry_type', 'meeting'),
+      tickets_opened: list.filter((e) => CATEGORY[e.entry_type] === 'tickets' && e.entry_type !== 'jira_progress').length,
+      tickets_closed: list.filter((e) => e.entry_type === 'jira_completed' || e.entry_type === 'bug_fixed').length,
+    },
     weekly,
     categories: [...cat].map(([key, c]) => ({ key, name: CATEGORY_LABELS.find(([k]) => k === key)![1], count: c, types: [] })),
     priority_share: s.per_project.sort((a, b) => b.count - a.count).map((p) => ({ priority_id: p.priority_id, title: p.name, color: null, status: null, department_goal_id: null, department_goal_title: null, department_goal_status: null, count: p.count })),
