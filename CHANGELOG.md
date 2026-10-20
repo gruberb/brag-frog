@@ -2,7 +2,7 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
-## [Unreleased]
+## [6.3.0] - 2026-10-20
 
 ### Changed
 - Trends: the top row shows docs created, PRs opened, PRs reviewed, PRs merged, meetings, tickets opened and tickets closed. It replaces the entries, PRs merged, "reviews and tickets closed" and "linked to a priority" cards. Docs created counts new Drive files, Confluence pages and manual documents; tickets closed counts Jira issues in a done status and fixed bugs.
