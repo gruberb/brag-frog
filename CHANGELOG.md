@@ -2,7 +2,7 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
-## [Unreleased]
+## [6.3.1] - 2026-10-20
 
 ### Changed
 - Trends: "docs created" is now "docs". It counts each document you worked on once (created, edited or commented, across Drive, Confluence and manual documents), however many days you touched it. Before, edits were ignored, so a cycle of editing existing docs showed 0. The API field `kpis.docs_created` is now `kpis.docs`.
