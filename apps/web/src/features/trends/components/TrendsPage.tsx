@@ -69,7 +69,7 @@ export function TrendsPage() {
       {t && (
         <div style={{ opacity: q.isPlaceholderData ? 0.6 : 1 }}>
           <div className="grid g7" style={{ marginBottom: 16 }}>
-            <Kpi n={t.kpis.docs_created} l="docs created" />
+            <Kpi n={t.kpis.docs} l="docs" />
             <Kpi n={t.kpis.prs_opened} l="PRs opened" />
             <Kpi n={t.kpis.prs_reviewed} l="PRs reviewed" />
             <Kpi n={t.kpis.prs_merged} l="PRs merged" />

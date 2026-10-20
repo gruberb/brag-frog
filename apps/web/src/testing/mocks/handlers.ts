@@ -186,7 +186,7 @@ function trends(range: TrendRange, cycleId: number): TrendsResponse {
   return {
     cycle_id: cycleId, range, from: weekly[0].week_start, to: format(new Date(), 'yyyy-MM-dd'),
     kpis: {
-      docs_created: list.filter((e) => ['drive_created', 'confluence_page', 'document', 'design_doc'].includes(e.entry_type)).length,
+      docs: new Set(list.filter((e) => CATEGORY[e.entry_type] === 'docs').map((e) => e.source_url ?? `entry:${e.id}`)).size,
       prs_opened: count('entry_type', 'pr_authored'), prs_reviewed: count('entry_type', 'pr_reviewed'), prs_merged: count('entry_type', 'pr_merged'),
       meetings: count('entry_type', 'meeting'),
       tickets_opened: list.filter((e) => CATEGORY[e.entry_type] === 'tickets' && e.entry_type !== 'jira_progress').length,

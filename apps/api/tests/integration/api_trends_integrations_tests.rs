@@ -110,7 +110,7 @@ async fn trends_returns_typed_aggregates() {
     assert_eq!(body["kpis"]["prs_merged"], 1);
     assert_eq!(body["kpis"]["prs_reviewed"], 1);
     assert_eq!(body["kpis"]["meetings"], 1);
-    assert_eq!(body["kpis"]["docs_created"], 1);
+    assert_eq!(body["kpis"]["docs"], 1);
 
     let weekly = body["weekly"].as_array().unwrap();
     let week = |d: &str| weekly.iter().find(|w| w["week_start"] == d).unwrap();
@@ -158,7 +158,7 @@ async fn trends_kpis_count_opened_and_closed_work() {
         "meeting",
         "drive_created",
         "confluence_page",
-        // Edits and comments are not creations.
+        // Same Drive file touched three ways: one doc.
         "drive_edited",
         "drive_commented",
         "jira_story",
@@ -172,6 +172,13 @@ async fn trends_kpis_count_opened_and_closed_work() {
         )
         .await;
     }
+    sqlx::query(
+        "UPDATE brag_entries SET source_url = 'https://drive.google.com/file/d/A' \
+         WHERE entry_type LIKE 'drive_%'",
+    )
+    .execute(&app.pool)
+    .await
+    .unwrap();
     let cookie = app.login(user_id).await;
 
     let body = app
@@ -183,7 +190,7 @@ async fn trends_kpis_count_opened_and_closed_work() {
         .json();
     assert_eq!(
         body["kpis"],
-        json!({"docs_created": 2, "prs_opened": 1, "prs_reviewed": 1, "prs_merged": 1,
+        json!({"docs": 2, "prs_opened": 1, "prs_reviewed": 1, "prs_merged": 1,
                "meetings": 1, "tickets_opened": 3, "tickets_closed": 1})
     );
 }

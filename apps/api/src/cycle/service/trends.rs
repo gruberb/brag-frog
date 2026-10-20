@@ -2,7 +2,7 @@
 //! percentages, humanised labels) is the caller's concern, so the same numbers can feed the
 //! legacy HTML page, the JSON API and, later, saved reports.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{Datelike, Duration, NaiveDate};
 use serde::{Deserialize, Serialize};
@@ -50,7 +50,7 @@ pub struct EntryFilter {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct Kpis {
-    pub docs_created: u32,
+    pub docs: u32,
     pub prs_opened: u32,
     pub prs_reviewed: u32,
     pub prs_merged: u32,
@@ -199,13 +199,14 @@ fn entry_type_label(entry_type: &str) -> &'static str {
     }
 }
 
-/// Edits and comments are excluded. Drive keeps one entry per file and day and lets an edit
-/// win over a create, so a file created and edited the same day is not counted here.
-fn is_doc_created(entry_type: &str) -> bool {
-    matches!(
-        entry_type,
-        "drive_created" | "confluence_page" | "document" | "design_doc"
-    )
+/// Identifies the document behind an entry. Drive writes one entry per file and day and
+/// Confluence one per page, both with a stable URL, so the same document across days counts
+/// once. Manual documents have no URL and count once per entry.
+fn doc_key(entry: &BragEntry) -> String {
+    match entry.source_url.as_deref().filter(|u| !u.is_empty()) {
+        Some(url) => url.to_string(),
+        None => format!("entry:{}", entry.id),
+    }
 }
 
 /// Every ticket entry is dated by the issue's creation, except `jira_progress`, which marks a
@@ -396,7 +397,7 @@ pub async fn compute(
     entries.retain(|e| filter.matches(e, &priority_to_goal, &aliases));
 
     let mut kpis = Kpis {
-        docs_created: 0,
+        docs: 0,
         prs_opened: 0,
         prs_reviewed: 0,
         prs_merged: 0,
@@ -404,6 +405,7 @@ pub async fn compute(
         tickets_opened: 0,
         tickets_closed: 0,
     };
+    let mut docs: HashSet<String> = HashSet::new();
     let mut by_priority: HashMap<Option<i64>, u32> = HashMap::new();
     let mut reach: HashMap<String, u32> = HashMap::new();
     let mut complexity: HashMap<String, u32> = HashMap::new();
@@ -461,8 +463,8 @@ pub async fn compute(
             "meeting" => kpis.meetings += 1,
             _ => {}
         }
-        if is_doc_created(&e.entry_type) {
-            kpis.docs_created += 1;
+        if entry_category(&e.entry_type) == "docs" && docs.insert(doc_key(e)) {
+            kpis.docs += 1;
         }
         if is_ticket_opened(&e.entry_type) {
             kpis.tickets_opened += 1;
