@@ -221,7 +221,7 @@ dependencies = [
 
 [[package]]
 name = "brag-frog"
-version = "6.6.0"
+version = "6.7.0"
 dependencies = [
  "aes-gcm",
  "async-trait",
