@@ -2,7 +2,7 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
-## [Unreleased]
+## [6.5.1] - 2026-10-21
 
 ### Fixed
 - Sync: saving synced entries took minutes on Cloud Run. Each entry was its own transaction, and with the database on a Cloud Storage FUSE mount every commit rewrote the whole file in the bucket, which GCS throttled (HTTP 429). A sync now saves everything in one transaction and skips entries that didn't change, so it takes seconds. A long sync running during a deploy could also leave the new instance unable to read the database (every request returned 500) until it restarted.
