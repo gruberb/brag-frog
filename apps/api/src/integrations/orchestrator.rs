@@ -5,7 +5,7 @@ use crate::cycle::model::{BragPhase, Week};
 use crate::identity::model::PeopleAlias;
 use crate::kernel::crypto::Crypto;
 use crate::kernel::error::AppError;
-use crate::worklog::model::BragEntry;
+use crate::worklog::model::{BragEntry, EntryType};
 
 use super::factory::{get_sync_service, service_requires_token};
 use super::model::{IntegrationConfig, SyncLog};
@@ -333,6 +333,41 @@ async fn persist_synced_entries(
     Ok(stats)
 }
 
+/// Removes pending requests (review requests) of this service's sources that the sync no
+/// longer returns. Only runs after a successful fetch, so a failed sync never clears them.
+async fn delete_stale_pending_requests(
+    pool: &SqlitePool,
+    user_id: i64,
+    service_name: &str,
+    entries: &[SyncedEntry],
+) -> Result<u64, AppError> {
+    let mut deleted = 0;
+    for source in super::catalog::service_to_sources(service_name) {
+        let pending_types: Vec<&str> = EntryType::ALL
+            .iter()
+            .filter(|t| t.is_pending_request() && t.source() == source)
+            .map(|t| t.slug())
+            .collect();
+        if pending_types.is_empty() {
+            continue;
+        }
+        let still_pending: Vec<&str> = entries
+            .iter()
+            .filter(|e| e.source == source && pending_types.contains(&e.entry_type))
+            .map(|e| e.source_id.as_str())
+            .collect();
+        deleted += BragEntry::delete_stale_pending_requests(
+            pool,
+            user_id,
+            source,
+            &pending_types,
+            &still_pending,
+        )
+        .await?;
+    }
+    Ok(deleted)
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn run_sync_core(
     pool: &SqlitePool,
@@ -372,6 +407,7 @@ async fn run_sync_core(
                 user_crypto,
             )
             .await?;
+            let deleted = delete_stale_pending_requests(pool, user_id, service_name, &entries).await?;
 
             tracing::info!(
                 service = service_name,
@@ -380,6 +416,7 @@ async fn run_sync_core(
                 updated = stats.updated,
                 unchanged = stats.unchanged,
                 skipped = stats.skipped,
+                deleted,
                 "Sync completed"
             );
 
@@ -391,7 +428,8 @@ async fn run_sync_core(
                 "success",
                 stats.created,
                 stats.updated,
-                0,
+                i64::try_from(deleted)
+                    .map_err(|_| AppError::Internal("Deleted entries count overflow".to_string()))?,
                 i64::try_from(entries.len())
                     .map_err(|_| AppError::Internal("Synced entries count overflow".to_string()))?,
                 stats.skipped,

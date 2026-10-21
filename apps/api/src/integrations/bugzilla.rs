@@ -161,6 +161,8 @@ impl SyncService for BugzillaSync {
             }
 
             let summary = bug["summary"].as_str().unwrap_or("").to_string();
+            let status = bug["status"].as_str().unwrap_or("");
+            let resolution = bug["resolution"].as_str().unwrap_or("");
             let created = bug["creation_time"]
                 .as_str()
                 .unwrap_or("")
@@ -184,7 +186,8 @@ impl SyncService for BugzillaSync {
                 title: format!("[Filed] {}", summary),
                 description: None,
                 entry_type: "bug_filed",
-                status: None,
+                status: Some(format!("{} {}", status, resolution).trim().to_string())
+                    .filter(|s| !s.is_empty()),
                 repository: None,
                 occurred_at: created,
                 meeting_role: None,

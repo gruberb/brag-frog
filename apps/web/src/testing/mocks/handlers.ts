@@ -35,7 +35,7 @@ const dto = ({ cycle_id: _c, ...e }: DbEntry): EntryDto => (void _c, e);
 const CATEGORY: Record<string, string> = {
   pr_authored: 'code', pr_merged: 'code', pr_development: 'code', revision_authored: 'code', development: 'code',
   bug_fixed: 'tickets', bug_filed: 'tickets', jira_completed: 'tickets', jira_story: 'tickets', jira_task: 'tickets', jira_epic: 'tickets', jira_progress: 'tickets',
-  pr_reviewed: 'reviews', revision_reviewed: 'reviews', code_review: 'reviews',
+  pr_reviewed: 'reviews', pr_review_requested: 'reviews', revision_reviewed: 'reviews', code_review: 'reviews',
   design_doc: 'docs', document: 'docs', confluence_page: 'docs', drive_created: 'docs', drive_edited: 'docs', drive_commented: 'docs',
   meeting: 'meetings', workshop: 'collaboration', mentoring: 'collaboration', presentation: 'collaboration', pairing: 'collaboration', cross_team: 'collaboration', interview: 'collaboration',
   learning: 'learning', onboarding: 'learning',
@@ -44,7 +44,7 @@ const CATEGORY_LABELS: [string, string][] = [['code', 'Code'], ['reviews', 'Revi
 const categoryOf = (entryType: string) => CATEGORY[entryType] ?? 'other';
 const ENTRY_TYPES: EntryTypeDto[] = [
   ...['development', 'code_review', 'design_doc', 'document', 'meeting', 'workshop', 'mentoring', 'presentation', 'pairing', 'cross_team', 'interview', 'learning', 'onboarding', 'decision', 'process_improvement', 'unblocking', 'incident_response', 'investigation', 'other'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: categoryOf(v), manual: true })),
-  ...['pr_authored', 'pr_merged', 'pr_reviewed', 'bug_fixed', 'bug_filed', 'revision_authored', 'revision_reviewed', 'jira_completed', 'jira_story', 'jira_task', 'jira_epic', 'jira_progress', 'confluence_page', 'drive_created', 'drive_edited', 'drive_commented'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: categoryOf(v), manual: false })),
+  ...['pr_authored', 'pr_merged', 'pr_reviewed', 'pr_review_requested', 'bug_fixed', 'bug_filed', 'revision_authored', 'revision_reviewed', 'jira_completed', 'jira_story', 'jira_task', 'jira_epic', 'jira_progress', 'confluence_page', 'drive_created', 'drive_edited', 'drive_commented'].map((v) => ({ value: v, label: v.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase()), group: categoryOf(v), manual: false })),
 ];
 
 /** Mirrors the API's `LogbookFilter` semantics (source is a comma list, category is derived from the type). */

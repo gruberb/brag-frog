@@ -11,6 +11,8 @@ pub enum EntryType {
     PrAuthored,
     #[serde(rename = "pr_reviewed")]
     PrReviewed,
+    #[serde(rename = "pr_review_requested")]
+    PrReviewRequested,
     #[serde(rename = "pr_merged")]
     PrMerged,
     #[serde(rename = "pr_development")]
@@ -105,6 +107,7 @@ impl EntryType {
     pub const ALL: &[EntryType] = &[
         Self::PrAuthored,
         Self::PrReviewed,
+        Self::PrReviewRequested,
         Self::PrMerged,
         Self::PrDevelopment,
         Self::BugFixed,
@@ -146,6 +149,7 @@ impl EntryType {
         match self {
             Self::PrAuthored => "pr_authored",
             Self::PrReviewed => "pr_reviewed",
+            Self::PrReviewRequested => "pr_review_requested",
             Self::PrMerged => "pr_merged",
             Self::PrDevelopment => "pr_development",
             Self::BugFixed => "bug_fixed",
@@ -188,6 +192,7 @@ impl EntryType {
         match self {
             Self::PrAuthored => "PR Authored",
             Self::PrReviewed => "PR Reviewed",
+            Self::PrReviewRequested => "PR Review Requested",
             Self::PrMerged => "PR Merged",
             Self::PrDevelopment => "PR Development",
             Self::BugFixed => "Bug Fixed",
@@ -228,7 +233,11 @@ impl EntryType {
     /// Originating service/source for this entry type.
     pub fn source(&self) -> &'static str {
         match self {
-            Self::PrAuthored | Self::PrReviewed | Self::PrMerged | Self::PrDevelopment => "github",
+            Self::PrAuthored
+            | Self::PrReviewed
+            | Self::PrReviewRequested
+            | Self::PrMerged
+            | Self::PrDevelopment => "github",
             Self::RevisionAuthored | Self::RevisionReviewed => "phabricator",
             Self::BugFixed | Self::BugFiled => "bugzilla",
             Self::JiraCompleted
@@ -240,6 +249,13 @@ impl EntryType {
             Self::DriveCreated | Self::DriveEdited | Self::DriveCommented => "google_drive",
             _ => "manual",
         }
+    }
+
+    /// True for types that mirror a request still waiting on the user rather than work done.
+    /// Every sync replaces them: the sync deletes the ones the source no longer reports, and
+    /// trends leave them out so a pending request never counts as output.
+    pub fn is_pending_request(&self) -> bool {
+        matches!(self, Self::PrReviewRequested)
     }
 
     /// True if this type is user-created (not from an external sync source).
@@ -257,7 +273,10 @@ impl EntryType {
             | Self::PrDevelopment
             | Self::RevisionAuthored
             | Self::Development => "code",
-            Self::PrReviewed | Self::RevisionReviewed | Self::CodeReview => "reviews",
+            Self::PrReviewed
+            | Self::PrReviewRequested
+            | Self::RevisionReviewed
+            | Self::CodeReview => "reviews",
             Self::BugFixed
             | Self::BugFiled
             | Self::JiraCompleted
@@ -307,6 +326,28 @@ impl EntryType {
         Self::from_slug(entry_type).map(|t| t.category())
     }
 
+    /// See [`EntryType::is_pending_request`]; false for slugs that are not entry types.
+    pub fn is_pending_request_slug(entry_type: &str) -> bool {
+        Self::from_slug(entry_type).is_some_and(|t| t.is_pending_request())
+    }
+
+}
+
+/// True when a synced status means the item needs no more work. Covers Jira status names,
+/// GitHub PR states, Phabricator revision statuses and Bugzilla's `"<STATUS> <RESOLUTION>"`
+/// form (`RESOLVED FIXED`, `VERIFIED DUPLICATE`), which is matched on its first word.
+/// `None` (unknown) counts as not finished.
+pub fn is_finished_status(status: Option<&str>) -> bool {
+    const FINISHED: &[&str] = &[
+        "done", "closed", "resolved", "verified", "complete", "completed", "fixed", "won't do",
+        "wont do", "duplicate", "cancelled", "canceled", "declined", "merged", "abandoned",
+    ];
+    let Some(status) = status else {
+        return false;
+    };
+    let status = status.trim().to_ascii_lowercase();
+    let first_word = status.split_whitespace().next().unwrap_or_default();
+    FINISHED.contains(&status.as_str()) || FINISHED.contains(&first_word)
 }
 
 /// Raw database row with AES-256-GCM encrypted BLOB fields (`title`, `description`, `teams`, `collaborators`).
@@ -389,7 +430,7 @@ impl BragEntryRow {
 
 /// A single work item (PR, bug, doc, meeting, etc.) tracked in the logbook.
 /// This is the decrypted form used in templates and application logic.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BragEntry {
     pub id: i64,
     pub week_id: i64,
@@ -509,11 +550,22 @@ pub struct BulkUpdateEntries {
 
 #[cfg(test)]
 mod tests {
-    use super::{CATEGORIES, EntryType, category_label};
+    use super::{CATEGORIES, EntryType, category_label, is_finished_status};
 
     #[test]
     fn all_count() {
-        assert_eq!(EntryType::ALL.len(), 36);
+        assert_eq!(EntryType::ALL.len(), 37);
+    }
+
+    #[test]
+    fn finished_status_across_sources() {
+        for done in ["Done", "Cancelled", "Won't Do", "MERGED", "Abandoned", "RESOLVED WONTFIX", "VERIFIED FIXED"] {
+            assert!(is_finished_status(Some(done)), "{done}");
+        }
+        for open in ["In Progress", "In Review", "To Do", "OPEN", "Needs Review", "ASSIGNED", "REOPENED"] {
+            assert!(!is_finished_status(Some(open)), "{open}");
+        }
+        assert!(!is_finished_status(None));
     }
 
     #[test]

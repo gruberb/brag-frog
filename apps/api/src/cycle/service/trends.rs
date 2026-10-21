@@ -14,7 +14,7 @@ use crate::identity::model::PeopleAlias;
 use crate::kernel::crypto::UserCrypto;
 use crate::kernel::error::AppError;
 use crate::objectives::model::{DepartmentGoal, Priority};
-use crate::worklog::model::{BragEntry, EntryType, category_label};
+use crate::worklog::model::{BragEntry, EntryType, category_label, is_finished_status};
 
 /// How many rows the people, repository and team rankings keep.
 pub const TOP_N: usize = 8;
@@ -220,31 +220,9 @@ fn is_ticket_closed(entry: &BragEntry) -> bool {
     entry.entry_type == "bug_fixed" || is_closed_jira_entry(entry)
 }
 
-fn is_terminal_jira_status(status: Option<&str>) -> bool {
-    let Some(status) = status else {
-        return false;
-    };
-    matches!(
-        status.trim().to_ascii_lowercase().as_str(),
-        "done"
-            | "closed"
-            | "resolved"
-            | "verified"
-            | "complete"
-            | "completed"
-            | "fixed"
-            | "won't do"
-            | "wont do"
-            | "duplicate"
-            | "cancelled"
-            | "canceled"
-            | "declined"
-    )
-}
-
 fn is_closed_jira_entry(entry: &BragEntry) -> bool {
     entry.entry_type == "jira_completed"
-        || (entry.source == "jira" && is_terminal_jira_status(entry.status.as_deref()))
+        || (entry.source == "jira" && is_finished_status(entry.status.as_deref()))
 }
 
 fn split_list(value: Option<&str>) -> impl Iterator<Item = &str> {
@@ -384,7 +362,10 @@ pub async fn compute(
 
     let mut entries = BragEntry::list_for_phase_in_range(pool, phase.id, from, to, crypto).await?;
     let today_str = today.format("%Y-%m-%d").to_string();
-    entries.retain(|e| e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str());
+    entries.retain(|e| {
+        (e.source == "manual" || e.occurred_at.as_str() <= today_str.as_str())
+            && !EntryType::is_pending_request_slug(&e.entry_type)
+    });
 
     let priorities = Priority::list_for_phase(pool, phase.id, crypto).await?;
     let goals = DepartmentGoal::list_for_phase(pool, phase.id, crypto).await?;

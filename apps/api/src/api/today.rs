@@ -19,7 +19,7 @@ use crate::AppState;
 use crate::ai::get_ai_client;
 use crate::ai::prompts::build_meeting_prep_prompt;
 use crate::cycle::model::{MeetingPrepNote, Week};
-use crate::cycle::service::dashboard::{compute_focus_days, filter_active_work};
+use crate::cycle::service::dashboard::{OPEN_WORK_TYPES, compute_focus_days, filter_active_work};
 use crate::identity::model::{PeopleAlias, User};
 use crate::objectives::model::{DepartmentGoal, Priority, PriorityUpdate};
 use crate::review::model::AiDocument;
@@ -100,15 +100,12 @@ pub async fn today(
     let alias_map = PeopleAlias::alias_map(&state.db, auth.user_id).await?;
     let team_map = PeopleAlias::team_map(&state.db, auth.user_id).await?;
 
-    let mut week_entries = BragEntry::list_for_phase_in_range(
-        &state.db,
-        phase.id,
-        &week.start_date,
-        &week.end_date,
-        &auth.crypto,
-    )
-    .await?;
-    PeopleAlias::apply_to_entries(&mut week_entries, &alias_map, &team_map);
+    // Whole cycle, not this week: entries are dated when the item was created (or last
+    // updated), so a ticket opened weeks ago and still in progress is dated weeks ago too.
+    let mut work_entries =
+        BragEntry::list_for_phase_by_types(&state.db, phase.id, OPEN_WORK_TYPES, &auth.crypto)
+            .await?;
+    PeopleAlias::apply_to_entries(&mut work_entries, &alias_map, &team_map);
 
     let mut meetings = BragEntry::list_calendar_meetings_in_range(
         &state.db,
@@ -168,7 +165,7 @@ pub async fn today(
         .collect();
     let meeting_count = days.iter().map(|d| d.meetings.len()).sum();
 
-    let active_work: Vec<EntryDto> = filter_active_work(&week_entries)
+    let active_work: Vec<EntryDto> = filter_active_work(&work_entries)
         .into_iter()
         .cloned()
         .map(Into::into)

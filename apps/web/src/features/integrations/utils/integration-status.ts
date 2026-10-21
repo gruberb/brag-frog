@@ -10,5 +10,5 @@ export function integrationState(i: Integration): IntegrationState {
 /** Every key of the generated `IntegrationInput` must be present; null means "not provided". */
 export const emptyInput = (): import('@/types/api/models').IntegrationInput => ({
   token: null, username: null, email: null, org: null, base_url: null, token_expires: null, sync_pr_authored: null, sync_pr_merged: null, sync_pr_reviewed: null,
-  sync_pr_development: null, sync_jira_completed: null, sync_jira_in_progress: null, sync_jira_created: null, sync_jira_progress: null,
+  sync_pr_review_requested: null, sync_pr_development: null, sync_jira_completed: null, sync_jira_in_progress: null, sync_jira_created: null, sync_jira_progress: null,
 });

@@ -50,6 +50,32 @@ impl BragEntry {
         rows.into_iter().map(|r| r.decrypt(crypto)).collect()
     }
 
+    /// Non-deleted entries in a phase whose type is one of `entry_types`, newest first.
+    /// Filters in SQL so callers that need a few types skip decrypting the whole phase.
+    pub async fn list_for_phase_by_types(
+        pool: &SqlitePool,
+        phase_id: i64,
+        entry_types: &[&str],
+        crypto: &UserCrypto,
+    ) -> Result<Vec<Self>, AppError> {
+        let types = serde_json::to_string(entry_types)
+            .map_err(|e| AppError::Internal(format!("encode entry types: {e}")))?;
+        let rows = sqlx::query_as::<_, BragEntryRow>(
+            r#"
+            SELECT e.* FROM brag_entries e
+            JOIN weeks w ON e.week_id = w.id
+            WHERE w.phase_id = ? AND e.deleted_at IS NULL
+              AND e.entry_type IN (SELECT value FROM json_each(?))
+            ORDER BY e.occurred_at DESC
+            "#,
+        )
+        .bind(phase_id)
+        .bind(types)
+        .fetch_all(pool)
+        .await?;
+        rows.into_iter().map(|r| r.decrypt(crypto)).collect()
+    }
+
     /// Calendar meetings in a date range, regardless of soft-delete status.
     /// Used by the dashboard to show all synced meetings (even excluded ones)
     /// without including manually-created meeting entries.
@@ -656,6 +682,45 @@ impl BragEntry {
         query = query.bind(user_id);
 
         let result = query.execute(pool).await?;
+        Ok(result.rows_affected())
+    }
+
+    /// Hard-delete a user's `source` entries of a pending-request type (see
+    /// [`EntryType::is_pending_request`](super::model::EntryType::is_pending_request)) whose
+    /// `source_id` is not in `still_pending`. A request the source stopped reporting was
+    /// handled or withdrawn. If the user acted on it, the sync already rewrote the row to its
+    /// new type (a review request becomes `pr_reviewed`), so the type filter leaves it alone.
+    /// Deleting instead of soft-deleting matters: a soft-deleted row blocks the upsert if the
+    /// same item is requested again. Covers every cycle, since a request is not tied to one.
+    pub async fn delete_stale_pending_requests(
+        pool: &SqlitePool,
+        user_id: i64,
+        source: &str,
+        entry_types: &[&str],
+        still_pending: &[&str],
+    ) -> Result<u64, AppError> {
+        let encode = |v: &[&str]| {
+            serde_json::to_string(v).map_err(|e| AppError::Internal(format!("encode ids: {e}")))
+        };
+        let result = sqlx::query(
+            r#"
+            DELETE FROM brag_entries
+            WHERE source = ?
+              AND entry_type IN (SELECT value FROM json_each(?))
+              AND source_id NOT IN (SELECT value FROM json_each(?))
+              AND week_id IN (
+                  SELECT w.id FROM weeks w
+                  JOIN brag_phases p ON w.phase_id = p.id
+                  WHERE p.user_id = ?
+              )
+            "#,
+        )
+        .bind(source)
+        .bind(encode(entry_types)?)
+        .bind(encode(still_pending)?)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
         Ok(result.rows_affected())
     }
 

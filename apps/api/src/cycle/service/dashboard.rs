@@ -1,7 +1,7 @@
 use chrono::{Local, NaiveDate};
 use serde::Serialize;
 
-use crate::worklog::model::BragEntry;
+use crate::worklog::model::{BragEntry, is_finished_status};
 
 /// A contiguous free block in a workday.
 #[derive(Debug, Serialize)]
@@ -155,22 +155,81 @@ pub fn compute_focus_days(
     days
 }
 
-/// Filter entries to "active work": open PRs, revisions, bugs, Jira tickets
-/// that haven't reached a terminal status.
+/// Entry types that can be open work. Each one is open until its synced status is finished.
+/// Types that are finished by definition (`bug_fixed`, `jira_completed`, `pr_merged`) and
+/// day markers (`pr_development`, `jira_progress`) never are.
+pub const OPEN_WORK_TYPES: &[&str] = &[
+    "pr_authored",
+    "pr_reviewed",
+    "pr_review_requested",
+    "revision_authored",
+    "bug_filed",
+    "jira_task",
+    "jira_story",
+    "jira_epic",
+];
+
+/// Filter entries to "active work": open PRs, pending review requests, revisions, bugs and
+/// Jira tickets that haven't reached a finished status.
 pub fn filter_active_work(entries: &[BragEntry]) -> Vec<&BragEntry> {
     entries
         .iter()
-        .filter(|e| match e.entry_type.as_str() {
-            "pr_authored" | "pr_reviewed" | "revision_authored" => !matches!(
-                e.status.as_deref(),
-                Some("MERGED") | Some("CLOSED") | Some("closed") | Some("merged")
-            ),
-            "bug_filed" | "bug_fixed" => true,
-            "jira_task" | "jira_story" | "jira_epic" => !matches!(
-                e.status.as_deref(),
-                Some("Done") | Some("done") | Some("Closed") | Some("closed")
-            ),
-            _ => false,
+        .filter(|e| {
+            OPEN_WORK_TYPES.contains(&e.entry_type.as_str())
+                && !is_finished_status(e.status.as_deref())
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn entry(source: &str, entry_type: &str, status: Option<&str>) -> BragEntry {
+        BragEntry {
+            source: source.into(),
+            entry_type: entry_type.into(),
+            status: status.map(Into::into),
+            ..BragEntry::default()
+        }
+    }
+
+    fn active(entries: &[BragEntry]) -> Vec<(&str, Option<&str>)> {
+        filter_active_work(entries)
+            .into_iter()
+            .map(|e| (e.entry_type.as_str(), e.status.as_deref()))
+            .collect()
+    }
+
+    #[test]
+    fn keeps_open_items_and_drops_finished_ones() {
+        let entries = [
+            entry("jira", "jira_story", Some("In Progress")),
+            entry("jira", "jira_task", Some("In Review")),
+            entry("jira", "jira_task", Some("Done")),
+            entry("jira", "jira_epic", Some("Cancelled")),
+            entry("jira", "jira_completed", Some("Done")),
+            entry("github", "pr_review_requested", Some("OPEN")),
+            entry("github", "pr_authored", Some("MERGED")),
+            entry("phabricator", "revision_authored", Some("Abandoned")),
+            entry("bugzilla", "bug_filed", Some("RESOLVED WONTFIX")),
+            entry("bugzilla", "bug_filed", Some("ASSIGNED")),
+            entry("bugzilla", "bug_fixed", Some("RESOLVED FIXED")),
+            entry("github", "pr_development", Some("OPEN")),
+        ];
+        assert_eq!(
+            active(&entries),
+            [
+                ("jira_story", Some("In Progress")),
+                ("jira_task", Some("In Review")),
+                ("pr_review_requested", Some("OPEN")),
+                ("bug_filed", Some("ASSIGNED")),
+            ]
+        );
+    }
+
+    #[test]
+    fn unknown_status_counts_as_open() {
+        assert_eq!(active(&[entry("bugzilla", "bug_filed", None)]), [("bug_filed", None)]);
+    }
 }

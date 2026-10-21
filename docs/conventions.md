@@ -5,7 +5,9 @@ Reference material for the entry system, data model, and API and web conventions
 ## Entry System
 
 - **Sources:** `github`, `phabricator`, `bugzilla`, `jira`, `confluence`, `google_drive`, `google_calendar`, `manual`
-- **35 entry types:** see `EntryType::ALL` in `apps/api/src/worklog/model.rs`. The web app reads them from `GET /api/v1/meta/entry-types`.
+- **37 entry types:** see `EntryType::ALL` in `apps/api/src/worklog/model.rs`. The web app reads them from `GET /api/v1/meta/entry-types`.
+- **Pending requests:** `pr_review_requested` mirrors an open PR still waiting for the user's review (`EntryType::is_pending_request`). Each sync deletes the ones GitHub no longer reports, and trends skip them. Once reviewed, the same row becomes `pr_reviewed`.
+- **Open work (Today):** entries of `OPEN_WORK_TYPES` (`cycle/service/dashboard.rs`) anywhere in the active cycle whose status is not finished (`is_finished_status` in `worklog/model.rs`, shared with trends).
 - Entries belong to a Week (which belongs to a cycle)
 - **Impact fields:** `outcome_statement`, `evidence_urls`, `role`, `impact_tags`, `reach`, `complexity`
 - **Decision fields:** `decision_alternatives`, `decision_reasoning`, `decision_outcome`

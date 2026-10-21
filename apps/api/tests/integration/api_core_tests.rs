@@ -384,6 +384,48 @@ async fn today_returns_week_columns_and_active_priorities() {
 }
 
 #[tokio::test]
+async fn today_open_work_spans_the_cycle_and_skips_finished_items() {
+    use brag_frog::cycle::model::Week;
+    use brag_frog::worklog::model::BragEntry;
+
+    let (app, uid, cookie) = setup().await;
+    let phase_id: i64 = sqlx::query_scalar("SELECT id FROM brag_phases WHERE user_id = ?")
+        .bind(uid)
+        .fetch_one(&app.pool)
+        .await
+        .unwrap();
+    // Dated two months back: synced tickets carry their creation date, not today's.
+    let old = chrono::Local::now().date_naive() - chrono::Duration::days(60);
+    let week = Week::find_or_create_for_date(&app.pool, phase_id, old).await.unwrap();
+    let crypto = app.crypto.for_user(uid).unwrap();
+    let date = old.format("%Y-%m-%d").to_string();
+    for (source, id, title, entry_type, status) in [
+        ("jira", "jira-A-1", "Old story", "jira_story", "In Progress"),
+        ("jira", "jira-A-2", "Cancelled task", "jira_task", "Cancelled"),
+        ("jira", "jira-A-3", "Done bug", "bug_fixed", "Done"),
+        ("github", "o/r#PR1", "Please review", "pr_review_requested", "OPEN"),
+        ("github", "o/r#PR2", "Merged PR", "pr_authored", "MERGED"),
+    ] {
+        BragEntry::create_from_sync(
+            &app.pool, week.id, source, id, None, title, None, entry_type, Some(status), None,
+            &date, None, None, None, None, None, None, &crypto,
+        )
+        .await
+        .unwrap();
+    }
+
+    let body = app.get_json("/api/v1/today", Some(&cookie)).await.json();
+    let mut titles: Vec<&str> = body["active_work"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|e| e["title"].as_str().unwrap())
+        .collect();
+    titles.sort();
+    assert_eq!(titles, ["Old story", "Please review"]);
+}
+
+#[tokio::test]
 async fn today_without_cycle_is_404() {
     let app = TestApp::new().await;
     let uid = common::create_test_user(&app.pool).await;

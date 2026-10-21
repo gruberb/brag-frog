@@ -2,6 +2,16 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- GitHub: open PRs waiting for your review now sync as "PR Review Requested" entries and show in the Today "Open work" Reviews tab. Once you submit the review, the entry becomes "PR Reviewed". Requests that are withdrawn, or PRs that close, drop out on the next sync. Trends don't count them. Turn it off under Settings → Integrations → GitHub → "Open PRs waiting for my review".
+
+### Fixed
+- Today: "Open work" only looked at entries dated this week. Synced tickets and PRs are dated when they were created, so an issue opened weeks ago and still In Progress never showed. It now covers the whole cycle.
+- Today: cancelled, won't-do and other finished Jira issues, abandoned revisions and resolved Bugzilla bugs no longer count as open work, and fixed bugs (`bug_fixed`) never do. Today and Trends share one list of finished statuses.
+- Bugzilla: bugs you filed now keep their status, so resolved ones stop showing as open.
+
 ## [6.3.1] - 2026-10-20
 
 ### Changed

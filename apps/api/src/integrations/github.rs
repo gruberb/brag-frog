@@ -5,7 +5,8 @@ use serde::Deserialize;
 use super::{ConnectionStatus, SyncService, SyncedEntry};
 use crate::kernel::error::AppError;
 
-/// Syncs PRs from GitHub via the GraphQL API: authored, merged, and reviewed.
+/// Syncs PRs from GitHub via the GraphQL API: authored, merged, reviewed, and open PRs with a
+/// pending review request for the user.
 /// Requires a token (Classic PAT, zero scopes is sufficient for public repos).
 /// No PR body content is stored — only title, URL, state, repo, and dates.
 pub struct GitHubSync;
@@ -23,12 +24,13 @@ struct GraphQLResponse {
     errors: Option<Vec<serde_json::Value>>,
 }
 
-// Discriminant for the three PR search queries we issue.
+// Discriminant for the PR search queries we issue.
 #[derive(Debug)]
 enum GitHubQueryType {
     Authored,
     Merged,
     Reviewed,
+    ReviewRequested,
 }
 
 #[async_trait]
@@ -145,6 +147,7 @@ impl GitHubSync {
         let sync_authored = config["sync_pr_authored"].as_bool().unwrap_or(true);
         let sync_merged = config["sync_pr_merged"].as_bool().unwrap_or(true);
         let sync_reviewed = config["sync_pr_reviewed"].as_bool().unwrap_or(true);
+        let sync_review_requested = config["sync_pr_review_requested"].as_bool().unwrap_or(true);
         let sync_pr_development = config["sync_pr_development"].as_bool().unwrap_or(true);
 
         // Split comma-separated orgs, trimming whitespace
@@ -161,6 +164,11 @@ impl GitHubSync {
         }
         if sync_merged {
             query_types.push(GitHubQueryType::Merged);
+        }
+        // Before Reviewed on purpose: a PR you reviewed and were asked to re-review appears in
+        // both, and the dedup below keeps the first, so the pending request wins.
+        if sync_review_requested {
+            query_types.push(GitHubQueryType::ReviewRequested);
         }
         if sync_reviewed {
             query_types.push(GitHubQueryType::Reviewed);
@@ -202,7 +210,8 @@ impl GitHubSync {
             }
         }
 
-        // Deduplicate by source_id (a PR could appear in multiple org searches)
+        // Deduplicate by source_id (a PR could appear in multiple org searches). The sort is
+        // stable, so for equal ids the entry from the earlier query type is kept.
         entries.sort_by(|a, b| a.source_id.cmp(&b.source_id));
         entries.dedup_by(|a, b| a.source_id == b.source_id);
 
@@ -261,6 +270,12 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
             "is:pr {}{}reviewed-by:{} -author:{} updated:{}..{}",
             visibility_filter, org_filter, safe_username, safe_username, p.start_date, p.end_date
         ),
+        // Current state, not history: GitHub drops the PR from this search as soon as the
+        // review is submitted or the request removed, so there is no date range.
+        GitHubQueryType::ReviewRequested => format!(
+            "is:pr is:open {}{}review-requested:{}",
+            visibility_filter, org_filter, safe_username
+        ),
     };
 
     tracing::info!(query = %search_query, "GitHub search query");
@@ -279,14 +294,14 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
         ""
     };
 
-    // For Authored/Merged PRs, fetch reviewers; for Reviewed PRs, fetch the PR author
+    // For Authored/Merged PRs, fetch reviewers; for PRs to review, fetch the PR author
     let collaborator_fragment = match p.query_type {
         GitHubQueryType::Authored | GitHubQueryType::Merged => {
             r#"reviews(first: 10) {
                                 nodes { author { login } }
                             }"#
         }
-        GitHubQueryType::Reviewed => {
+        GitHubQueryType::Reviewed | GitHubQueryType::ReviewRequested => {
             r#"author { login }"#
         }
     };
@@ -383,7 +398,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             Some(reviewers.into_iter().collect::<Vec<_>>().join(", "))
                         }
                     }
-                    GitHubQueryType::Reviewed => {
+                    GitHubQueryType::Reviewed | GitHubQueryType::ReviewRequested => {
                         // The collaborator is the PR author
                         node["author"]["login"]
                             .as_str()
@@ -484,6 +499,26 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             status: Some(state),
                             repository: Some(repo),
                             occurred_at,
+                            meeting_role: None,
+                            recurring_group: None,
+                            start_time: None,
+                            end_time: None,
+                            collaborators,
+                        });
+                    }
+                    GitHubQueryType::ReviewRequested => {
+                        // Same source_id as `pr_reviewed`: once the review is in, the next
+                        // sync rewrites this row instead of leaving a stale request behind.
+                        entries.push(SyncedEntry {
+                            source: "github",
+                            source_id: format!("{}#PR{}", repo, number),
+                            source_url: Some(url),
+                            title,
+                            description: None,
+                            entry_type: "pr_review_requested",
+                            status: Some(state),
+                            repository: Some(repo),
+                            occurred_at: parse_date(&updated_at, &p.start_date),
                             meeting_role: None,
                             recurring_group: None,
                             start_time: None,

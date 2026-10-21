@@ -218,7 +218,8 @@ Uses `async_trait` for object safety (`Box<dyn SyncService>` dispatch). Each ser
 4. Calls `service.sync()` to fetch work items
 5. For each `SyncedEntry`: finds/creates the correct `Week`, upserts the `BragEntry`
 6. Skips soft-deleted entries (respects user removals)
-7. Records a `SyncLog` with created/updated/unchanged/skipped counts
+7. Deletes pending requests (`pr_review_requested`) the service no longer returns
+8. Records a `SyncLog` with created/updated/deleted/unchanged/skipped counts
 
 Syncs run as background tasks (`integrations/background.rs`): `POST /api/v1/sync` and `POST /api/v1/sync/{service}` return immediately, and the web app polls `GET /api/v1/sync/status`. `main.rs` also starts `hourly_sync_loop` for all enabled integrations.
 

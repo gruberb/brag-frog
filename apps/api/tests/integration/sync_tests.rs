@@ -597,3 +597,74 @@ async fn test_sync_with_configured_integration() {
     assert!(result.is_ok());
     assert_eq!(result.unwrap().log.entries_created, 1);
 }
+
+// ── Pending review requests ──
+
+#[tokio::test]
+async fn test_sync_replaces_pending_review_requests() {
+    let (pool, crypto, user_id, phase_id) = setup_sync_test().await;
+    let http_client = reqwest::Client::new();
+    let run = |entries| {
+        brag_frog::integrations::run_sync_with_service(
+            &pool,
+            &crypto,
+            &http_client,
+            user_id,
+            "github",
+            MockSyncService::new(entries),
+        )
+    };
+
+    run(vec![
+        make_entry("gh-1", "Reviewed later", "pr_review_requested", "2025-03-10"),
+        make_entry("gh-2", "Request withdrawn", "pr_review_requested", "2025-03-10"),
+        make_entry("gh-3", "My PR", "pr_authored", "2025-03-10"),
+    ])
+    .await
+    .unwrap();
+
+    // gh-1 got reviewed, gh-2 is no longer requested, gh-3 is simply outside this fetch.
+    let result = run(vec![make_entry("gh-1", "Reviewed later", "pr_reviewed", "2025-03-11")])
+        .await
+        .unwrap();
+    assert_eq!(result.log.entries_deleted, 1);
+
+    let user_crypto = crypto.for_user(user_id).unwrap();
+    let mut left: Vec<(String, String)> = BragEntry::list_for_phase(&pool, phase_id, &user_crypto)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|e| (e.source_id.unwrap(), e.entry_type))
+        .collect();
+    left.sort();
+    assert_eq!(
+        left,
+        [("gh-1".into(), "pr_reviewed".into()), ("gh-3".into(), "pr_authored".into())]
+    );
+}
+
+#[tokio::test]
+async fn test_failed_sync_keeps_pending_review_requests() {
+    let (pool, crypto, user_id, phase_id) = setup_sync_test().await;
+    let http_client = reqwest::Client::new();
+    brag_frog::integrations::run_sync_with_service(
+        &pool,
+        &crypto,
+        &http_client,
+        user_id,
+        "github",
+        MockSyncService::new(vec![make_entry("gh-1", "Please review", "pr_review_requested", "2025-03-10")]),
+    )
+    .await
+    .unwrap();
+
+    let failing = Box::new(FailingSyncService { error_msg: "GitHub down".into() });
+    let _ = brag_frog::integrations::run_sync_with_service(
+        &pool, &crypto, &http_client, user_id, "github", failing,
+    )
+    .await;
+
+    let user_crypto = crypto.for_user(user_id).unwrap();
+    let entries = BragEntry::list_for_phase(&pool, phase_id, &user_crypto).await.unwrap();
+    assert_eq!(entries.len(), 1);
+}
