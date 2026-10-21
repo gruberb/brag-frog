@@ -259,7 +259,7 @@ See [customization.md](customization.md) for the full customization guide.
 ## AI Integration
 
 ### Per-User Client
-There is no global AI client. Each user configures their own Anthropic API key via Settings, AI tab (stored as the `claude` integration). `AiClient` is instantiated per-request with the user's decrypted key and the model from `BRAGFROG_AI_MODEL` (default: `claude-opus-4-7`).
+There is no global AI client. Each user configures their own Anthropic API key via Settings, AI tab (stored as the `claude` integration). `AiClient` is instantiated per-request with the user's decrypted key and the operator's `AiSettings` (`BRAGFROG_AI_MODEL`, default `claude-opus-5-5`; `BRAGFROG_AI_EFFORT`, default `medium`; `BRAGFROG_AI_FALLBACKS`, default `default`). Current models always think, so `max_tokens` (16,000) leaves room for thinking plus the reply, responses are read by block type (`thinking` and `fallback` blocks are skipped), and `stop_reason: "refusal"` is returned as an error. A review section's `template` (its outline) is appended to the draft prompt as the required answer structure, and the editor replaces a document that holds only that outline.
 
 ### Prompt Building (`ai/prompts.rs`)
 `build_self_reflection_prompt()` assembles a prompt for one self-review section (`POST /cycles/{id}/review/{slug}/draft`):

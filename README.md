@@ -68,7 +68,9 @@ Requires [moon](https://moonrepo.dev), Node 24 (pinned in `.prototools`) and a R
 | `BRAGFROG_INSTANCE_NAME` | Instance name shown on the sign-in page |
 | `BRAGFROG_ALLOWED_DOMAIN` | Restrict sign-ups to a specific email domain (e.g. `your-company.com`) |
 | `BRAGFROG_PUBLIC_ONLY` | Only sync public/non-confidential data (default: `false`) |
-| `BRAGFROG_AI_MODEL` | Anthropic model for summaries (default: `claude-opus-4-7`) |
+| `BRAGFROG_AI_MODEL` | Anthropic model for summaries (default: `claude-opus-5-5`) |
+| `BRAGFROG_AI_EFFORT` | Thinking effort: `low`, `medium`, `high`, `xhigh`, `max` (default: `medium`) |
+| `BRAGFROG_AI_FALLBACKS` | Retry refusals on another model server-side (default: `default`, empty turns it off) |
 | `BRAGFROG_PORT` | Server port (default: `8080`) |
 | `BRAGFROG_DATABASE_PATH` | SQLite database path (default: `bragfrog.db`) |
 | `BRAGFROG_CONFIG_DIR` | Default TOML configs (default: `config`) |

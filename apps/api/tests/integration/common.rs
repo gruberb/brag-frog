@@ -45,7 +45,11 @@ fn test_config() -> Config {
         encryption_key: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=".to_string(),
         allowed_domain: None,
         base_url: "http://localhost".to_string(),
-        ai_model: "test-model".to_string(),
+        ai: brag_frog::kernel::config::AiSettings {
+            model: "test-model".to_string(),
+            effort: None,
+            fallbacks: None,
+        },
         public_only: false,
         instance_name: None,
         config_dir: "config".to_string(),

@@ -168,16 +168,41 @@ Phase: {phase_name}
             &sec.prompt
         };
 
-        if wants_promotion && !sec.promotion_addendum.is_empty() {
+        let mut instruction = if wants_promotion && !sec.promotion_addendum.is_empty() {
             format!("{}\n\n{}", base_prompt, sec.promotion_addendum)
         } else {
             base_prompt.to_string()
+        };
+        if let Some(outline) = sec.template.as_deref().filter(|t| !t.trim().is_empty()) {
+            instruction.push_str(&outline_instruction(outline));
         }
+        instruction
     } else {
         "Write a general summary of accomplishments for this period.".to_string()
     };
 
     format!("{}\n\n---\n\n{}", context, instruction)
+}
+
+/// The section's outline (the template the editor starts from) as the answer's structure.
+/// The draft replaces that outline in the editor, so it has to come back in the same shape:
+/// same headings, guidance lines replaced by content.
+fn outline_instruction(outline: &str) -> String {
+    format!(
+        r#"
+
+## Outline
+Answer by filling in this outline, as Markdown:
+- Keep every heading, at the same level and in the same order. Replace `<...>` placeholders in headings with your own text.
+- Replace the italic guidance lines and the empty bullets with your content. Do not repeat the guidance text.
+- Keep labels such as "Complexity:" at the start of their bullets and write after them. Add bullets where the evidence supports it.
+- Leave out a part only where the instructions above allow it (for example a second example without strong evidence).
+- Output only the filled-in outline, with nothing before or after it.
+
+<outline>
+{outline}
+</outline>"#
+    )
 }
 
 struct ScopedSelfReflectionData {
@@ -1245,5 +1270,28 @@ mod tests {
         assert!(prompt.contains("World Cup launch example"));
         assert!(!prompt.contains("Autopush"));
         assert!(!prompt.contains("Unlinked planning entry"));
+    }
+
+    #[test]
+    fn self_review_prompt_asks_for_the_section_outline() {
+        init_review_config();
+        let prompt = build_self_reflection_prompt(
+            "impact_examples",
+            &[],
+            &[],
+            &[],
+            &[],
+            &HashMap::new(),
+            &[],
+            "2026 H2",
+            None,
+            false,
+        );
+        let outline = crate::review::model::get_section("impact_examples")
+            .and_then(|s| s.template.clone())
+            .expect("impact_examples has an outline");
+        assert!(prompt.contains(&format!("<outline>\n{outline}\n</outline>")));
+        // The section prompt must not describe a competing structure.
+        assert!(!prompt.contains("Use exactly this structure"));
     }
 }

@@ -234,7 +234,9 @@ Or pull a newer `ghcr.io/gruberb/brag-frog` tag. Back up `bragfrog.db` before up
 | `BRAGFROG_INSTANCE_NAME` | No | none | Instance name shown on the sign-in page |
 | `BRAGFROG_ALLOWED_DOMAIN` | No | none | Restrict sign-ups to an email domain |
 | `BRAGFROG_PUBLIC_ONLY` | No | `false` | Only sync public/non-confidential data |
-| `BRAGFROG_AI_MODEL` | No | `claude-opus-4-7` | Anthropic model for AI summaries |
+| `BRAGFROG_AI_MODEL` | No | `claude-opus-5-5` | Anthropic model for AI summaries |
+| `BRAGFROG_AI_EFFORT` | No | `medium` | `output_config.effort`: `low`, `medium`, `high`, `xhigh`, `max`. Empty uses the model's default. Startup fails on other values |
+| `BRAGFROG_AI_FALLBACKS` | No | `default` | `fallbacks` sent with each request, so a safety-classifier refusal is retried on the model Anthropic recommends. Set it empty for models without server-side fallback |
 | `BRAGFROG_BASE_URL` | No | `http://localhost:{port}` | Public URL for OAuth redirects |
 | `BRAGFROG_HOST` | No | `0.0.0.0` | Bind address |
 | `BRAGFROG_PORT` | No | `8080` | Listen port (also reads `PORT`) |

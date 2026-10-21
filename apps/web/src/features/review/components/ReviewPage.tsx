@@ -8,7 +8,7 @@ import { EmptyState, ErrorState } from '@/components/ui/EmptyState';
 import { Menu } from '@/components/ui/Menu';
 import { Popover } from '@/components/ui/Popover';
 import { SkeletonRows } from '@/components/ui/Spinner';
-import { hasContent } from '@/components/editor/content';
+import { hasContent, onlyOutline } from '@/components/editor/content';
 import { LazyRichEditor } from '@/components/editor/LazyRichEditor';
 import type { EntryRefCandidate, RichEditorHandle } from '@/components/editor/types';
 import { paths } from '@/config/paths';
@@ -157,12 +157,18 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
       { slug: active.slug, goal_ids: picked },
       {
         onSuccess: async ({ markdown }) => {
+          const editor = handle.current;
+          if (!editor) return;
           const { markdownToBlocks } = await import('@/components/editor/convert');
           const blocks = await markdownToBlocks(markdown, jiraBase);
-          // Never overwrite what the user wrote: a draft is appended unless the document is empty.
-          if (handle.current?.isEmpty()) handle.current.replaceAll(blocks);
-          else handle.current?.insertBlocks(blocks);
-          toast('Draft added');
+          // Never overwrite what the user wrote. The draft fills in the section's outline, so a
+          // document holding only that outline (an empty section starts with it) is replaced;
+          // anything else gets the draft appended below.
+          const outline = active.template ? await markdownToBlocks(active.template) : [];
+          const replace = editor.isEmpty() || (outline.length > 0 && onlyOutline(editor.getBlocks(), outline));
+          if (replace) editor.replaceAll(blocks);
+          else editor.insertBlocks(blocks);
+          toast(replace ? 'Draft added' : 'Draft added below your text');
         },
         onError: toastError,
       },
@@ -197,7 +203,7 @@ export function ReviewPage({ cycleId, section: sectionSlug, onSectionChange, rea
                     ))}
                   </fieldset>
                 )}
-                <div className="small muted">The draft is added below what you have written.</div>
+                <div className="small muted">The draft fills in the outline. If you have already written something, it is added below.</div>
                 <Button variant="primary" size="sm" onClick={runDraft} disabled={draft.isPending}>{draft.isPending ? 'Drafting…' : 'Generate draft'}</Button>
               </div>
             </Popover>

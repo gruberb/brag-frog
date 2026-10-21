@@ -258,7 +258,7 @@ async fn generate_narrative(
         }
     };
     match client.generate(prompt).await {
-        Ok(text) => (text, Some(state.config.ai_model.clone()), None),
+        Ok(text) => (text, Some(state.config.ai.model.clone()), None),
         Err(e) => {
             tracing::error!("Report narrative failed: {e:?}");
             (

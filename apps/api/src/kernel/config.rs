@@ -21,8 +21,8 @@ pub struct Config {
     pub allowed_domain: Option<String>,
     /// Public base URL for constructing absolute links. Default: `http://localhost:{port}`.
     pub base_url: String,
-    /// AI model identifier for summary generation. Default: `claude-opus-4-7`.
-    pub ai_model: String,
+    /// Model and request settings for every AI call.
+    pub ai: AiSettings,
     /// When true, sync services only fetch public/non-confidential data.
     /// Operator-level security policy via `BRAGFROG_PUBLIC_ONLY` env var.
     pub public_only: bool,
@@ -68,8 +68,7 @@ impl Config {
             encryption_key: env::var("BRAGFROG_ENCRYPTION_KEY").unwrap_or_default(),
             allowed_domain: env::var("BRAGFROG_ALLOWED_DOMAIN").ok(),
             base_url,
-            ai_model: env::var("BRAGFROG_AI_MODEL")
-                .unwrap_or_else(|_| "claude-opus-4-7".to_string()),
+            ai: AiSettings::from_env(),
             public_only: env::var("BRAGFROG_PUBLIC_ONLY")
                 .map(|v| v == "true" || v == "1")
                 .unwrap_or(false),
@@ -77,6 +76,48 @@ impl Config {
             config_dir: env::var("BRAGFROG_CONFIG_DIR").unwrap_or_else(|_| "config".to_string()),
             custom_dir: env::var("BRAGFROG_CUSTOM_DIR").unwrap_or_else(|_| "custom".to_string()),
             web_dist: env::var("BRAGFROG_WEB_DIST").unwrap_or_else(|_| "../web/dist".to_string()),
+        }
+    }
+}
+
+/// Operator settings for the Anthropic Messages API. Users bring their own API key; the
+/// operator picks the model and how hard it works.
+#[derive(Debug, Clone)]
+pub struct AiSettings {
+    /// `BRAGFROG_AI_MODEL`. Default: `claude-opus-5-5`.
+    pub model: String,
+    /// `BRAGFROG_AI_EFFORT` (`low`, `medium`, `high`, `xhigh`, `max`), sent as
+    /// `output_config.effort`. Default: `medium`. Empty leaves it to the model's default.
+    pub effort: Option<String>,
+    /// `BRAGFROG_AI_FALLBACKS`, sent as `fallbacks`. Default: `default`, which lets the API
+    /// retry a safety-classifier refusal on the model Anthropic recommends for that category.
+    /// Empty turns it off, for models without server-side fallback.
+    pub fallbacks: Option<String>,
+}
+
+impl AiSettings {
+    const EFFORTS: &[&str] = &["low", "medium", "high", "xhigh", "max"];
+
+    /// Reads the settings from the environment. Panics on an unknown effort level, like the
+    /// other required settings: a typo would otherwise fail every AI request at runtime.
+    fn from_env() -> Self {
+        let optional = |name: &str, default: &str| {
+            let value = env::var(name).unwrap_or_else(|_| default.to_string());
+            Some(value.trim().to_string()).filter(|v| !v.is_empty())
+        };
+        let effort = optional("BRAGFROG_AI_EFFORT", "medium");
+        if let Some(e) = effort.as_deref() {
+            assert!(
+                Self::EFFORTS.contains(&e),
+                "BRAGFROG_AI_EFFORT must be one of {:?} or empty, got {e:?}",
+                Self::EFFORTS
+            );
+        }
+        Self {
+            model: optional("BRAGFROG_AI_MODEL", "claude-opus-5-5")
+                .unwrap_or_else(|| "claude-opus-5-5".to_string()),
+            effort,
+            fallbacks: optional("BRAGFROG_AI_FALLBACKS", "default"),
         }
     }
 }

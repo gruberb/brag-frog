@@ -24,3 +24,36 @@ export function hasContent(content: string | null | undefined, format: ContentFo
     return true;
   }
 }
+
+type BlockNode = { text?: unknown; content?: unknown; children?: unknown; props?: { label?: unknown } };
+
+/** Visible text of one block's inline content: text runs, link text and entry chip labels. */
+function inlineText(node: unknown): string {
+  if (Array.isArray(node)) return node.map(inlineText).join('');
+  if (!node || typeof node !== 'object') return '';
+  const n = node as BlockNode;
+  if (typeof n.text === 'string') return n.text;
+  if (typeof n.props?.label === 'string') return n.props.label;
+  return inlineText(n.content);
+}
+
+/** The normalized text of every block in a tree (nested blocks included), empty ones dropped. */
+function blockTexts(blocks: unknown, out: string[] = []): string[] {
+  if (!Array.isArray(blocks)) return out;
+  for (const b of blocks as BlockNode[]) {
+    const text = inlineText(b?.content).replace(/\s+/g, ' ').trim();
+    if (text) out.push(text);
+    blockTexts(b?.children, out);
+  }
+  return out;
+}
+
+/**
+ * True when every non-empty block in `doc` is a line of `outline`: the document holds the
+ * section's outline (once or several times, maybe partly deleted) and nothing the user wrote.
+ * An AI draft may then replace it instead of being appended below it.
+ */
+export function onlyOutline(doc: unknown[], outline: unknown[]): boolean {
+  const lines = new Set(blockTexts(outline));
+  return blockTexts(doc).every((t) => lines.has(t));
+}

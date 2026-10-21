@@ -2,6 +2,13 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- AI: the default model is now Claude Opus 5.5 (`claude-opus-5-5`), replacing Claude Opus 4.7. It always thinks before answering, so requests now allow 16,000 output tokens (was 4,096) and wait up to 4 minutes (was 2). Two new operator settings: `BRAGFROG_AI_EFFORT` (default `medium`) and `BRAGFROG_AI_FALLBACKS` (default `default`, which retries a safety-classifier refusal on another model server-side). A refusal now shows as an error instead of an empty draft.
+- Review: "Draft with AI" fills in the section's outline (its headings and bullets) and replaces the outline in the editor when nothing else has been written. Before, the draft ignored the outline, used its own structure, and was added below it, so a new section ended up with the outline followed by a differently structured draft. Anything you wrote is still kept, with the draft added below.
+- Review: the default "Contribution & Impact Examples" prompt describes what goes into each part of the outline instead of a separate format of its own.
+
 ## [6.6.0] - 2026-10-21
 
 ### Added

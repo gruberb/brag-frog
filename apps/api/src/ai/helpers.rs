@@ -19,10 +19,7 @@ pub async fn get_ai_client(state: &AppState, user_id: i64) -> Result<Arc<super::
             action = "ai_generate",
             "Token decrypted for AI generation"
         );
-        return Ok(Arc::new(super::AiClient::new(
-            key,
-            state.config.ai_model.clone(),
-        )));
+        return Ok(Arc::new(super::AiClient::new(key, state.config.ai.clone())));
     }
 
     Err(AppError::BadRequest(
