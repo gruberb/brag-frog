@@ -2,7 +2,7 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
-## [Unreleased]
+## [6.4.0] - 2026-10-20
 
 ### Added
 - GitHub: open PRs waiting for your review now sync as "PR Review Requested" entries and show in the Today "Open work" Reviews tab. Once you submit the review, the entry becomes "PR Reviewed". Requests that are withdrawn, or PRs that close, drop out on the next sync. Trends don't count them. Turn it off under Settings → Integrations → GitHub → "Open PRs waiting for my review".
