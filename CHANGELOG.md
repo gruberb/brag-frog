@@ -2,7 +2,7 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
-## [Unreleased]
+## [6.6.0] - 2026-10-21
 
 ### Added
 - GitHub: "Repositories to skip" in Settings → Integrations → GitHub. List `owner/repo` names separated by commas, and the sync leaves them out entirely (authored, merged, reviewed and review requests).
