@@ -207,8 +207,10 @@ async fn test_login_handler(
 
 // ── Existing test helpers (preserved from original) ──
 
-/// Create an in-memory SQLite pool with the full schema applied.
+/// Create an in-memory SQLite pool with the full schema applied. Also loads the configs, since
+/// sync code reads `services.toml` and tests run in any order (or alone, when filtered).
 pub async fn test_pool() -> SqlitePool {
+    init_test_configs();
     let pool = db::setup_pool(":memory:").await;
     db::run_migrations(&pool).await;
     pool

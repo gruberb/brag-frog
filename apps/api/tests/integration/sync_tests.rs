@@ -710,3 +710,53 @@ async fn test_refresh_only_updates_existing_rows_and_creates_nothing() {
         .collect();
     assert_eq!(rows, [("A-1", "Done")]);
 }
+
+// ── Write avoidance ──
+
+#[tokio::test]
+async fn test_resync_skips_unchanged_entries_and_writes_changed_ones() {
+    let (pool, crypto, user_id, phase_id) = setup_sync_test().await;
+    let http_client = reqwest::Client::new();
+    let run = |entries| {
+        brag_frog::integrations::run_sync_with_service(
+            &pool,
+            &crypto,
+            &http_client,
+            user_id,
+            "github",
+            MockSyncService::new(entries),
+        )
+    };
+    let stamp = |id: &'static str| {
+        sqlx::query_scalar::<_, String>("SELECT updated_at FROM brag_entries WHERE source_id = ?")
+            .bind(id)
+            .fetch_one(&pool)
+    };
+
+    run(vec![
+        make_entry("gh-1", "Same", "pr_authored", "2025-03-10"),
+        make_entry("gh-2", "Moves", "pr_authored", "2025-03-10"),
+    ])
+    .await
+    .unwrap();
+    sqlx::query("UPDATE brag_entries SET updated_at = 'before'").execute(&pool).await.unwrap();
+
+    let result = run(vec![
+        make_entry("gh-1", "Same", "pr_authored", "2025-03-10"),
+        make_entry("gh-2", "Moves", "pr_authored", "2025-03-17"),
+    ])
+    .await
+    .unwrap();
+
+    assert_eq!(result.log.entries_created, 0);
+    assert_eq!(result.log.entries_updated, 1);
+    assert_eq!(stamp("gh-1").await.unwrap(), "before", "unchanged entry was rewritten");
+    assert_ne!(stamp("gh-2").await.unwrap(), "before");
+    let user_crypto = crypto.for_user(user_id).unwrap();
+    let moved = BragEntry::find_by_source(&pool, "github", "gh-2", user_id, &user_crypto)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(moved.occurred_at, "2025-03-17");
+    assert_eq!(BragEntry::list_for_phase(&pool, phase_id, &user_crypto).await.unwrap().len(), 2);
+}

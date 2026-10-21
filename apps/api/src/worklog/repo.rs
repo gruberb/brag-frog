@@ -200,13 +200,16 @@ impl BragEntry {
     }
 
     /// Looks up an entry by `(source, source_id)` pair, scoped to the user. Used during sync dedup.
-    pub async fn find_by_source(
-        pool: &SqlitePool,
+    pub async fn find_by_source<'e, E>(
+        db: E,
         source: &str,
         source_id: &str,
         user_id: i64,
         crypto: &UserCrypto,
-    ) -> Result<Option<Self>, AppError> {
+    ) -> Result<Option<Self>, AppError>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    {
         let row = sqlx::query_as::<_, BragEntryRow>(
             r#"SELECT e.* FROM brag_entries e
             JOIN weeks w ON e.week_id = w.id
@@ -216,7 +219,7 @@ impl BragEntry {
         .bind(source)
         .bind(source_id)
         .bind(user_id)
-        .fetch_optional(pool)
+        .fetch_optional(db)
         .await?;
         row.map(|r| r.decrypt(crypto)).transpose()
     }
@@ -275,8 +278,8 @@ impl BragEntry {
     /// When `teams` is provided (e.g. derived from people alias team map), it is persisted
     /// on INSERT and merged on UPDATE using COALESCE to avoid overwriting user-set teams.
     #[allow(clippy::too_many_arguments)]
-    pub async fn create_from_sync(
-        pool: &SqlitePool,
+    pub async fn create_from_sync<'e, E>(
+        db: E,
         week_id: i64,
         source: &str,
         source_id: &str,
@@ -294,7 +297,10 @@ impl BragEntry {
         collaborators: Option<&str>,
         teams: Option<&str>,
         crypto: &UserCrypto,
-    ) -> Result<Self, AppError> {
+    ) -> Result<Self, AppError>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    {
         let enc_title = crypto.encrypt(title)?;
         let enc_description = crypto.encrypt_opt(&description.map(String::from))?;
         let enc_collaborators = crypto.encrypt_opt(&collaborators.map(String::from))?;
@@ -339,7 +345,7 @@ impl BragEntry {
         .bind(end_time)
         .bind(&enc_collaborators)
         .bind(&enc_teams)
-        .fetch_one(pool)
+        .fetch_one(db)
         .await?;
 
         row.decrypt(crypto)
@@ -692,13 +698,16 @@ impl BragEntry {
     /// new type (a review request becomes `pr_reviewed`), so the type filter leaves it alone.
     /// Deleting instead of soft-deleting matters: a soft-deleted row blocks the upsert if the
     /// same item is requested again. Covers every cycle, since a request is not tied to one.
-    pub async fn delete_stale_pending_requests(
-        pool: &SqlitePool,
+    pub async fn delete_stale_pending_requests<'e, E>(
+        db: E,
         user_id: i64,
         source: &str,
         entry_types: &[&str],
         still_pending: &[&str],
-    ) -> Result<u64, AppError> {
+    ) -> Result<u64, AppError>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    {
         let encode = |v: &[&str]| {
             serde_json::to_string(v).map_err(|e| AppError::Internal(format!("encode ids: {e}")))
         };
@@ -719,7 +728,7 @@ impl BragEntry {
         .bind(encode(entry_types)?)
         .bind(encode(still_pending)?)
         .bind(user_id)
-        .execute(pool)
+        .execute(db)
         .await?;
         Ok(result.rows_affected())
     }

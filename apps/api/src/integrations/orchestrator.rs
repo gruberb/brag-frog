@@ -1,5 +1,5 @@
 use chrono::{Datelike, NaiveDate};
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 use crate::cycle::model::{BragPhase, Week};
 use crate::identity::model::PeopleAlias;
@@ -229,16 +229,47 @@ fn derive_teams(collaborators: Option<&str>, team_map: &std::collections::HashMa
     }
 }
 
+/// True when upserting `entry` would leave `ex` as it is. Mirrors the `ON CONFLICT` clause of
+/// [`BragEntry::create_from_sync`]: fields it merges with `COALESCE` only count as changed when
+/// the merge would actually write a new value.
+fn sync_would_change(
+    ex: &BragEntry,
+    entry: &SyncedEntry,
+    week_id: i64,
+    derived_teams: Option<&str>,
+) -> bool {
+    // `COALESCE(new, old)`: a value from the sync replaces the stored one.
+    let replaces = |new: Option<&str>, old: Option<&str>| new.is_some() && new != old;
+    // `COALESCE(old, new)`: the sync only fills a gap.
+    let fills = |old: Option<&str>, new: Option<&str>| old.is_none() && new.is_some();
+    ex.title != entry.title
+        || ex.entry_type != entry.entry_type
+        || ex.status.as_deref() != entry.status.as_deref()
+        || ex.occurred_at != entry.occurred_at
+        || ex.week_id != week_id
+        || ex.start_time.as_deref() != entry.start_time.as_deref()
+        || ex.end_time.as_deref() != entry.end_time.as_deref()
+        || fills(ex.description.as_deref(), entry.description.as_deref())
+        || fills(ex.teams.as_deref(), derived_teams)
+        || replaces(entry.source_url.as_deref(), ex.source_url.as_deref())
+        || replaces(entry.repository.as_deref(), ex.repository.as_deref())
+        || replaces(entry.recurring_group.as_deref(), ex.recurring_group.as_deref())
+        || replaces(entry.collaborators.as_deref(), ex.collaborators.as_deref())
+}
+
+/// Upserts `entries` on `conn`, which the caller runs as one transaction. Unchanged entries
+/// are not written at all.
+#[allow(clippy::too_many_arguments)]
 async fn persist_synced_entries(
-    pool: &SqlitePool,
+    conn: &mut SqliteConnection,
     user_id: i64,
     phase: &BragPhase,
     entries: &[SyncedEntry],
     start_date: NaiveDate,
+    team_map: &std::collections::HashMap<String, String>,
     user_crypto: &crate::kernel::crypto::UserCrypto,
 ) -> Result<EntrySyncStats, AppError> {
     let mut stats = EntrySyncStats::default();
-    let team_map = PeopleAlias::team_map(pool, user_id).await?;
 
     for entry in entries {
         // Refresh-only items exist only to update a stored row (see `SyncedEntry`). Keeping
@@ -254,8 +285,14 @@ async fn persist_synced_entries(
         let existing = if entry.source_id.is_empty() {
             None
         } else {
-            BragEntry::find_by_source(pool, entry.source, &entry.source_id, user_id, user_crypto)
-                .await?
+            BragEntry::find_by_source(
+                &mut *conn,
+                entry.source,
+                &entry.source_id,
+                user_id,
+                user_crypto,
+            )
+            .await?
         };
 
         if let Some(ref ex) = existing
@@ -285,8 +322,8 @@ async fn persist_synced_entries(
             occurred - chrono::Duration::days(i64::from(occurred.weekday().num_days_from_monday()));
         let week_end = week_start + chrono::Duration::days(6);
 
-        let week = Week::find_or_create(
-            pool,
+        let week = Week::find_or_create_on(
+            &mut *conn,
             phase.id,
             iso_week,
             year,
@@ -295,25 +332,20 @@ async fn persist_synced_entries(
         )
         .await?;
 
-        if let Some(ref ex) = existing {
-            if ex.title != entry.title
-                || ex.description.as_deref() != entry.description.as_deref()
-                || ex.entry_type != entry.entry_type
-                || ex.status.as_deref() != entry.status.as_deref()
-            {
-                stats.updated += 1;
-            } else {
+        // Derive teams from collaborator emails via the team map
+        let derived_teams = derive_teams(entry.collaborators.as_deref(), team_map);
+
+        match existing {
+            Some(ref ex) if !sync_would_change(ex, entry, week.id, derived_teams.as_deref()) => {
                 stats.unchanged += 1;
+                continue;
             }
-        } else {
-            stats.created += 1;
+            Some(_) => stats.updated += 1,
+            None => stats.created += 1,
         }
 
-        // Derive teams from collaborator emails via the team map
-        let derived_teams = derive_teams(entry.collaborators.as_deref(), &team_map);
-
         BragEntry::create_from_sync(
-            pool,
+            &mut *conn,
             week.id,
             entry.source,
             &entry.source_id,
@@ -341,7 +373,7 @@ async fn persist_synced_entries(
 /// Removes pending requests (review requests) of this service's sources that the sync no
 /// longer returns. Only runs after a successful fetch, so a failed sync never clears them.
 async fn delete_stale_pending_requests(
-    pool: &SqlitePool,
+    conn: &mut SqliteConnection,
     user_id: i64,
     service_name: &str,
     entries: &[SyncedEntry],
@@ -362,7 +394,7 @@ async fn delete_stale_pending_requests(
             .map(|e| e.source_id.as_str())
             .collect();
         deleted += BragEntry::delete_stale_pending_requests(
-            pool,
+            &mut *conn,
             user_id,
             source,
             &pending_types,
@@ -398,22 +430,38 @@ async fn run_sync_core(
         "Starting sync for service"
     );
 
-    match sync_service
-        .sync(http_client, token, service_config, start_date, end_date)
-        .await
-    {
-        Ok(entries) => {
-            let stats = persist_synced_entries(
-                pool,
-                user_id,
-                &phase_window.phase,
-                &entries,
-                start_date,
-                user_crypto,
-            )
+    // Fetch and save fail the same way: a database error after the fetch must still log
+    // "Sync failed" and mark the integration, like an API error does. Dropping `tx` on an
+    // error rolls the whole sync back.
+    let outcome = async {
+        let entries = sync_service
+            .sync(http_client, token, service_config, start_date, end_date)
             .await?;
-            let deleted = delete_stale_pending_requests(pool, user_id, service_name, &entries).await?;
+        // One transaction per sync: on a FUSE-mounted database every commit rewrites the
+        // whole file in object storage, so per-entry commits made a sync take minutes.
+        // Read before `begin`: with the single-connection pool used for FUSE, the
+        // transaction holds the only connection until it commits.
+        let team_map = PeopleAlias::team_map(pool, user_id).await?;
+        let mut tx = pool.begin().await?;
+        let stats = persist_synced_entries(
+            &mut tx,
+            user_id,
+            &phase_window.phase,
+            &entries,
+            start_date,
+            &team_map,
+            user_crypto,
+        )
+        .await?;
+        let deleted =
+            delete_stale_pending_requests(&mut tx, user_id, service_name, &entries).await?;
+        tx.commit().await?;
+        Ok::<_, AppError>((entries, stats, deleted))
+    }
+    .await;
 
+    match outcome {
+        Ok((entries, stats, deleted)) => {
             tracing::info!(
                 service = service_name,
                 fetched = entries.len(),

@@ -216,7 +216,7 @@ Uses `async_trait` for object safety (`Box<dyn SyncService>` dispatch). Each ser
 2. Loads the active cycle's date range
 3. Injects `allowed_*` filters from `services.toml` into the service config
 4. Calls `service.sync()` to fetch work items
-5. For each `SyncedEntry`: finds/creates the correct `Week`, upserts the `BragEntry`
+5. For each `SyncedEntry`: finds/creates the correct `Week`, upserts the `BragEntry`. All writes of one sync share a single transaction, and entries the upsert would not change are not written (`sync_would_change`). On a FUSE-mounted database (Cloud Run with GCS) each commit rewrites the whole file in object storage, so per-entry commits are not an option
 6. Skips soft-deleted entries (respects user removals) and refresh-only items without a stored row
 7. Deletes pending requests (`pr_review_requested`) the service no longer returns
 8. Records a `SyncLog` with created/updated/deleted/unchanged/skipped counts

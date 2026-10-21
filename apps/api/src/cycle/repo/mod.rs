@@ -244,6 +244,20 @@ impl Week {
         start_date: &str,
         end_date: &str,
     ) -> Result<Self, AppError> {
+        let mut conn = pool.acquire().await?;
+        Self::find_or_create_on(&mut conn, phase_id, iso_week, year, start_date, end_date).await
+    }
+
+    /// [`Week::find_or_create`] on a given connection, so sync can run it inside its
+    /// transaction.
+    pub async fn find_or_create_on(
+        conn: &mut sqlx::SqliteConnection,
+        phase_id: i64,
+        iso_week: i64,
+        year: i64,
+        start_date: &str,
+        end_date: &str,
+    ) -> Result<Self, AppError> {
         // Try to find existing
         if let Some(week) = sqlx::query_as::<_, Week>(
             "SELECT * FROM weeks WHERE phase_id = ? AND iso_week = ? AND year = ?",
@@ -251,7 +265,7 @@ impl Week {
         .bind(phase_id)
         .bind(iso_week)
         .bind(year)
-        .fetch_optional(pool)
+        .fetch_optional(&mut *conn)
         .await?
         {
             return Ok(week);
@@ -260,7 +274,7 @@ impl Week {
         // Calculate week number within phase
         let week_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM weeks WHERE phase_id = ?")
             .bind(phase_id)
-            .fetch_one(pool)
+            .fetch_one(&mut *conn)
             .await?;
 
         let week = sqlx::query_as::<_, Week>(
@@ -276,7 +290,7 @@ impl Week {
         .bind(year)
         .bind(start_date)
         .bind(end_date)
-        .fetch_one(pool)
+        .fetch_one(&mut *conn)
         .await?;
 
         Ok(week)
