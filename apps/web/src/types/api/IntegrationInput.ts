@@ -3,4 +3,8 @@
 /**
  * Body of `PUT` and `POST .../test`. Every key is optional; checkboxes are real booleans.
  */
-export type IntegrationInput = { token: string | null, username: string | null, email: string | null, org: string | null, base_url: string | null, token_expires: string | null, sync_pr_authored: boolean | null, sync_pr_merged: boolean | null, sync_pr_reviewed: boolean | null, sync_pr_review_requested: boolean | null, sync_pr_development: boolean | null, sync_jira_completed: boolean | null, sync_jira_in_progress: boolean | null, sync_jira_created: boolean | null, sync_jira_progress: boolean | null, };
+export type IntegrationInput = { token: string | null, username: string | null, email: string | null, org: string | null, 
+/**
+ * GitHub: comma-separated `owner/repo` names left out of every search.
+ */
+skip_repos: string | null, base_url: string | null, token_expires: string | null, sync_pr_authored: boolean | null, sync_pr_merged: boolean | null, sync_pr_reviewed: boolean | null, sync_pr_review_requested: boolean | null, sync_pr_review_requested_teams: boolean | null, sync_pr_development: boolean | null, sync_jira_completed: boolean | null, sync_jira_in_progress: boolean | null, sync_jira_created: boolean | null, sync_jira_progress: boolean | null, };

@@ -148,6 +148,13 @@ impl GitHubSync {
         let sync_merged = config["sync_pr_merged"].as_bool().unwrap_or(true);
         let sync_reviewed = config["sync_pr_reviewed"].as_bool().unwrap_or(true);
         let sync_review_requested = config["sync_pr_review_requested"].as_bool().unwrap_or(true);
+        let review_requested_teams =
+            config["sync_pr_review_requested_teams"].as_bool().unwrap_or(false);
+        let skip_filter: String = parse_repo_list(config["skip_repos"].as_str().unwrap_or(""))
+            .map_err(AppError::BadRequest)?
+            .iter()
+            .map(|r| format!("-repo:{r} "))
+            .collect();
         let sync_pr_development = config["sync_pr_development"].as_bool().unwrap_or(true);
 
         // Split comma-separated orgs, trimming whitespace
@@ -188,6 +195,8 @@ impl GitHubSync {
                     query_type,
                     public_only,
                     sync_pr_development,
+                    review_requested_teams,
+                    skip_filter: &skip_filter,
                 })
                 .await?;
                 entries.extend(prs);
@@ -203,6 +212,8 @@ impl GitHubSync {
                         query_type,
                         public_only,
                         sync_pr_development,
+                        review_requested_teams,
+                        skip_filter: &skip_filter,
                     })
                     .await?;
                     entries.extend(prs);
@@ -217,6 +228,23 @@ impl GitHubSync {
 
         Ok(entries)
     }
+}
+
+/// Parses a comma- or whitespace-separated list of `owner/repo` names. Rejects anything else,
+/// since each name is interpolated into a GitHub search query.
+pub(crate) fn parse_repo_list(value: &str) -> Result<Vec<&str>, String> {
+    let valid_part = |p: &str| {
+        !p.is_empty()
+            && p.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+    };
+    value
+        .split(|c: char| c == ',' || c.is_whitespace())
+        .filter(|r| !r.is_empty())
+        .map(|r| match r.split_once('/') {
+            Some((owner, repo)) if valid_part(owner) && valid_part(repo) => Ok(r),
+            _ => Err(format!("\"{r}\" is not a repository. Use owner/repo, separated by commas.")),
+        })
+        .collect()
 }
 
 // Escapes backslashes and double quotes for safe interpolation into a
@@ -236,6 +264,10 @@ struct FetchPrsParams<'a> {
     query_type: &'a GitHubQueryType,
     public_only: bool,
     sync_pr_development: bool,
+    /// Also match requests to the user's teams (`review-requested:`), not just to the user.
+    review_requested_teams: bool,
+    /// `-repo:owner/name ` terms for the repositories the user skips.
+    skip_filter: &'a str,
 }
 
 // Executes a single GitHub GraphQL search for PRs matching `query_type`,
@@ -255,7 +287,9 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
         format!("org:{} ", safe_org)
     };
 
-    let visibility_filter = if p.public_only { "is:public " } else { "" };
+    // Shared by every query below: visibility plus the skipped repositories.
+    let visibility_filter =
+        format!("{}{}", if p.public_only { "is:public " } else { "" }, p.skip_filter);
 
     let search_query = match p.query_type {
         GitHubQueryType::Authored => format!(
@@ -272,9 +306,15 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
         ),
         // Current state, not history: GitHub drops the PR from this search as soon as the
         // review is submitted or the request removed, so there is no date range.
+        // `review-requested:` also matches every team the user is in, which on large orgs
+        // pulls in years of CODEOWNERS requests nobody acts on, so direct requests are the
+        // default. Archived repositories are read-only: nobody can act on those requests.
         GitHubQueryType::ReviewRequested => format!(
-            "is:pr is:open {}{}review-requested:{}",
-            visibility_filter, org_filter, safe_username
+            "is:pr is:open archived:false {}{}{}:{}",
+            visibility_filter,
+            org_filter,
+            if p.review_requested_teams { "review-requested" } else { "user-review-requested" },
+            safe_username
         ),
     };
 
@@ -548,4 +588,21 @@ fn parse_date(iso_timestamp: &str, fallback: &NaiveDate) -> String {
         .next()
         .unwrap_or(&fallback.to_string())
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_repo_list;
+
+    #[test]
+    fn repo_list_accepts_owner_repo_and_rejects_the_rest() {
+        assert_eq!(
+            parse_repo_list(" mozilla-services/merino,mozilla/uniffi-rs\nowner/repo.js ").unwrap(),
+            ["mozilla-services/merino", "mozilla/uniffi-rs", "owner/repo.js"]
+        );
+        assert_eq!(parse_repo_list("").unwrap(), Vec::<&str>::new());
+        for bad in ["merino", "a/b/c", "a/\"b", "a/b OR is:closed", "/repo"] {
+            assert!(parse_repo_list(bad).is_err(), "{bad}");
+        }
+    }
 }

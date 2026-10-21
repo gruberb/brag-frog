@@ -342,6 +342,19 @@ async fn integration_write_errors() {
         .await;
     assert_eq!(unknown.status, StatusCode::NOT_FOUND);
 
+    // Skipped repositories go into GitHub search queries, so anything but owner/repo is refused
+    // before the connection test.
+    let bad_repos = app
+        .json(
+            "PUT",
+            "/api/v1/integrations/github",
+            Some(json!({"token": "t", "skip_repos": "mozilla/merino, merino OR is:closed"})),
+            Some(&cookie),
+        )
+        .await;
+    assert_eq!(bad_repos.status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert!(bad_repos.json()["error"]["message"].as_str().unwrap().contains("owner/repo"));
+
     // Atlassian needs a token and none is saved.
     let no_token = app
         .json(

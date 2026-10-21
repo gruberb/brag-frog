@@ -9,6 +9,7 @@ pub struct IntegrationForm {
     pub username: Option<String>,
     pub email: Option<String>,
     pub org: Option<String>,
+    pub skip_repos: Option<String>,
     pub base_url: Option<String>,
     pub token_expires: Option<String>,
     // Sync setting checkboxes (HTML sends "on" or absent)
@@ -16,6 +17,7 @@ pub struct IntegrationForm {
     pub sync_pr_merged: Option<String>,
     pub sync_pr_reviewed: Option<String>,
     pub sync_pr_review_requested: Option<String>,
+    pub sync_pr_review_requested_teams: Option<String>,
     pub sync_jira_completed: Option<String>,
     pub sync_jira_in_progress: Option<String>,
     pub sync_jira_created: Option<String>,
@@ -31,6 +33,7 @@ fn checkbox_fields_for_service(service: &str) -> &[&str] {
             "sync_pr_merged",
             "sync_pr_reviewed",
             "sync_pr_review_requested",
+            "sync_pr_review_requested_teams",
             "sync_pr_development",
         ],
         "atlassian" => &[
@@ -50,6 +53,7 @@ fn checkbox_value<'a>(input: &'a IntegrationForm, name: &str) -> Option<&'a Opti
         "sync_pr_merged" => Some(&input.sync_pr_merged),
         "sync_pr_reviewed" => Some(&input.sync_pr_reviewed),
         "sync_pr_review_requested" => Some(&input.sync_pr_review_requested),
+        "sync_pr_review_requested_teams" => Some(&input.sync_pr_review_requested_teams),
         "sync_jira_completed" => Some(&input.sync_jira_completed),
         "sync_jira_in_progress" => Some(&input.sync_jira_in_progress),
         "sync_jira_created" => Some(&input.sync_jira_created),
@@ -66,6 +70,7 @@ pub(crate) fn build_config_json(input: &IntegrationForm, service: &str) -> Optio
         ("username", &input.username),
         ("email", &input.email),
         ("org", &input.org),
+        ("skip_repos", &input.skip_repos),
         ("base_url", &input.base_url),
         ("token_expires", &input.token_expires),
     ];
@@ -100,6 +105,7 @@ pub(crate) fn merge_form_into_config(
         ("username", &input.username),
         ("email", &input.email),
         ("org", &input.org),
+        ("skip_repos", &input.skip_repos),
         ("base_url", &input.base_url),
     ];
     for &(key, val) in fields {
@@ -182,10 +188,12 @@ pub fn service_config_fields(service: &str, user_email: &str) -> Vec<serde_json:
             vec![
                 serde_json::json!({"name": "username", "label": "GitHub Username", "placeholder": "auto-detected on Test", "default_value": "", "field_type": "text"}),
                 serde_json::json!({"name": "org", "label": "Organizations", "placeholder": gh.org_placeholder, "default_value": gh.default_orgs, "field_type": "text"}),
+                serde_json::json!({"name": "skip_repos", "label": "Repositories to skip", "placeholder": "owner/repo, owner/other-repo", "default_value": "", "field_type": "text"}),
                 serde_json::json!({"name": "sync_pr_authored", "label": "PRs I opened", "default_value": true, "field_type": "checkbox"}),
                 serde_json::json!({"name": "sync_pr_merged", "label": "PRs that got merged", "default_value": true, "field_type": "checkbox"}),
                 serde_json::json!({"name": "sync_pr_reviewed", "label": "PRs I reviewed", "default_value": true, "field_type": "checkbox"}),
                 serde_json::json!({"name": "sync_pr_review_requested", "label": "Open PRs waiting for my review", "default_value": true, "field_type": "checkbox"}),
+                serde_json::json!({"name": "sync_pr_review_requested_teams", "label": "Include review requests to my teams", "default_value": false, "field_type": "checkbox"}),
                 serde_json::json!({"name": "sync_pr_development", "label": "Daily commit activity on my PRs", "default_value": true, "field_type": "checkbox"}),
             ]
         }

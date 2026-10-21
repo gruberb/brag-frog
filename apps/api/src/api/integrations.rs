@@ -84,12 +84,15 @@ pub struct IntegrationInput {
     pub username: Option<String>,
     pub email: Option<String>,
     pub org: Option<String>,
+    /// GitHub: comma-separated `owner/repo` names left out of every search.
+    pub skip_repos: Option<String>,
     pub base_url: Option<String>,
     pub token_expires: Option<String>,
     pub sync_pr_authored: Option<bool>,
     pub sync_pr_merged: Option<bool>,
     pub sync_pr_reviewed: Option<bool>,
     pub sync_pr_review_requested: Option<bool>,
+    pub sync_pr_review_requested_teams: Option<bool>,
     pub sync_pr_development: Option<bool>,
     pub sync_jira_completed: Option<bool>,
     pub sync_jira_in_progress: Option<bool>,
@@ -106,12 +109,14 @@ impl IntegrationInput {
             username: self.username,
             email: self.email,
             org: self.org,
+            skip_repos: self.skip_repos,
             base_url: self.base_url,
             token_expires: self.token_expires,
             sync_pr_authored: on(self.sync_pr_authored),
             sync_pr_merged: on(self.sync_pr_merged),
             sync_pr_reviewed: on(self.sync_pr_reviewed),
             sync_pr_review_requested: on(self.sync_pr_review_requested),
+            sync_pr_review_requested_teams: on(self.sync_pr_review_requested_teams),
             sync_jira_completed: on(self.sync_jira_completed),
             sync_jira_in_progress: on(self.sync_jira_in_progress),
             sync_jira_created: on(self.sync_jira_created),
@@ -342,6 +347,9 @@ pub async fn save(
 ) -> ApiResult<IntegrationDto> {
     let service = known_service(&service)?;
     let form = input.into_form();
+    if let Some(repos) = form.skip_repos.as_deref() {
+        crate::integrations::github::parse_repo_list(repos).map_err(ApiError::invalid)?;
+    }
 
     if service != "claude" {
         let status = check_connection(&state, &auth, service, &form).await?;

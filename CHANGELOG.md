@@ -2,6 +2,15 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- GitHub: "Repositories to skip" in Settings → Integrations → GitHub. List `owner/repo` names separated by commas, and the sync leaves them out entirely (authored, merged, reviewed and review requests).
+- GitHub: "Include review requests to my teams", off by default.
+
+### Changed
+- GitHub: "PR Review Requested" now covers only requests made to you personally, and never PRs in archived repositories. Before, it also included every request to any team you're in, which on large orgs meant years of CODEOWNERS and dependabot PRs. Entries that no longer match are removed on the next sync.
+
 ## [6.5.1] - 2026-10-21
 
 ### Fixed
