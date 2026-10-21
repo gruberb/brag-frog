@@ -2,7 +2,7 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
-## [Unreleased]
+## [6.5.0] - 2026-10-20
 
 ### Added
 - Review: the Career level drawer can compare your level with the next one. Each expectation shows the next level's text beneath yours, plus the next level's one-liner. It starts on when "I am going for promotion" is checked in your profile. AI drafts already used the next level as a promotion target; now you can see it while writing.
