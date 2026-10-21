@@ -100,6 +100,7 @@ fn make_entry(
         start_time: None,
         end_time: None,
         collaborators: None,
+        refresh_only: false,
     }
 }
 
@@ -336,6 +337,7 @@ async fn test_sync_meeting_type() {
         start_time: None,
         end_time: None,
         collaborators: None,
+        refresh_only: false,
     }]);
 
     // Need google_calendar integration instead
@@ -404,6 +406,7 @@ async fn test_sync_drive_types() {
             start_time: None,
             end_time: None,
             collaborators: None,
+            refresh_only: false,
         },
         SyncedEntry {
             source: "google_drive",
@@ -420,6 +423,7 @@ async fn test_sync_drive_types() {
             start_time: None,
             end_time: None,
             collaborators: None,
+            refresh_only: false,
         },
     ]);
 
@@ -667,4 +671,42 @@ async fn test_failed_sync_keeps_pending_review_requests() {
     let user_crypto = crypto.for_user(user_id).unwrap();
     let entries = BragEntry::list_for_phase(&pool, phase_id, &user_crypto).await.unwrap();
     assert_eq!(entries.len(), 1);
+}
+
+// ── Refresh-only items ──
+
+#[tokio::test]
+async fn test_refresh_only_updates_existing_rows_and_creates_nothing() {
+    let (pool, crypto, user_id, phase_id) = setup_sync_test().await;
+    let http_client = reqwest::Client::new();
+    let ticket = |id: &str, status: &str, refresh_only| SyncedEntry {
+        status: Some(status.to_string()),
+        refresh_only,
+        ..make_entry(id, id, "jira_story", "2025-03-10")
+    };
+    let run = |entries| {
+        brag_frog::integrations::run_sync_with_service(
+            &pool,
+            &crypto,
+            &http_client,
+            user_id,
+            "github",
+            MockSyncService::new(entries),
+        )
+    };
+
+    run(vec![ticket("A-1", "In Progress", false)]).await.unwrap();
+    // A-1 moved to Done, which the settings exclude; A-2 was never imported.
+    let result = run(vec![ticket("A-1", "Done", true), ticket("A-2", "Done", true)])
+        .await
+        .unwrap();
+    assert_eq!(result.synced_source_ids.get("github"), None);
+
+    let user_crypto = crypto.for_user(user_id).unwrap();
+    let entries = BragEntry::list_for_phase(&pool, phase_id, &user_crypto).await.unwrap();
+    let rows: Vec<_> = entries
+        .iter()
+        .map(|e| (e.source_id.as_deref().unwrap(), e.status.as_deref().unwrap()))
+        .collect();
+    assert_eq!(rows, [("A-1", "Done")]);
 }

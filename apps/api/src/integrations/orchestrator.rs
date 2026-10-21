@@ -241,12 +241,31 @@ async fn persist_synced_entries(
     let team_map = PeopleAlias::team_map(pool, user_id).await?;
 
     for entry in entries {
-        if !entry.source_id.is_empty() {
+        // Refresh-only items exist only to update a stored row (see `SyncedEntry`). Keeping
+        // them out of `synced_source_ids` lets a hard sync still drop rows the settings exclude.
+        if !entry.source_id.is_empty() && !entry.refresh_only {
             stats
                 .synced_source_ids
                 .entry(entry.source.to_string())
                 .or_default()
                 .push(entry.source_id.clone());
+        }
+
+        let existing = if entry.source_id.is_empty() {
+            None
+        } else {
+            BragEntry::find_by_source(pool, entry.source, &entry.source_id, user_id, user_crypto)
+                .await?
+        };
+
+        if let Some(ref ex) = existing
+            && ex.deleted_at.is_some()
+        {
+            stats.skipped += 1;
+            continue;
+        }
+        if entry.refresh_only && existing.is_none() {
+            continue;
         }
 
         let occurred =
@@ -275,20 +294,6 @@ async fn persist_synced_entries(
             &week_end.format("%Y-%m-%d").to_string(),
         )
         .await?;
-
-        let existing = if entry.source_id.is_empty() {
-            None
-        } else {
-            BragEntry::find_by_source(pool, entry.source, &entry.source_id, user_id, user_crypto)
-                .await?
-        };
-
-        if let Some(ref ex) = existing
-            && ex.deleted_at.is_some()
-        {
-            stats.skipped += 1;
-            continue;
-        }
 
         if let Some(ref ex) = existing {
             if ex.title != entry.title

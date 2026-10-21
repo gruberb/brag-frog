@@ -160,17 +160,16 @@ impl SyncService for JiraSync {
                         start_time: None,
                         end_time: None,
                         collaborators: collaborator.clone(),
+                        refresh_only: false,
                     });
                 }
             }
 
-            // Filter based on sync settings
+            // Sync settings decide which issues get imported. Excluded ones still go out as
+            // refresh-only, so an issue imported while in progress picks up its new status.
             let include = sync_created
                 || (sync_completed && is_done)
                 || (sync_in_progress && is_in_progress);
-            if !include {
-                continue;
-            }
 
             let entry_type = match issue_type.as_str() {
                 "bug" => {
@@ -182,7 +181,8 @@ impl SyncService for JiraSync {
                 }
                 "story" => "jira_story",
                 "task" | "sub-task" => "jira_task",
-                "epic" => "jira_epic",
+                // Containers whose work is tracked in child issues.
+                "epic" | "theme" | "initiative" => "jira_epic",
                 _ => {
                     if is_done {
                         "jira_completed"
@@ -207,6 +207,7 @@ impl SyncService for JiraSync {
                 start_time: None,
                 end_time: None,
                 collaborators: collaborator,
+                refresh_only: !include,
             });
         }
 

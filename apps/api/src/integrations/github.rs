@@ -426,6 +426,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             start_time: None,
                             end_time: None,
                             collaborators: collaborators.clone(),
+                            refresh_only: false,
                         });
 
                         // Generate per-day development entries from commit dates
@@ -459,6 +460,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                                         start_time: None,
                                         end_time: None,
                                         collaborators: collaborators.clone(),
+                                        refresh_only: false,
                                     });
                                 }
                             }
@@ -484,6 +486,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             start_time: None,
                             end_time: None,
                             collaborators,
+                            refresh_only: false,
                         });
                     }
                     GitHubQueryType::Reviewed => {
@@ -504,6 +507,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             start_time: None,
                             end_time: None,
                             collaborators,
+                            refresh_only: false,
                         });
                     }
                     GitHubQueryType::ReviewRequested => {
@@ -524,6 +528,7 @@ async fn fetch_prs(p: &FetchPrsParams<'_>) -> Result<Vec<SyncedEntry>, AppError>
                             start_time: None,
                             end_time: None,
                             collaborators,
+                            refresh_only: false,
                         });
                     }
                 }

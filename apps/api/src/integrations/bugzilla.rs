@@ -131,6 +131,7 @@ impl SyncService for BugzillaSync {
                 start_time: None,
                 end_time: None,
                 collaborators: collaborator,
+                refresh_only: false,
             });
         }
 
@@ -195,6 +196,7 @@ impl SyncService for BugzillaSync {
                 start_time: None,
                 end_time: None,
                 collaborators: collaborator,
+                refresh_only: false,
             });
         }
 

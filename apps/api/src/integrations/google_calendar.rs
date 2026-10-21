@@ -298,6 +298,7 @@ impl SyncService for GoogleCalendarSync {
                     start_time: start_time_hm,
                     end_time: end_time_hm,
                     collaborators,
+                    refresh_only: false,
                 });
             }
 

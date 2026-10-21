@@ -349,6 +349,7 @@ impl SyncService for GoogleDriveSync {
                                     start_time: None,
                                     end_time: None,
                                     collaborators: None,
+                                    refresh_only: false,
                                 },
                             );
                         }
@@ -570,6 +571,7 @@ async fn fetch_comment_only_entries(
                     start_time: None,
                     end_time: None,
                     collaborators: None,
+                    refresh_only: false,
                 },
             ));
         }

@@ -49,6 +49,10 @@ pub struct SyncedEntry {
     pub start_time: Option<String>,
     pub end_time: Option<String>,
     pub collaborators: Option<String>,
+    /// Update the stored row if there is one, but never create it. For items the user's sync
+    /// settings exclude (for example a Jira issue that moved to Done with "Completed issues"
+    /// off): skipping them outright would leave an earlier import stuck in its old status.
+    pub refresh_only: bool,
 }
 
 /// Result of a `test_connection` call -- reports auth success and the authenticated username.

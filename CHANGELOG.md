@@ -2,6 +2,17 @@
 
 All notable changes to Brag Frog will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Review: the Career level drawer can compare your level with the next one. Each expectation shows the next level's text beneath yours, plus the next level's one-liner. It starts on when "I am going for promotion" is checked in your profile. AI drafts already used the next level as a promotion target; now you can see it while writing.
+
+### Changed
+- Today: Jira epics, themes and initiatives no longer show under "Open work"; their child issues do. Themes and initiatives now sync as "Jira Epic" (they were "Jira Task"), so they're also grouped with epics in the Logbook.
+
+### Fixed
+- Jira: an issue imported while in progress kept that status forever once it moved to a status your sync settings exclude (for example Done with "Completed issues" off). Sync now still updates issues it already has, without importing new ones.
+
 ## [6.4.0] - 2026-10-20
 
 ### Added

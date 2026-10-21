@@ -151,6 +151,7 @@ impl SyncService for PhabricatorSync {
                     start_time: None,
                     end_time: None,
                     collaborators: None,
+                    refresh_only: false,
                 });
             }
         }

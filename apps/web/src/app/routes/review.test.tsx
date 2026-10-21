@@ -40,6 +40,18 @@ describe('Review', () => {
     expect(await screen.findByRole('dialog', { name: 'Senior Engineer (IC5)' })).toBeInTheDocument();
   });
 
+  it('compares the career level with the next one', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(ui, { route: '/review/2' });
+    await user.click(await screen.findByRole('button', { name: 'Career level' }));
+    const drawer = await screen.findByRole('dialog', { name: 'Senior Engineer (IC5)' });
+    expect(within(drawer).queryByText('Quarters')).not.toBeInTheDocument();
+    await user.click(within(drawer).getByRole('checkbox', { name: 'Compare with Staff Engineer (IC6)' }));
+    expect(within(drawer).getByText('Months')).toBeInTheDocument();
+    expect(within(drawer).getByText('Quarters')).toBeInTheDocument();
+    expect(within(drawer).getByText('Set direction across teams.')).toBeInTheDocument();
+  });
+
   it('opens the evidence drawer closed-by-default and lists entries with Insert', async () => {
     const user = userEvent.setup();
     renderWithProviders(ui, { route: '/review/2' });

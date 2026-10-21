@@ -217,7 +217,7 @@ Uses `async_trait` for object safety (`Box<dyn SyncService>` dispatch). Each ser
 3. Injects `allowed_*` filters from `services.toml` into the service config
 4. Calls `service.sync()` to fetch work items
 5. For each `SyncedEntry`: finds/creates the correct `Week`, upserts the `BragEntry`
-6. Skips soft-deleted entries (respects user removals)
+6. Skips soft-deleted entries (respects user removals) and refresh-only items without a stored row
 7. Deletes pending requests (`pr_review_requested`) the service no longer returns
 8. Records a `SyncLog` with created/updated/deleted/unchanged/skipped counts
 

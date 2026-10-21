@@ -156,8 +156,9 @@ pub fn compute_focus_days(
 }
 
 /// Entry types that can be open work. Each one is open until its synced status is finished.
-/// Types that are finished by definition (`bug_fixed`, `jira_completed`, `pr_merged`) and
-/// day markers (`pr_development`, `jira_progress`) never are.
+/// Types that are finished by definition (`bug_fixed`, `jira_completed`, `pr_merged`), day
+/// markers (`pr_development`, `jira_progress`) and Jira containers (`jira_epic`: epics,
+/// themes, initiatives, whose work shows through their child issues) never are.
 pub const OPEN_WORK_TYPES: &[&str] = &[
     "pr_authored",
     "pr_reviewed",
@@ -166,7 +167,6 @@ pub const OPEN_WORK_TYPES: &[&str] = &[
     "bug_filed",
     "jira_task",
     "jira_story",
-    "jira_epic",
 ];
 
 /// Filter entries to "active work": open PRs, pending review requests, revisions, bugs and
@@ -208,6 +208,7 @@ mod tests {
             entry("jira", "jira_task", Some("In Review")),
             entry("jira", "jira_task", Some("Done")),
             entry("jira", "jira_epic", Some("Cancelled")),
+            entry("jira", "jira_epic", Some("In Progress")),
             entry("jira", "jira_completed", Some("Done")),
             entry("github", "pr_review_requested", Some("OPEN")),
             entry("github", "pr_authored", Some("MERGED")),
